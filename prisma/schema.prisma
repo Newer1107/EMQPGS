@@ -1,0 +1,196 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  COE
+  COORDINATOR
+  MODERATOR
+  CONTRIBUTOR
+  DEAN
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ExamType {
+  ISE_1
+  ISE_2
+  ENDSEM
+  SUPPLEMENTARY
+  KT
+}
+
+enum ExamCycleStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum QuestionBankStatus {
+  DRAFT
+  IN_PROGRESS
+  UNDER_MODERATION
+  MODERATED
+  REPORT_GENERATED
+  AWAITING_HOD_SIGN
+  SIGNED_REPORT_UPLOADED
+  AWAITING_COORDINATOR_APPROVAL
+  APPROVED
+  LOCKED
+}
+
+enum AssignmentRole {
+  MODERATOR
+  CONTRIBUTOR
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ACTION_REQUIRED
+}
+
+model Department {
+  id           String    @id @default(cuid())
+  name         String
+  code         String    @unique
+  hodName      String
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  users        User[]
+  subjects     Subject[]
+  examCycles   ExamCycle[]
+}
+
+model User {
+  id               String              @id @default(cuid())
+  name             String
+  email            String              @unique
+  passwordHash     String
+  role             Role
+  status           UserStatus          @default(ACTIVE)
+  lastLoginAt      DateTime?
+  departmentId     String?
+  resetTokenHash   String?
+  resetTokenExpiry DateTime?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  department       Department?         @relation(fields: [departmentId], references: [id])
+  assignments      TeacherAssignment[] @relation("assignedTeacher")
+  assignedBy       TeacherAssignment[] @relation("assignedBy")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  questionBanks    QuestionBank[]      @relation("questionBankCreator")
+}
+
+model ExamCycle {
+  id           String            @id @default(cuid())
+  academicYear String
+  semester     Int
+  examType     ExamType
+  status       ExamCycleStatus   @default(DRAFT)
+  departmentId String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  department   Department?       @relation(fields: [departmentId], references: [id])
+  questionBanks QuestionBank[]
+
+  @@unique([academicYear, semester, examType])
+}
+
+model Subject {
+  id                  String         @id @default(cuid())
+  subjectCode         String         @unique
+  subjectName         String
+  academicYear        String
+  semester            Int
+  credits             Int
+  questionBankDueDate DateTime
+  departmentId        String
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  department          Department     @relation(fields: [departmentId], references: [id])
+  questionBanks       QuestionBank[]
+}
+
+model QuestionBank {
+  id           String              @id @default(cuid())
+  subjectId    String
+  examCycleId  String
+  status       QuestionBankStatus  @default(DRAFT)
+  createdById  String
+  lockedAt     DateTime?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  subject      Subject             @relation(fields: [subjectId], references: [id])
+  examCycle    ExamCycle           @relation(fields: [examCycleId], references: [id])
+  createdBy    User                @relation("questionBankCreator", fields: [createdById], references: [id])
+  assignments  TeacherAssignment[]
+
+  @@unique([subjectId, examCycleId])
+}
+
+model TeacherAssignment {
+  id             String         @id @default(cuid())
+  questionBankId String
+  teacherId      String
+  assignmentRole AssignmentRole
+  assignedById   String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  questionBank   QuestionBank   @relation(fields: [questionBankId], references: [id])
+  teacher        User           @relation("assignedTeacher", fields: [teacherId], references: [id])
+  assignedBy     User           @relation("assignedBy", fields: [assignedById], references: [id])
+
+  @@unique([questionBankId, teacherId, assignmentRole])
+}
+
+model Notification {
+  id          String           @id @default(cuid())
+  recipientId String
+  title       String
+  message     String
+  type        NotificationType @default(INFO)
+  isRead      Boolean          @default(false)
+  actionUrl   String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  recipient   User             @relation(fields: [recipientId], references: [id])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorId], references: [id])
+}
+
+model FileAsset {
+  id               String   @id @default(cuid())
+  bucket           String
+  objectKey        String   @unique
+  fileName         String
+  mimeType         String
+  size             Int
+  uploadedById     String?
+  linkedEntityType String?
+  linkedEntityId   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

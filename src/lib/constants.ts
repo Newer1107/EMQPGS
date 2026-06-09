@@ -1,0 +1,72 @@
+import { AssignmentRole, ExamCycleStatus, ExamType, QuestionBankStatus, Role, UserStatus } from "@prisma/client";
+
+export const APP_NAME = "EMQPGS";
+export const ACCESS_COOKIE = "emqpgs_access_token";
+export const REFRESH_COOKIE = "emqpgs_refresh_token";
+
+export const roleLabels: Record<Role, string> = {
+  COE: "Controller of Examination",
+  COORDINATOR: "Coordinator",
+  MODERATOR: "Moderator",
+  CONTRIBUTOR: "Contributor",
+  DEAN: "Dean",
+};
+
+export const examTypeLabels: Record<ExamType, string> = {
+  ISE_1: "ISE 1",
+  ISE_2: "ISE 2",
+  ENDSEM: "ENDSEM",
+  SUPPLEMENTARY: "SUPPLEMENTARY",
+  KT: "KT",
+};
+
+export const examCycleStatusLabels: Record<ExamCycleStatus, string> = {
+  DRAFT: "Draft",
+  ACTIVE: "Active",
+  CLOSED: "Closed",
+};
+
+export const questionBankStatusLabels: Record<QuestionBankStatus, string> = {
+  DRAFT: "Draft",
+  IN_PROGRESS: "In Progress",
+  UNDER_MODERATION: "Under Moderation",
+  MODERATED: "Moderated",
+  REPORT_GENERATED: "Report Generated",
+  AWAITING_HOD_SIGN: "Awaiting HOD Sign",
+  SIGNED_REPORT_UPLOADED: "Signed Report Uploaded",
+  AWAITING_COORDINATOR_APPROVAL: "Awaiting Coordinator Approval",
+  APPROVED: "Approved",
+  LOCKED: "Locked",
+};
+
+export const assignmentRoleLabels: Record<AssignmentRole, string> = {
+  MODERATOR: "Moderator",
+  CONTRIBUTOR: "Contributor",
+};
+
+export const userStatusLabels: Record<UserStatus, string> = {
+  ACTIVE: "Active",
+  DISABLED: "Disabled",
+};
+
+export const rbacMatrix: Record<Role, string[]> = {
+  COE: [
+    "users:create",
+    "users:update",
+    "users:disable",
+    "departments:manage",
+    "exam-cycles:manage",
+    "subjects:read",
+    "question-banks:read",
+    "audit:read",
+  ],
+  COORDINATOR: [
+    "subjects:manage",
+    "question-banks:manage",
+    "assignments:manage",
+    "notifications:read",
+  ],
+  MODERATOR: ["question-banks:review", "notifications:read"],
+  CONTRIBUTOR: ["question-banks:contribute", "notifications:read"],
+  DEAN: ["question-banks:read", "reports:read", "notifications:read"],
+};

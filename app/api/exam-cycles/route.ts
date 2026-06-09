@@ -1,0 +1,17 @@
+import { Role } from "@prisma/client";
+import { withApiHandler } from "@/lib/api-handler";
+import { parseJson } from "@/lib/parse-body";
+import { ExamCycleService } from "@/modules/exam-cycles/service";
+import { examCycleSchema } from "@/modules/exam-cycles/validation";
+
+const service = new ExamCycleService();
+
+export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.DEAN] });
+
+export const POST = withApiHandler(
+  async (request) => {
+    const payload = examCycleSchema.parse(await parseJson(request));
+    return service.create(payload);
+  },
+  { roles: [Role.COE], audit: { action: "EXAM_CYCLE_CREATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },
+);
