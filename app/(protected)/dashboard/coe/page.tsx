@@ -1,5 +1,4 @@
 import { Role } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { getDashboardSeed } from "@/lib/server-data";
@@ -9,26 +8,38 @@ export default async function CoeDashboardPage() {
   if (!data) return null;
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <p className="page-kicker">Controller of Examination</p>
-          <h1 className="page-display mt-4">COE</h1>
-          <p className="page-lead mt-6">Govern access, academic structure, and audit controls through a monochrome command surface.</p>
-        </div>
-        <Badge>Controller of Examination</Badge>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">COE Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Controller of Examination — govern access, academic structure, and audit controls</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {data.stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
       </div>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Pending Tasks</CardTitle></CardHeader>
-          <CardContent className="space-y-3">{data.pendingTasks.map((task) => <p key={task} className="border-b border-[var(--border-light)] pb-3 text-base">{task}</p>)}</CardContent>
+          <CardContent>
+            {data.pendingTasks.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">No pending tasks</p>
+            ) : (
+              <ul className="space-y-2">
+                {data.pendingTasks.map((task) => <li key={task} className="text-sm">{task}</li>)}
+              </ul>
+            )}
+          </CardContent>
         </Card>
         <Card>
           <CardHeader><CardTitle>Notifications</CardTitle></CardHeader>
-          <CardContent className="space-y-3">{data.notifications.map((item) => <p key={item.id} className="border-b border-[var(--border-light)] pb-3 text-base">{item.title}</p>)}</CardContent>
+          <CardContent>
+            {data.notifications.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">No notifications</p>
+            ) : (
+              <ul className="space-y-2">
+                {data.notifications.map((item) => <li key={item.id} className="text-sm">{item.title}</li>)}
+              </ul>
+            )}
+          </CardContent>
         </Card>
       </div>
     </div>

@@ -46,6 +46,7 @@ export class QuestionService {
       include: { assignments: true },
     });
     if (!questionBank) throw new NotFoundError("Question bank not found");
+    this.ensureQuestionBankMutable(questionBank.status);
 
     const isModerator = actor.role === Role.MODERATOR;
     const isContributor = actor.role === Role.CONTRIBUTOR;
@@ -84,6 +85,7 @@ export class QuestionService {
   async createQuestion(input: QuestionInput, actor: Actor) {
     const slot = await this.repository.findSlotById(input.slotId);
     if (!slot) throw new NotFoundError("Reserved slot not found");
+    this.ensureQuestionBankMutable(slot.questionBank.status);
     if (!slot.reservedById) throw new AppError("Slot must be reserved before creating a question", 400);
     if (slot.reservedById !== actor.id && actor.role !== Role.MODERATOR) throw new ForbiddenError("You do not own this slot");
     if (slot.question) throw new AppError("A question already exists for this slot", 409);
@@ -111,6 +113,7 @@ export class QuestionService {
   async updateQuestion(id: string, input: Partial<QuestionInput>, actor: Actor) {
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot edit this question");
 
     const updated = await this.repository.updateQuestion(id, {
@@ -132,6 +135,7 @@ export class QuestionService {
   async submitQuestion(id: string, actor: Actor) {
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (question.contributorId !== actor.id) throw new ForbiddenError("Only the contributor can submit this question");
     if (question.questionText.trim().length < 15) throw new AppError("Question text must be at least 15 characters", 400);
 
@@ -159,6 +163,7 @@ export class QuestionService {
     if (!canModerateQuestion(actor)) throw new ForbiddenError("Only moderators can moderate questions");
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
 
     const targetStatus =
       action === "APPROVE"
@@ -217,6 +222,7 @@ export class QuestionService {
   async addAttachment(questionId: string, fileAssetId: string, actor: Actor) {
     const question = await this.repository.findById(questionId);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot modify attachments on this question");
 
     return this.repository.attachFile(questionId, fileAssetId, actor.id);
@@ -234,6 +240,7 @@ export class QuestionService {
     if (!attachment) throw new NotFoundError("Attachment not found");
     const question = await this.repository.findById(attachment.questionId);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot replace this attachment");
     return this.repository.replaceAttachment(attachmentId, fileAssetId);
   }
@@ -243,6 +250,7 @@ export class QuestionService {
     if (!attachment) throw new NotFoundError("Attachment not found");
     const question = await this.repository.findById(attachment.questionId);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot delete this attachment");
     return this.repository.deleteAttachment(attachmentId);
   }
@@ -250,6 +258,7 @@ export class QuestionService {
   async createAttachmentUploadUrl(questionId: string, actor: Actor, fileName: string, mimeType: string, size: number) {
     const question = await this.repository.findById(questionId);
     if (!question) throw new NotFoundError("Question not found");
+    this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot upload attachments for this question");
 
     return this.storageService.createUploadLink({
@@ -261,6 +270,12 @@ export class QuestionService {
       linkedEntityType: "QUESTION",
       linkedEntityId: questionId,
     });
+  }
+
+  private ensureQuestionBankMutable(status: string) {
+    if (status === "LOCKED") {
+      throw new AppError("Locked question bank cannot be modified", 409);
+    }
   }
 }
 

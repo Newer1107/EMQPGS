@@ -8,35 +8,41 @@ import { getAdminData } from "@/lib/server-data";
 export default async function UsersManagementPage() {
   const data = await getAdminData();
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-      <DataTableCard title="User Management">
-        <Table>
-          <THead><TR><TH>Name</TH><TH>Email</TH><TH>Department</TH><TH>Role</TH><TH>Status</TH></TR></THead>
-          <TBody>
-            {data.users.map((user) => (
-              <TR key={user.id}>
-                <TD>{user.name}</TD>
-                <TD>{user.email}</TD>
-                <TD>{user.department?.name ?? "-"}</TD>
-                <TD><Badge>{user.role}</Badge></TD>
-                <TD>{user.status}</TD>
-              </TR>
-            ))}
-          </TBody>
-        </Table>
-      </DataTableCard>
-      <SimpleForm
-        title="Create User"
-        endpoint="/api/users"
-        fields={[
-          { name: "name", label: "Name", type: "text" },
-          { name: "email", label: "Email", type: "email" },
-          { name: "departmentId", label: "Department", type: "select", options: data.departments.map((d) => ({ value: d.id, label: d.name })) },
-          { name: "role", label: "Role", type: "select", options: Object.values(Role).map((role) => ({ value: role, label: role })) },
-          { name: "status", label: "Status", type: "select", options: Object.values(UserStatus).map((status) => ({ value: status, label: status })) },
-          { name: "password", label: "Password", type: "text" },
-        ]}
-      />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">User Management</h1>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Manage institutional users and their roles</p>
+      </div>
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+        <DataTableCard title="All Users">
+          <Table>
+            <THead><TR><TH>Name</TH><TH>Email</TH><TH>Department</TH><TH>Role</TH><TH>Status</TH></TR></THead>
+            <TBody>
+              {data.users.map((user) => (
+                <TR key={user.id}>
+                  <TD className="font-medium">{user.name}</TD>
+                  <TD>{user.email}</TD>
+                  <TD>{user.department?.name ?? "-"}</TD>
+                  <TD><Badge>{user.role}</Badge></TD>
+                  <TD>{user.status}</TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        </DataTableCard>
+        <SimpleForm
+          title="Create User"
+          endpoint="/api/users"
+          fields={[
+            { name: "name", label: "Name", type: "text" },
+            { name: "email", label: "Email", type: "email" },
+            { name: "departmentId", label: "Department", type: "select", options: data.departments.map((d) => ({ value: d.id, label: d.name })) },
+            { name: "role", label: "Role", type: "select", options: Object.values(Role).map((role) => ({ value: role, label: role })) },
+            { name: "status", label: "Status", type: "select", options: Object.values(UserStatus).map((status) => ({ value: status, label: status })) },
+            { name: "password", label: "Password", type: "text" },
+          ]}
+        />
+      </div>
     </div>
   );
 }

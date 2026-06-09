@@ -56,6 +56,7 @@ describe("QuestionService integration", () => {
       marks: 5,
       slotNumber: 4,
       reservedById: "user-1",
+      questionBank: { status: "IN_PROGRESS" },
       question: null,
     });
     mockQuestionRepository.createQuestion.mockResolvedValue({ id: "q-1" });
@@ -96,6 +97,7 @@ describe("QuestionService integration", () => {
       marks: 5,
       slotNumber: 4,
       reservedById: "user-2",
+      questionBank: { status: "IN_PROGRESS" },
       question: null,
     });
 
@@ -131,6 +133,7 @@ describe("QuestionService integration", () => {
       id: "q-1",
       contributorId: "user-1",
       questionText: "short",
+      questionBank: { status: "IN_PROGRESS" },
     });
 
     await expect(
@@ -150,6 +153,7 @@ describe("QuestionService integration", () => {
       marks: 10,
       slotNumber: 5,
       questionBank: {
+        status: "IN_PROGRESS",
         subject: { subjectCode: "CS501" },
         assignments: [{ assignmentRole: "MODERATOR", teacher: { id: "m-1", email: "mod@example.com", name: "Mod" } }],
       },

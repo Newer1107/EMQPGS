@@ -7,6 +7,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/lib/audit";
 import { getRequestMeta } from "@/lib/api-context";
+import { env } from "@/lib/env";
+import { getOrCreateCsrfToken } from "@/lib/csrf";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -31,8 +33,9 @@ export const POST = withApiHandler(async (request) => {
   ]);
 
   const cookieStore = await cookies();
-  cookieStore.set(authCookieNames.access, accessToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 15 });
-  cookieStore.set(authCookieNames.refresh, refreshToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * 7 });
+  cookieStore.set(authCookieNames.access, accessToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * env.ACCESS_TOKEN_TTL_MINUTES });
+  cookieStore.set(authCookieNames.refresh, refreshToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * 60 * 24 * env.REFRESH_TOKEN_TTL_DAYS });
+  await getOrCreateCsrfToken();
 
   await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   const meta = await getRequestMeta();

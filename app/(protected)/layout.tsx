@@ -1,7 +1,17 @@
+import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { AppShell } from "@/components/layout/app-shell";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>;
+export default async function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  let role: string | null = null;
+  try {
+    const user = await getCurrentUserFromCookies();
+    role = user.role;
+  } catch {
+    redirect("/login");
+  }
+
+  return <AppShell role={role!}>{children}</AppShell>;
 }

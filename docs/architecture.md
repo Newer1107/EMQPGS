@@ -1,25 +1,41 @@
-# Architecture Overview
+# EMQPGS Architecture
 
 ## Layers
 
-- `app/`: App Router UI and route handlers
-- `src/modules/*`: feature-based repositories, validation, and services
-- `src/lib/*`: cross-cutting concerns like auth, audit, storage, DB, Redis, and error handling
-- `prisma/`: schema and seed data
+- `app/` — Next.js App Router pages and route handlers
+- `src/modules/*` — feature services, repositories, validators, and workflow engines
+- `src/lib/*` — auth, RBAC, CSRF, rate limiting, queues, storage, logging, and shared infrastructure
+- `prisma/` — schema, migrations, and seed data
+- `workers/` — BullMQ worker bootstrap
 
-## Patterns
+## Core Modules
 
-- Clean Architecture-inspired separation between transport, business logic, and persistence
-- Repository pattern for Prisma access
-- Service layer for orchestration
-- DTO validation through Zod
-- RBAC checks through `withApiHandler` and `proxy.ts`
-- Audit logging through `logAudit`
-- Global API error handling through `withApiHandler`
+- `users`, `departments`, `exam-cycles`, `subjects`
+- `question-banks`, `assignments`, `questions`, `notifications`
+- `reports`, `ai`, `production`
 
-## Phase 1 Scope
+## Cross-Cutting Concerns
 
-- Administrative setup and identity management
-- Department, cycle, subject, and question-bank scaffolding
-- Assignment orchestration with notifications
-- MinIO-only upload preparation using presigned URLs
+- JWT auth with access + refresh cookies
+- Auth.js credentials login
+- RBAC via `proxy.ts` and `src/lib/api-handler.ts`
+- CSRF validation for all mutating API calls
+- Redis-backed rate limiting
+- Structured JSON logging
+- Append-only audit log chain with integrity hash
+- MinIO-only object storage with presigned URLs
+
+## Production Flow
+
+1. Contributors submit moderated questions
+2. Moderator finalizes question bank
+3. AI report is generated through Ollama + deterministic analytics
+4. HOD signs the report and moderator uploads it
+5. Coordinator approves and locks the bank
+6. Paper generator creates `PAPER_A`, `PAPER_B`, `PAPER_C`
+7. Dean reviews scores and maps papers to:
+   - Regular Exam
+   - Supplementary
+   - KT
+8. COE exports final PDF, DOCX, or ZIP bundles
+9. Cleanup and backup workers manage retention and nightly backups

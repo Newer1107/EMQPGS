@@ -23,7 +23,7 @@ const mono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: `${APP_NAME} - Examination Management & Question Paper Generation`,
-  description: "Phase 1 administrative foundation for EMQPGS",
+  description: "Examination Management and Question Paper Generation System",
 };
 
 export default function RootLayout({
@@ -33,13 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${playfair.variable} ${sourceSerif.variable} ${mono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col bg-[var(--background)] text-[var(--foreground)]">
-        <a
-          href="#main-content"
-          className="skip-link fixed left-4 top-4 z-50 -translate-y-24 border-2 border-[var(--foreground)] bg-[var(--background)] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[var(--foreground)] transition-transform duration-100 focus:translate-y-0 focus-visible:translate-y-0"
-        >
-          Skip to content
-        </a>
+      <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         {children}
       </body>
     </html>

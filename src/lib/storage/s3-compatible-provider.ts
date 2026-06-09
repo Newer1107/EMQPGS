@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "@/lib/env";
 
@@ -24,7 +24,7 @@ export class S3CompatibleProvider {
       ContentType: contentType,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn: 900 });
+    return getSignedUrl(this.client, command, { expiresIn: env.SIGNED_URL_EXPIRY_SECONDS });
   }
 
   async createPresignedGetUrl(bucket: string, objectKey: string) {
@@ -33,6 +33,26 @@ export class S3CompatibleProvider {
       Key: objectKey,
     });
 
-    return getSignedUrl(this.client, command, { expiresIn: 900 });
+    return getSignedUrl(this.client, command, { expiresIn: env.SIGNED_URL_EXPIRY_SECONDS });
+  }
+
+  async uploadObject(bucket: string, objectKey: string, body: Uint8Array | Buffer | string, contentType: string) {
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: objectKey,
+      Body: body,
+      ContentType: contentType,
+    });
+
+    await this.client.send(command);
+  }
+
+  async deleteObject(bucket: string, objectKey: string) {
+    await this.client.send(new DeleteObjectCommand({ Bucket: bucket, Key: objectKey }));
+  }
+
+  async headBucket(bucket: string) {
+    await this.client.send(new HeadBucketCommand({ Bucket: bucket }));
+    return true;
   }
 }

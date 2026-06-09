@@ -8,6 +8,7 @@ const allowedBuckets = [
   "generated-papers",
   "exports",
   "audit-files",
+  "system-backups",
 ] as const;
 
 export class StorageService {
@@ -55,5 +56,55 @@ export class StorageService {
       downloadUrl: await this.provider.createPresignedGetUrl(asset.bucket, asset.objectKey),
       asset,
     };
+  }
+
+  async uploadServerFile(input: {
+    bucket: (typeof allowedBuckets)[number];
+    fileName: string;
+    mimeType: string;
+    body: Uint8Array | Buffer | string;
+    size: number;
+    uploadedById?: string | null;
+    linkedEntityType?: string;
+    linkedEntityId?: string;
+  }) {
+    if (!allowedBuckets.includes(input.bucket)) {
+      throw new AppError("Invalid storage bucket", 400);
+    }
+
+    const objectKey = `${Date.now()}-${input.fileName.replace(/\s+/g, "-")}`;
+    await this.provider.uploadObject(input.bucket, objectKey, input.body, input.mimeType);
+
+    return prisma.fileAsset.create({
+      data: {
+        bucket: input.bucket,
+        objectKey,
+        fileName: input.fileName,
+        mimeType: input.mimeType,
+        size: input.size,
+        uploadedById: input.uploadedById ?? null,
+        linkedEntityType: input.linkedEntityType,
+        linkedEntityId: input.linkedEntityId,
+      },
+    });
+  }
+
+  async createDownloadLinkForAsset(asset: { id: string; bucket: string; objectKey: string; fileName: string; mimeType: string }) {
+    return {
+      downloadUrl: await this.provider.createPresignedGetUrl(asset.bucket, asset.objectKey),
+      asset,
+    };
+  }
+
+  async deleteAsset(fileAssetId: string) {
+    const asset = await prisma.fileAsset.findUnique({ where: { id: fileAssetId } });
+    if (!asset) return null;
+    await this.provider.deleteObject(asset.bucket, asset.objectKey);
+    await prisma.fileAsset.delete({ where: { id: fileAssetId } });
+    return asset;
+  }
+
+  async checkBucketHealth(bucket: (typeof allowedBuckets)[number]) {
+    return this.provider.headBucket(bucket);
   }
 }

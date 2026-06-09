@@ -3,6 +3,9 @@ import { Role } from "@prisma/client";
 import { AppError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
 import { getCurrentUserFromCookies, getRequestMeta } from "@/lib/api-context";
 import { logAudit } from "@/lib/audit";
+import { assertCsrfProtection } from "@/lib/csrf";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 type RouteOptions = {
   roles?: Role[];
@@ -19,6 +22,10 @@ export function withApiHandler<T>(
 ) {
   return async (request: NextRequest) => {
     try {
+      const meta = await getRequestMeta();
+      await enforceRateLimit([request.method, request.nextUrl.pathname, meta.ipAddress ?? "unknown"]);
+      await assertCsrfProtection(request.method);
+
       const user = options?.roles?.length ? await getCurrentUserFromCookies() : await getOptionalUser();
 
       if (options?.roles?.length && !user) {
@@ -31,7 +38,6 @@ export function withApiHandler<T>(
 
       const result = await handler(request, { user });
       if (options?.audit && user) {
-        const meta = await getRequestMeta();
         await logAudit({
           actorId: user.id,
           action: options.audit.action,
@@ -41,9 +47,15 @@ export function withApiHandler<T>(
           ...meta,
         });
       }
+      logger.info("API request completed", {
+        method: request.method,
+        path: request.nextUrl.pathname,
+        actorId: user?.id ?? null,
+        statusCode: 200,
+      });
       return NextResponse.json({ success: true, data: result });
     } catch (error) {
-      return handleApiError(error);
+      return handleApiError(error, request);
     }
   };
 }
@@ -64,15 +76,26 @@ async function safeReadBody(request: NextRequest) {
   }
 }
 
-function handleApiError(error: unknown) {
+function handleApiError(error: unknown, request: NextRequest) {
   if (error instanceof AppError) {
+    logger.warn("API request failed", {
+      method: request.method,
+      path: request.nextUrl.pathname,
+      statusCode: error.statusCode,
+      code: error.code,
+      message: error.message,
+    });
     return NextResponse.json(
       { success: false, error: { code: error.code, message: error.message, details: error.details } },
       { status: error.statusCode },
     );
   }
 
-  console.error(error);
+  logger.error("Unhandled API error", {
+    method: request.method,
+    path: request.nextUrl.pathname,
+    error: error instanceof Error ? error.message : "Unknown error",
+  });
   return NextResponse.json(
     { success: false, error: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" } },
     { status: 500 },

@@ -9,11 +9,15 @@ export default async function CoordinatorQuestionsPage() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Contribution Monitor</h1>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Read-only view of question contribution progress</p>
+      </div>
       <Card>
         <CardHeader>
-          <CardTitle>Coordinator Read-only View</CardTitle>
+          <CardTitle>Read-only View</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-slate-600">
+        <CardContent className="text-sm text-[var(--muted-foreground)]">
           Observe reservation progress, review contribution coverage, and track moderation status without editing questions.
         </CardContent>
       </Card>

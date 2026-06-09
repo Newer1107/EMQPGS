@@ -19,7 +19,7 @@ export async function signAccessToken(payload: Omit<TokenPayload, "type">) {
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
-    .setExpirationTime("15m")
+    .setExpirationTime(`${env.ACCESS_TOKEN_TTL_MINUTES}m`)
     .sign(accessSecret);
 }
 
@@ -28,7 +28,7 @@ export async function signRefreshToken(payload: Omit<TokenPayload, "type">) {
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.sub)
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime(`${env.REFRESH_TOKEN_TTL_DAYS}d`)
     .sign(refreshSecret);
 }
 
@@ -37,7 +37,15 @@ export async function verifyAccessToken(token: string) {
 }
 
 export async function verifyRefreshToken(token: string) {
-  return jwtVerify(token, refreshSecret);
+  const verified = await jwtVerify(token, refreshSecret);
+  const issuedAt = verified.payload.iat;
+  if (typeof issuedAt === "number") {
+    const idleTimeoutSeconds = env.SESSION_IDLE_TIMEOUT_MINUTES * 60;
+    if (Date.now() / 1000 - issuedAt > idleTimeoutSeconds) {
+      throw new Error("Session idle timeout exceeded");
+    }
+  }
+  return verified;
 }
 
 export const authCookieNames = {

@@ -4,10 +4,13 @@ export function DataTableCard({ title, children }: { title: string; children: Re
   return (
     <Card>
       <CardHeader>
-        <p className="page-kicker">Registry</p>
-        <CardTitle className="mt-2 text-5xl">{title}</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          {children}
+        </div>
+      </CardContent>
     </Card>
   );
 }

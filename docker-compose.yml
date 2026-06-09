@@ -3,15 +3,39 @@ version: "3.9"
 services:
   app:
     build: .
+    restart: unless-stopped
     depends_on:
       mysql:
         condition: service_healthy
       redis:
         condition: service_started
+      minio:
+        condition: service_started
       minio-init:
         condition: service_completed_successfully
     ports:
       - "3000:3000"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  worker:
+    build: .
+    restart: unless-stopped
+    command: sh -c "npm run prisma:deploy && npm run worker"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
     env_file:
       - .env
 
@@ -38,10 +62,16 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
+    restart: unless-stopped
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -50,6 +80,11 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   minio-init:
     image: minio/mc:latest
@@ -62,7 +97,8 @@ services:
       /usr/bin/mc mb -p local/signed-reports || true &&
       /usr/bin/mc mb -p local/generated-papers || true &&
       /usr/bin/mc mb -p local/exports || true &&
-      /usr/bin/mc mb -p local/audit-files || true
+      /usr/bin/mc mb -p local/audit-files || true &&
+      /usr/bin/mc mb -p local/system-backups || true
       "
 
 volumes:

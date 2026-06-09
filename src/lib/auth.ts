@@ -2,6 +2,7 @@ import Credentials from "next-auth/providers/credentials";
 import NextAuth from "next-auth";
 import { z } from "zod";
 import { Role } from "@prisma/client";
+import { env } from "@/lib/env";
 import { UserService } from "@/modules/users/service";
 
 const credentialsSchema = z.object({
@@ -11,7 +12,7 @@ const credentialsSchema = z.object({
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: env.SESSION_IDLE_TIMEOUT_MINUTES * 60 },
   pages: { signIn: "/login" },
   providers: [
     Credentials({

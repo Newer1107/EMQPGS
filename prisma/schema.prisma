@@ -47,6 +47,51 @@ enum QuestionBankStatus {
   LOCKED
 }
 
+enum AiReportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PaperGenerationStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum PaperVariant {
+  PAPER_A
+  PAPER_B
+  PAPER_C
+}
+
+enum CoordinatorDecision {
+  APPROVED
+  REJECTED
+}
+
+enum ExportFormat {
+  PDF
+  DOCX
+  ZIP
+}
+
+enum ExportArtifactStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+enum BackupStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
 enum AssignmentRole {
   MODERATOR
   CONTRIBUTOR
@@ -126,6 +171,9 @@ model User {
   questionSlots    QuestionSlot[]      @relation("slotReservedBy")
   contributedQuestions Question[]      @relation("questionContributor")
   uploadedAttachments QuestionAttachment[] @relation("attachmentUploader")
+  deanReviews      DeanReview[]        @relation("deanReviewSelector")
+  exportArtifacts  ExportArtifact[]    @relation("exportArtifactGenerator")
+  backupsTriggered SystemBackup[]      @relation("backupTrigger")
 }
 
 model ExamCycle {
@@ -173,6 +221,16 @@ model QuestionBank {
   assignments  TeacherAssignment[]
   questionSlots QuestionSlot[]
   questions    Question[]
+  aiReports    AiReport[]
+  generatedPapers GeneratedPaper[]
+  deanReview   DeanReview?
+  signedReportAssetId String?
+  signedReportUploadedAt DateTime?
+  coordinatorDecision CoordinatorDecision?
+  coordinatorReviewedAt DateTime?
+  coordinatorReviewRemark String?
+  signedReportAsset FileAsset? @relation("questionBankSignedReport", fields: [signedReportAssetId], references: [id])
+  exportArtifacts ExportArtifact[]
 
   @@unique([subjectId, examCycleId])
 }
@@ -214,6 +272,8 @@ model AuditLog {
   metadata    Json?
   ipAddress   String?
   userAgent   String?
+  previousHash String?
+  integrityHash String?
   createdAt   DateTime @default(now())
   actor       User?    @relation(fields: [actorId], references: [id])
 }
@@ -231,6 +291,12 @@ model FileAsset {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   attachments      QuestionAttachment[]
+  aiReportsJson    AiReport[]      @relation("aiReportJsonAsset")
+  aiReportsPdf     AiReport[]      @relation("aiReportPdfAsset")
+  generatedPaperFiles GeneratedPaper[] @relation("generatedPaperFileAsset")
+  signedQuestionBanks QuestionBank[] @relation("questionBankSignedReport")
+  exportArtifacts ExportArtifact[] @relation("exportArtifactFileAsset")
+  systemBackups   SystemBackup[]   @relation("systemBackupFileAsset")
 }
 
 model QuestionSlot {
@@ -268,12 +334,18 @@ model Question {
   moderatorRemark String?
   submittedAt     DateTime?
   reviewedAt      DateTime?
+  usageCount      Int              @default(0)
+  lastUsedExam    String?
+  lastUsedYear    String?
+  lastUsedSemester Int?
+  lastUsedType    ExamType?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   questionBank    QuestionBank     @relation(fields: [questionBankId], references: [id])
   slot            QuestionSlot     @relation(fields: [slotId], references: [id])
   contributor     User             @relation("questionContributor", fields: [contributorId], references: [id])
   attachments     QuestionAttachment[]
+  generatedPaperItems GeneratedPaperItem[]
 
   @@index([questionBankId, moduleNumber, marks, slotNumber])
   @@index([contributorId, status])
@@ -291,4 +363,116 @@ model QuestionAttachment {
   uploadedBy   User       @relation("attachmentUploader", fields: [uploadedById], references: [id])
 
   @@unique([questionId, fileAssetId])
+}
+
+model AiReport {
+  id                 String          @id @default(cuid())
+  questionBankId     String
+  status             AiReportStatus  @default(PENDING)
+  modelName          String
+  summary            String?
+  reportJson         Json?
+  chartData          Json?
+  failureReason      String?
+  generatedById      String?
+  generatedAt        DateTime?
+  jsonFileAssetId    String?
+  pdfFileAssetId     String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  questionBank       QuestionBank    @relation(fields: [questionBankId], references: [id])
+  jsonFileAsset      FileAsset?      @relation("aiReportJsonAsset", fields: [jsonFileAssetId], references: [id])
+  pdfFileAsset       FileAsset?      @relation("aiReportPdfAsset", fields: [pdfFileAssetId], references: [id])
+
+  @@index([questionBankId, status])
+}
+
+model GeneratedPaper {
+  id                String                 @id @default(cuid())
+  questionBankId    String
+  variant           PaperVariant
+  status            PaperGenerationStatus  @default(PENDING)
+  generatedById     String?
+  generatedAt       DateTime?
+  failureReason     String?
+  paperJson         Json?
+  paperFileAssetId  String?
+  coverageScore     Float?
+  difficultyScore   Float?
+  qualityScore      Float?
+  duplicateRisk     Float?
+  recommendation    String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  questionBank      QuestionBank           @relation(fields: [questionBankId], references: [id])
+  paperFileAsset    FileAsset?             @relation("generatedPaperFileAsset", fields: [paperFileAssetId], references: [id])
+  items             GeneratedPaperItem[]
+  selectedAsRegular DeanReview[]           @relation("regularPaper")
+  selectedAsSupplementary DeanReview[]     @relation("supplementaryPaper")
+  selectedAsKt      DeanReview[]           @relation("ktPaper")
+
+  @@unique([questionBankId, variant])
+}
+
+model GeneratedPaperItem {
+  id                String         @id @default(cuid())
+  generatedPaperId  String
+  questionId        String
+  createdAt         DateTime       @default(now())
+  generatedPaper    GeneratedPaper @relation(fields: [generatedPaperId], references: [id])
+  question          Question       @relation(fields: [questionId], references: [id])
+
+  @@unique([generatedPaperId, questionId])
+}
+
+model DeanReview {
+  id                   String         @id @default(cuid())
+  questionBankId       String         @unique
+  regularPaperId       String
+  supplementaryPaperId String
+  ktPaperId            String
+  selectedById         String
+  notes                String?
+  selectedAt           DateTime       @default(now())
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  questionBank         QuestionBank   @relation(fields: [questionBankId], references: [id])
+  regularPaper         GeneratedPaper @relation("regularPaper", fields: [regularPaperId], references: [id])
+  supplementaryPaper   GeneratedPaper @relation("supplementaryPaper", fields: [supplementaryPaperId], references: [id])
+  ktPaper              GeneratedPaper @relation("ktPaper", fields: [ktPaperId], references: [id])
+  selectedBy           User           @relation("deanReviewSelector", fields: [selectedById], references: [id])
+}
+
+model ExportArtifact {
+  id             String               @id @default(cuid())
+  questionBankId String
+  generatedById  String?
+  format         ExportFormat
+  status         ExportArtifactStatus @default(PENDING)
+  fileAssetId    String?
+  metadata       Json?
+  expiresAt      DateTime
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  questionBank   QuestionBank         @relation(fields: [questionBankId], references: [id])
+  generatedBy    User?                @relation("exportArtifactGenerator", fields: [generatedById], references: [id])
+  fileAsset      FileAsset?           @relation("exportArtifactFileAsset", fields: [fileAssetId], references: [id])
+
+  @@index([questionBankId, format, status])
+}
+
+model SystemBackup {
+  id            String       @id @default(cuid())
+  status        BackupStatus @default(PENDING)
+  fileAssetId   String?
+  triggeredById String?
+  metadata      Json?
+  failureReason String?
+  expiresAt     DateTime
+  startedAt     DateTime     @default(now())
+  completedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  fileAsset     FileAsset?   @relation("systemBackupFileAsset", fields: [fileAssetId], references: [id])
+  triggeredBy   User?        @relation("backupTrigger", fields: [triggeredById], references: [id])
 }

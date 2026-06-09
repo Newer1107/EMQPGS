@@ -14,6 +14,7 @@ import {
 export const APP_NAME = "EMQPGS";
 export const ACCESS_COOKIE = "emqpgs_access_token";
 export const REFRESH_COOKIE = "emqpgs_refresh_token";
+export const CSRF_COOKIE = "emqpgs_csrf_token";
 
 export const roleLabels: Record<Role, string> = {
   COE: "Controller of Examination",
@@ -102,14 +103,21 @@ export const rbacMatrix: Record<Role, string[]> = {
     "subjects:read",
     "question-banks:read",
     "audit:read",
+    "reports:read",
+    "papers:read",
+    "exports:manage",
+    "dean-selections:read",
+    "monitoring:read",
   ],
   COORDINATOR: [
     "subjects:manage",
     "question-banks:manage",
     "assignments:manage",
     "notifications:read",
+    "reports:read",
+    "papers:read",
   ],
-  MODERATOR: ["question-banks:review", "notifications:read"],
+  MODERATOR: ["question-banks:review", "notifications:read", "reports:read", "papers:read"],
   CONTRIBUTOR: ["question-banks:contribute", "notifications:read"],
-  DEAN: ["question-banks:read", "reports:read", "notifications:read"],
+  DEAN: ["question-banks:read", "reports:read", "notifications:read", "papers:read", "dean-selections:manage"],
 };

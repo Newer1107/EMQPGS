@@ -1,62 +1,14 @@
 # EMQPGS
 
-Examination Management & Question Paper Generation System built on Next.js, Prisma, MySQL, Redis, Auth.js, and MinIO.
+Examination Management & Question Paper Generation System built with Next.js, TypeScript, Prisma, MySQL, Redis, Auth.js, BullMQ, MinIO, and Ollama.
 
-This repository currently includes:
+## Status
 
-- Phase 1 platform foundation
-- Phase 2 question contribution and moderation system
+This repository now includes:
 
-## Core Capabilities
-
-## Design System
-
-The current UI uses a project-wide **Minimalist Monochrome** design system with:
-
-- pure black and white hierarchy
-- serif-led editorial typography
-- zero border radius
-- sharp line-based structure instead of shadows
-- high-contrast inverted surfaces for emphasis
-- subtle paper/grid/noise textures for depth
-- uppercase mono labels for metadata and navigation
-- oversized display typography for key views and role dashboards
-
-Theme implementation is centralized through:
-
-- `app/globals.css`
-- `app/layout.tsx`
-- `src/components/ui/*`
-- `src/components/layout/app-shell.tsx`
-
-This keeps visual changes maintainable and avoids one-off styling drift.
-
-### Platform Foundation
-
-- Role-based administrative dashboards for `COE`, `Coordinator`, `Moderator`, `Contributor`, and `Dean`
-- User management with department and role assignment
-- Department management
-- Exam cycle management
-- Subject management
-- Question bank lifecycle management
-- Teacher assignment workflows
-- JWT-based login, logout, forgot password, reset password, and refresh token support
-- Audit logging across key system events
-- MinIO-backed file storage using presigned URLs only
-
-### Question Contribution & Moderation
-
-- 6-module question bank grid for every subject/question bank
-- 7 slots each for `2`, `5`, and `10` mark questions per module
-- Total of `126` slot coordinates per question bank
-- Slot reservation engine with collision prevention and moderator override
-- Contributor visibility restrictions
-- Moderator full visibility and full edit access
-- Coordinator read-only monitoring access
-- Question lifecycle from draft to submission, approval, rejection, and revision requests
-- Attachment upload, preview/download, replace, and delete for images, diagrams, and PDFs
-- In-app notifications plus email abstraction layer
-- Moderation dashboard and contributor workspace
+- Phase 1: platform foundation and administration
+- Phase 2: question contribution and moderation
+- Phase 3: AI analysis, paper generation, dean review, exports, security hardening, observability, and deployment assets
 
 ## Tech Stack
 
@@ -65,214 +17,187 @@ This keeps visual changes maintainable and avoids one-off styling drift.
 - Next.js App Router
 - TypeScript
 - Tailwind CSS
-- Lightweight `shadcn/ui`-style reusable UI primitives
+- Reusable `shadcn/ui`-style primitives
 
 ### Backend
 
 - Next.js route handlers
 - Prisma ORM
 - MySQL 8
-- Redis client wiring
+- Redis
+- BullMQ
 
 ### Authentication
 
-- Auth.js
-- Custom JWT access and refresh cookies
+- Auth.js credentials provider
+- JWT access and refresh cookies
+- CSRF-protected mutating APIs
 
 ### Storage
 
 - MinIO
-- S3-compatible presigned upload and download URLs
+- Presigned upload and download URLs
+- Server-side artifact uploads for generated files
 
-### Tooling
+### AI and Documents
 
-- Docker
-- Docker Compose
-- Vitest
-- ESLint
+- Ollama for AI analysis overlays
+- `pdf-lib` for PDF generation
+- `docx` for DOCX generation
+- `jszip` for ZIP bundles
+
+## Roles
+
+- `COE`
+- `COORDINATOR`
+- `MODERATOR`
+- `CONTRIBUTOR`
+- `DEAN`
+
+Detailed permissions: `docs/rbac-matrix.md`
 
 ## Architecture
 
-## Layering
+### Layering
 
-- `app/` — App Router pages and API route handlers
-- `src/lib/` — shared infrastructure, auth, storage, DB, Redis, errors, audit
-- `src/modules/` — feature modules with validation, repositories, services, and workflow logic
-- `prisma/` — schema, migrations, and seed data
-- `docs/` — RBAC and architecture notes
+- `app/` — pages and APIs
+- `src/modules/` — feature modules
+- `src/lib/` — cross-cutting infrastructure
+- `prisma/` — schema, migrations, seed
+- `workers/` — BullMQ workers
+- `docs/` — architecture, security, monitoring, deployment
 
-### Patterns Used
+### Patterns
 
-- Clean Architecture-inspired separation
-- Feature-based module organization
-- Repository pattern for data access
-- Service layer for orchestration and business logic
-- DTO validation with Zod
-- Proxy-based RBAC gatekeeping
-- Central API error handling
-- Explicit audit logging
+- feature-based modular architecture
+- repository and service layers
+- Zod validation
+- centralized API error handling
+- RBAC checks in proxy and route handlers
+- structured logging
+- append-only audit trail hashing
 
-## Roles and Permissions
+See:
 
-See `docs/rbac-matrix.md`.
+- `docs/architecture.md`
+- `docs/architecture-diagram.md`
 
-### High-level Summary
+## Core Features
 
-- `COE` — user management, departments, exam cycles, audit oversight
-- `Coordinator` — subjects, question banks, assignments, read-only contribution monitoring
-- `Moderator` — full question visibility, slot override, edit, approve/reject/revision actions
-- `Contributor` — own slot reservation, own questions only, submission and revision handling
-- `Dean` — readiness and approval visibility
+### Administration
 
-## Question Bank Structure
+- user management
+- department management
+- exam cycle management
+- subject management
+- question bank creation
+- teacher assignment workflows
 
-Each question bank is initialized with:
+### Question Contribution
 
-- `6` modules
-- `7 × 2-mark questions` per module
-- `7 × 5-mark questions` per module
-- `7 × 10-mark questions` per module
+- 6 modules per subject
+- 7 slots each for `2`, `5`, and `10` mark questions
+- total `126` slot coordinates per question bank
+- contributor-only visibility for owned questions
+- moderator full visibility and override
+- coordinator read-only visibility
 
-Total question coordinates per question bank:
+### Moderation
 
-- `6 × (7 + 7 + 7) = 126`
+- approve
+- reject
+- request revision
+- notifications and email abstraction
+- attachment management with MinIO
 
-These coordinates are materialized as `QuestionSlot` rows.
+### AI Analysis
 
-## Question Model
+- deterministic report generation for:
+  - module coverage
+  - CO coverage
+  - RBT distribution
+  - difficulty distribution
+  - duplicate detection
+  - missing areas
+  - quality findings
+  - Bloom’s balance
+- Ollama summary overlay
+- JSON and PDF report storage in MinIO
 
-Each question stores:
+### Paper Generation
 
-- Question text
-- Module number
-- Marks
-- Slot number
-- CO mapping
-- RBT level
-- Teaching index
-- Difficulty level
-- Contributor
-- Status
-- Moderator remark
+- generates `PAPER_A`, `PAPER_B`, `PAPER_C`
+- enforces:
+  - no duplicates
+  - module balance
+  - historical exclusion
+  - cross-paper uniqueness
+  - inventory warnings
+  - usage priority
+- tracks:
+  - `usageCount`
+  - `lastUsedExam`
+  - `lastUsedYear`
+  - `lastUsedSemester`
+  - `lastUsedType`
 
-### Supported CO Values
+### Dean Review
 
-- `CO1`
-- `CO2`
-- `CO3`
-- `CO4`
-- `CO5`
-- `CO6`
+- dean receives Papers A, B, and C
+- each paper exposes:
+  - coverage score
+  - difficulty score
+  - quality score
+  - duplicate risk
+  - recommendation
+- dean must select:
+  - regular exam paper
+  - supplementary paper
+  - KT paper
 
-### Supported RBT Values
+### COE Production Controls
 
-- `L1`
-- `L2`
-- `L3`
-- `L4`
-- `L5`
-- `L6`
+- view generated papers
+- view AI reports
+- view dean selections
+- export PDF
+- export DOCX
+- export ZIP
+- print via PDF download flow
 
-### Question Statuses
+### Security Hardening
 
-- `DRAFT`
-- `SUBMITTED`
-- `APPROVED`
-- `REJECTED`
-- `REVISION_REQUESTED`
+- role-based access verification
+- object-level authorization for exports
+- CSRF protection
+- rate limiting
+- secure headers
+- short-lived signed URLs
+- append-only audit logs
+- session idle timeout
+- immutable locked banks
 
-## Slot Reservation Rules
+### Observability and Ops
 
-- One contributor can own one slot coordinate at a time
-- A claimed slot is locked
-- A slot with an existing question cannot be claimed by another contributor
-- Moderators can override reservation conflicts
-- Coordinators are read-only observers
+- structured logs
+- `/api/health`
+- `/api/monitoring`
+- queue monitoring
+- MinIO monitoring
+- MySQL monitoring
+- nightly backup queue
+- retention cleanup queue
 
-## Visibility Rules
+## Storage Buckets
 
-### Contributor
+- `question-bank-attachments`
+- `signed-reports`
+- `generated-papers`
+- `exports`
+- `audit-files`
+- `system-backups`
 
-- Can see only own questions
-- Cannot view another contributor’s question content
-- Can edit own non-approved questions
-
-### Moderator
-
-- Can see all questions
-- Can edit all questions
-- Can approve, reject, or request revision
-- Can override slot reservations
-
-### Coordinator
-
-- Can see overall contribution progress
-- Read-only
-
-## Attachment Management
-
-Attachments are stored in MinIO and represented through:
-
-- `FileAsset`
-- `QuestionAttachment`
-
-Supported workflows:
-
-- Upload via presigned URL
-- Attach to question
-- Preview/download via presigned URL
-- Replace existing attachment
-- Delete attachment relation
-
-No local file storage is used.
-
-## Notifications
-
-### In-app
-
-- Stored in `Notification`
-- Used for assignments, moderation outcomes, and revision requests
-
-### Email
-
-- Abstracted behind `EmailProvider`
-- Default implementation logs to console
-- Ready to swap for SMTP, SES, or another provider
-
-## Audit Logging
-
-Tracked events include:
-
-- Login
-- Logout
-- User creation and updates
-- Subject creation
-- Assignment changes
-- Question created
-- Question edited
-- Question submitted
-- Question approved
-- Question rejected
-- Question revision requested
-
-## Database Models
-
-Current Prisma models include:
-
-- `User`
-- `Department`
-- `ExamCycle`
-- `Subject`
-- `QuestionBank`
-- `TeacherAssignment`
-- `Notification`
-- `AuditLog`
-- `FileAsset`
-- `QuestionSlot`
-- `Question`
-- `QuestionAttachment`
-
-## API Surface
+## Main APIs
 
 ### Auth
 
@@ -281,63 +206,76 @@ Current Prisma models include:
 - `POST /api/auth/refresh`
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/reset-password`
+- `GET /api/auth/csrf`
 
-### Admin
+### Reports and Papers
 
-- `GET/POST /api/users`
-- `PATCH /api/users/[id]`
-- `GET/POST /api/departments`
-- `PATCH/DELETE /api/departments/[id]`
-- `GET/POST /api/exam-cycles`
-- `PATCH /api/exam-cycles/[id]`
-- `GET/POST /api/subjects`
-- `PATCH /api/subjects/[id]`
-- `GET/POST /api/question-banks`
-- `PATCH /api/question-banks/[id]/status`
-- `GET/POST /api/assignments`
-- `GET /api/audit-logs`
-- `GET /api/dashboard`
-- `GET /api/notifications`
+- `GET/POST /api/question-banks/[id]/reports`
+- `GET/POST /api/question-banks/[id]/papers`
+- `GET/POST /api/question-banks/[id]/dean-review`
 
-### Contribution & Moderation
+### Production
 
-- `GET/POST /api/question-slots`
-- `POST /api/question-slots/[id]/override`
-- `GET/POST /api/questions`
-- `GET/PATCH /api/questions/[id]`
-- `POST /api/questions/[id]/submit`
-- `POST /api/questions/[id]/moderate`
-- `GET/POST /api/questions/[id]/attachments`
-- `POST /api/questions/[id]/attachments/presign`
-- `PATCH/DELETE /api/question-attachments/[id]`
-- `GET /api/question-attachments/[id]/download`
-- `POST /api/storage/presign`
+- `GET/POST /api/exports`
+- `GET /api/exports/[id]/download`
+- `POST /api/backups`
+- `GET /api/monitoring`
+- `GET /api/health`
 
-## UI Pages
+Full reference: `docs/api-documentation.md`
 
-### Shared Role Dashboards
+## Protected Pages
+
+### COE
 
 - `/dashboard/coe`
-- `/dashboard/coordinator`
-- `/dashboard/moderator`
-- `/dashboard/contributor`
-- `/dashboard/dean`
-
-### Admin Workflows
-
 - `/dashboard/coe/users`
 - `/dashboard/coe/departments`
 - `/dashboard/coe/exam-cycles`
 - `/dashboard/coe/audit`
+- `/dashboard/coe/production`
+- `/dashboard/coe/monitoring`
+
+### Coordinator
+
+- `/dashboard/coordinator`
 - `/dashboard/coordinator/subjects`
 - `/dashboard/coordinator/question-banks`
 - `/dashboard/coordinator/assignments`
-
-### Question Contribution & Moderation
-
-- `/dashboard/contributor/questions`
-- `/dashboard/moderator/questions`
 - `/dashboard/coordinator/questions`
+
+### Moderator
+
+- `/dashboard/moderator`
+- `/dashboard/moderator/questions`
+
+### Contributor
+
+- `/dashboard/contributor`
+- `/dashboard/contributor/questions`
+
+### Dean
+
+- `/dashboard/dean`
+- `/dashboard/dean/review`
+
+## Environment Variables
+
+Required or supported keys are documented in `.env.example`.
+
+Important additions for production:
+
+- `CSRF_SECRET`
+- `ACCESS_TOKEN_TTL_MINUTES`
+- `REFRESH_TOKEN_TTL_DAYS`
+- `SESSION_IDLE_TIMEOUT_MINUTES`
+- `SIGNED_URL_EXPIRY_SECONDS`
+- `RATE_LIMIT_WINDOW_SECONDS`
+- `RATE_LIMIT_MAX_REQUESTS`
+- `INSTITUTION_NAME`
+- `EXPORT_RETENTION_DAYS`
+- `BACKUP_RETENTION_DAYS`
+- `HEALTHCHECK_TOKEN`
 
 ## Local Development
 
@@ -346,54 +284,33 @@ Current Prisma models include:
 - Node.js 24+
 - npm 11+
 - Docker Desktop
+- optional Ollama local runtime
 
-### Environment
-
-Copy `.env.example` to `.env`.
-
-Required keys:
-
-- `DATABASE_URL`
-- `REDIS_URL`
-- `AUTH_SECRET`
-- `AUTH_URL`
-- `JWT_ACCESS_SECRET`
-- `JWT_REFRESH_SECRET`
-- `MINIO_ENDPOINT`
-- `MINIO_PORT`
-- `MINIO_USE_SSL`
-- `MINIO_ACCESS_KEY`
-- `MINIO_SECRET_KEY`
-- `MINIO_REGION`
-
-### Start Infrastructure
+### Start Infra
 
 ```bash
 docker compose up -d mysql redis minio minio-init
 ```
 
-### Generate Prisma Client
+### Install and Generate
 
 ```bash
-npm run prisma:generate
+npm ci
+npx prisma generate
 ```
 
-### Apply Migrations
+### Migrate and Seed
 
 ```bash
 npm run prisma:migrate
-```
-
-### Seed Data
-
-```bash
 npm run prisma:seed
 ```
 
-### Start App
+### Start App and Worker
 
 ```bash
 npm run dev
+npm run worker
 ```
 
 ## Seed Users
@@ -408,53 +325,48 @@ Default password:
 
 - `Password@123`
 
-## Storage Buckets
+## Docker and Deployment
 
-- `question-bank-attachments`
-- `signed-reports`
-- `generated-papers`
-- `exports`
-- `audit-files`
+- `Dockerfile`
+- `docker-compose.yml`
+- `.github/workflows/ci.yml`
+- `.github/workflows/deploy.yml`
+
+Deployment details:
+
+- `docs/deployment-guide.md`
+- `docs/production-checklist.md`
+
+## Monitoring and Security Docs
+
+- `docs/security-checklist.md`
+- `docs/monitoring-guide.md`
 
 ## Tests
 
-### Run All Tests
+Run:
 
 ```bash
 npm run test
 ```
 
-### Included Coverage
+Coverage currently includes:
 
-- Unit tests for slot generation
-- Permission tests for contribution/moderation visibility
-- Integration-style service tests for question lifecycle orchestration
+- slot generation
+- permissions
+- question lifecycle
+- report analysis
+- paper generation
+- locked-bank behavior
 
-## Validation and Quality
-
-Verified commands:
+## Verified Commands
 
 - `npm run lint`
-- `npm run test`
 - `npm run build`
+- `npx prisma generate` with `PRISMA_GENERATE_NO_ENGINE=1`
 
-## Important Implementation Notes
+## Notes
 
-- Protected dashboards are request-time rendered to avoid build-time DB coupling
-- Presigned URLs are used for upload and download flows
-- Current email delivery is abstracted and defaults to console logging
-- The current authentication stack uses Auth.js plus explicit JWT cookie flows for the custom route handlers
-- The contribution workspace pages currently load seeded role examples server-side for demonstration; authenticated API actions still execute using the logged-in user cookies
-
-## Project Documents
-
-- Architecture overview: `docs/architecture.md`
-- RBAC matrix: `docs/rbac-matrix.md`
-
-## Next Suggested Steps
-
-- Add real SMTP or transactional email provider
-- Add richer question editing UX with prefilled forms and inline updates
-- Add pagination and filtering for large question banks
-- Add E2E browser tests
-- Add report generation and HOD signing workflows in the next phase
+- workers register nightly backup and retention cleanup schedules
+- backup execution expects `mysqldump` to be available in the runtime environment
+- AI analysis expects Ollama to be reachable at `OLLAMA_BASE_URL`

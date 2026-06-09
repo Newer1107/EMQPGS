@@ -2,12 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 import { ACCESS_COOKIE } from "@/lib/constants";
 
 const publicRoutes = ["/login", "/forgot-password", "/reset-password"];
+const publicApiRoutes = ["/api/health", "/api/auth/csrf"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get(ACCESS_COOKIE)?.value;
 
   if (pathname.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  if (publicApiRoutes.includes(pathname)) {
     return NextResponse.next();
   }
 

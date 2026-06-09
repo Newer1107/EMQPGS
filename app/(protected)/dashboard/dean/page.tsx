@@ -7,17 +7,25 @@ export default async function DeanDashboardPage() {
   const data = await getDashboardSeed(Role.DEAN);
   if (!data) return null;
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">Dean</p>
-        <h1 className="page-display mt-4">OVERSIGHT</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">Dean Dashboard</h1>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Approval visibility and readiness overview</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {data.stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
       </div>
       <Card>
         <CardHeader><CardTitle>Readiness Notes</CardTitle></CardHeader>
-        <CardContent className="space-y-3">{data.pendingTasks.map((task) => <p key={task} className="border-b border-[var(--border-light)] pb-3 text-base">{task}</p>)}</CardContent>
+        <CardContent>
+          {data.pendingTasks.length === 0 ? (
+            <p className="text-sm text-[var(--muted-foreground)]">No readiness notes</p>
+          ) : (
+            <ul className="space-y-2">
+              {data.pendingTasks.map((task) => <li key={task} className="text-sm">{task}</li>)}
+            </ul>
+          )}
+        </CardContent>
       </Card>
     </div>
   );

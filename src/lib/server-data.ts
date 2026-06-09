@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { DashboardService } from "@/modules/dashboard/service";
+import { ProductionService } from "@/modules/production/service";
 
 export async function getDashboardSeed(role: Role) {
   const user = await prisma.user.findFirst({ where: { role } });
@@ -56,4 +57,16 @@ export async function getQuestionContributionWorkspace(role: Role) {
   }
 
   return { actor, questionBank };
+}
+
+export async function getDeanReviewData() {
+  return new ProductionService().listDeanReviewQueue();
+}
+
+export async function getCoeProductionData() {
+  return new ProductionService().listCoeOverview();
+}
+
+export async function getMonitoringData() {
+  return new ProductionService().getObservabilityOverview();
 }
