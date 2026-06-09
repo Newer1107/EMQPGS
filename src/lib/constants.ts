@@ -1,4 +1,15 @@
-import { AssignmentRole, ExamCycleStatus, ExamType, QuestionBankStatus, Role, UserStatus } from "@prisma/client";
+import {
+  AssignmentRole,
+  CourseOutcome,
+  DifficultyLevel,
+  ExamCycleStatus,
+  ExamType,
+  QuestionBankStatus,
+  QuestionStatus,
+  RbtLevel,
+  Role,
+  UserStatus,
+} from "@prisma/client";
 
 export const APP_NAME = "EMQPGS";
 export const ACCESS_COOKIE = "emqpgs_access_token";
@@ -47,6 +58,38 @@ export const assignmentRoleLabels: Record<AssignmentRole, string> = {
 export const userStatusLabels: Record<UserStatus, string> = {
   ACTIVE: "Active",
   DISABLED: "Disabled",
+};
+
+export const courseOutcomeLabels: Record<CourseOutcome, string> = {
+  CO1: "CO1",
+  CO2: "CO2",
+  CO3: "CO3",
+  CO4: "CO4",
+  CO5: "CO5",
+  CO6: "CO6",
+};
+
+export const rbtLevelLabels: Record<RbtLevel, string> = {
+  L1: "L1",
+  L2: "L2",
+  L3: "L3",
+  L4: "L4",
+  L5: "L5",
+  L6: "L6",
+};
+
+export const difficultyLabels: Record<DifficultyLevel, string> = {
+  EASY: "Easy",
+  MEDIUM: "Medium",
+  HARD: "Hard",
+};
+
+export const questionStatusLabels: Record<QuestionStatus, string> = {
+  DRAFT: "Draft",
+  SUBMITTED: "Submitted",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+  REVISION_REQUESTED: "Revision Requested",
 };
 
 export const rbacMatrix: Record<Role, string[]> = {

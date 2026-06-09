@@ -29,8 +29,11 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
   }
 
   return (
-    <form className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm" action={async (formData) => onSubmit(formData)}>
-      <h3 className="text-lg font-semibold text-slate-950">{title}</h3>
+    <form className="editorial-surface space-y-6 border-2 border-[var(--foreground)] p-8" action={async (formData) => onSubmit(formData)}>
+      <div className="section-frame">
+        <p className="page-kicker">Create</p>
+        <h3 className="mt-3 text-4xl">{title}</h3>
+      </div>
       {fields.map((field) => (
         <div key={field.name} className="space-y-2">
           <Label htmlFor={field.name}>{field.label}</Label>
@@ -50,8 +53,8 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
           )}
         </div>
       ))}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-500">{status}</p>
+      <div className="editorial-rule flex items-center justify-between gap-3 pt-6">
+        <p className="text-sm italic text-[var(--muted-foreground)]">{status}</p>
         <Button type="submit">Save</Button>
       </div>
     </form>

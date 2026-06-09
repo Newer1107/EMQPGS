@@ -8,11 +8,12 @@ export default async function CoordinatorDashboardPage() {
   const data = await getDashboardSeed(Role.COORDINATOR);
   if (!data) return null;
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      <div className="section-frame flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-semibold">Coordinator Dashboard</h1>
-          <p className="mt-2 text-slate-600">Manage subjects, question banks, and teacher assignments.</p>
+          <p className="page-kicker">Coordinator</p>
+          <h1 className="page-display mt-4">COORDINATE</h1>
+          <p className="page-lead mt-6">Manage subjects, question banks, teacher assignments, and contribution readiness without visual noise.</p>
         </div>
         <Badge>Coordinator</Badge>
       </div>
@@ -21,7 +22,10 @@ export default async function CoordinatorDashboardPage() {
       </div>
       <Card>
         <CardHeader><CardTitle>Pending Tasks</CardTitle></CardHeader>
-        <CardContent className="space-y-3">{data.pendingTasks.map((task) => <p key={task} className="rounded-xl bg-slate-50 p-3 text-sm">{task}</p>)}</CardContent>
+        <CardContent className="space-y-3">
+          {data.pendingTasks.map((task) => <p key={task} className="border-b border-[var(--border-light)] pb-3 text-base">{task}</p>)}
+          <a href="/dashboard/coordinator/questions" className="inline-flex border-b border-[var(--foreground)] pb-1 font-mono text-[11px] uppercase tracking-[0.2em]">Open contribution monitor</a>
+        </CardContent>
       </Card>
     </div>
   );

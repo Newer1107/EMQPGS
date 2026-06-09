@@ -59,6 +59,38 @@ enum NotificationType {
   ACTION_REQUIRED
 }
 
+enum CourseOutcome {
+  CO1
+  CO2
+  CO3
+  CO4
+  CO5
+  CO6
+}
+
+enum RbtLevel {
+  L1
+  L2
+  L3
+  L4
+  L5
+  L6
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+}
+
 model Department {
   id           String    @id @default(cuid())
   name         String
@@ -91,6 +123,9 @@ model User {
   notifications    Notification[]
   auditLogs        AuditLog[]
   questionBanks    QuestionBank[]      @relation("questionBankCreator")
+  questionSlots    QuestionSlot[]      @relation("slotReservedBy")
+  contributedQuestions Question[]      @relation("questionContributor")
+  uploadedAttachments QuestionAttachment[] @relation("attachmentUploader")
 }
 
 model ExamCycle {
@@ -136,6 +171,8 @@ model QuestionBank {
   examCycle    ExamCycle           @relation(fields: [examCycleId], references: [id])
   createdBy    User                @relation("questionBankCreator", fields: [createdById], references: [id])
   assignments  TeacherAssignment[]
+  questionSlots QuestionSlot[]
+  questions    Question[]
 
   @@unique([subjectId, examCycleId])
 }
@@ -193,4 +230,65 @@ model FileAsset {
   linkedEntityId   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  attachments      QuestionAttachment[]
+}
+
+model QuestionSlot {
+  id              String       @id @default(cuid())
+  questionBankId  String
+  moduleNumber    Int
+  marks           Int
+  slotNumber      Int
+  reservedById    String?
+  reservedAt      DateTime?
+  isLocked        Boolean      @default(false)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
+  reservedBy      User?        @relation("slotReservedBy", fields: [reservedById], references: [id])
+  question        Question?
+
+  @@unique([questionBankId, moduleNumber, marks, slotNumber])
+}
+
+model Question {
+  id              String           @id @default(cuid())
+  questionBankId  String
+  slotId          String           @unique
+  questionText    String
+  moduleNumber    Int
+  marks           Int
+  slotNumber      Int
+  coMapping       CourseOutcome
+  rbtLevel        RbtLevel
+  teachingIndex   String?
+  difficultyLevel DifficultyLevel?
+  contributorId   String
+  status          QuestionStatus   @default(DRAFT)
+  moderatorRemark String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  questionBank    QuestionBank     @relation(fields: [questionBankId], references: [id])
+  slot            QuestionSlot     @relation(fields: [slotId], references: [id])
+  contributor     User             @relation("questionContributor", fields: [contributorId], references: [id])
+  attachments     QuestionAttachment[]
+
+  @@index([questionBankId, moduleNumber, marks, slotNumber])
+  @@index([contributorId, status])
+}
+
+model QuestionAttachment {
+  id           String    @id @default(cuid())
+  questionId   String
+  fileAssetId  String
+  uploadedById String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  question     Question   @relation(fields: [questionId], references: [id])
+  fileAsset    FileAsset  @relation(fields: [fileAssetId], references: [id])
+  uploadedBy   User       @relation("attachmentUploader", fields: [uploadedById], references: [id])
+
+  @@unique([questionId, fileAssetId])
 }

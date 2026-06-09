@@ -1,0 +1,12 @@
+process.env.DATABASE_URL ??= "mysql://emqpgs:emqpgs@localhost:3306/emqpgs";
+process.env.REDIS_URL ??= "redis://localhost:6379";
+process.env.AUTH_SECRET ??= "12345678901234567890123456789012";
+process.env.AUTH_URL ??= "http://localhost:3000";
+process.env.JWT_ACCESS_SECRET ??= "12345678901234567890123456789012";
+process.env.JWT_REFRESH_SECRET ??= "abcdefghijklmnopqrstuvwxyz123456";
+process.env.MINIO_ENDPOINT ??= "localhost";
+process.env.MINIO_PORT ??= "9000";
+process.env.MINIO_USE_SSL ??= "false";
+process.env.MINIO_ACCESS_KEY ??= "minioadmin";
+process.env.MINIO_SECRET_KEY ??= "minioadmin";
+process.env.MINIO_REGION ??= "us-east-1";

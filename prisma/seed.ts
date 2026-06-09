@@ -1,5 +1,19 @@
-import { PrismaClient, AssignmentRole, ExamCycleStatus, ExamType, NotificationType, QuestionBankStatus, Role, UserStatus } from "@prisma/client";
+import {
+  AssignmentRole,
+  CourseOutcome,
+  DifficultyLevel,
+  ExamCycleStatus,
+  ExamType,
+  NotificationType,
+  QuestionBankStatus,
+  QuestionStatus,
+  RbtLevel,
+  Role,
+  UserStatus,
+  PrismaClient,
+} from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { buildQuestionSlotTemplate } from "../src/modules/questions/slot-template";
 
 const prisma = new PrismaClient();
 
@@ -132,6 +146,56 @@ async function main() {
       actionUrl: "/dashboard/contributor",
     },
   });
+
+  await prisma.questionSlot.createMany({
+    data: buildQuestionSlotTemplate().map((slot) => ({
+      questionBankId: questionBank.id,
+      ...slot,
+    })),
+    skipDuplicates: true,
+  });
+
+  const reservedSlot = await prisma.questionSlot.findFirst({
+    where: {
+      questionBankId: questionBank.id,
+      moduleNumber: 1,
+      marks: 5,
+      slotNumber: 1,
+    },
+  });
+
+  if (reservedSlot) {
+    await prisma.questionSlot.update({
+      where: { id: reservedSlot.id },
+      data: {
+        reservedById: users[3].id,
+        reservedAt: new Date(),
+        isLocked: true,
+      },
+    });
+
+    const question = await prisma.question.upsert({
+      where: { slotId: reservedSlot.id },
+      update: {},
+      create: {
+        questionBankId: questionBank.id,
+        slotId: reservedSlot.id,
+        questionText: "Analyze the time complexity of Dijkstra's algorithm with a binary heap.",
+        moduleNumber: 1,
+        marks: 5,
+        slotNumber: 1,
+        coMapping: CourseOutcome.CO2,
+        rbtLevel: RbtLevel.L4,
+        teachingIndex: "TI-ALG-01",
+        difficultyLevel: DifficultyLevel.MEDIUM,
+        contributorId: users[3].id,
+        status: QuestionStatus.SUBMITTED,
+        submittedAt: new Date(),
+      },
+    });
+
+    void question;
+  }
 }
 
 main()

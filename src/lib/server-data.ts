@@ -20,3 +20,40 @@ export async function getAdminData() {
   ]);
   return { departments, users, examCycles, subjects, questionBanks, assignments, auditLogs };
 }
+
+export async function getQuestionContributionWorkspace(role: Role) {
+  const actor = await prisma.user.findFirst({ where: { role } });
+  const questionBank = await prisma.questionBank.findFirst({
+    orderBy: { createdAt: "asc" },
+    include: {
+      subject: true,
+      examCycle: true,
+      assignments: { include: { teacher: true } },
+      questionSlots: {
+        orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
+        include: {
+          reservedBy: true,
+          question: {
+            include: {
+              contributor: true,
+              attachments: { include: { fileAsset: true } },
+            },
+          },
+        },
+      },
+      questions: {
+        orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
+        include: {
+          contributor: true,
+          attachments: { include: { fileAsset: true } },
+        },
+      },
+    },
+  });
+
+  if (!actor || !questionBank) {
+    return null;
+  }
+
+  return { actor, questionBank };
+}

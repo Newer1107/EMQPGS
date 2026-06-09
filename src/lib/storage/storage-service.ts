@@ -44,4 +44,16 @@ export class StorageService {
 
     return { uploadUrl: url, asset };
   }
+
+  async createDownloadLink(fileAssetId: string) {
+    const asset = await prisma.fileAsset.findUnique({ where: { id: fileAssetId } });
+    if (!asset) {
+      throw new AppError("File asset not found", 404);
+    }
+
+    return {
+      downloadUrl: await this.provider.createPresignedGetUrl(asset.bucket, asset.objectKey),
+      asset,
+    };
+  }
 }

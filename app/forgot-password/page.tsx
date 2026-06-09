@@ -10,14 +10,15 @@ export default function ForgotPasswordPage() {
   const [message, setMessage] = useState("");
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md">
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="w-full max-w-2xl">
         <CardHeader>
-          <CardTitle>Forgot password</CardTitle>
+          <p className="page-kicker">Recovery</p>
+          <CardTitle className="mt-2 text-5xl">Forgot Password</CardTitle>
         </CardHeader>
         <CardContent>
           <form
-            className="space-y-4"
+            className="space-y-6"
             action={async (formData) => {
               const response = await fetch("/api/auth/forgot-password", {
                 method: "POST",
@@ -32,8 +33,10 @@ export default function ForgotPasswordPage() {
               <Label htmlFor="email">Email</Label>
               <Input id="email" name="email" type="email" />
             </div>
-            <Button type="submit">Generate reset link</Button>
-            <p className="text-sm text-slate-600">{message}</p>
+            <div className="editorial-rule flex items-center justify-between pt-6">
+              <Button type="submit">Generate Reset Link</Button>
+              <p className="max-w-sm text-right text-sm italic text-[var(--muted-foreground)]">{message}</p>
+            </div>
           </form>
         </CardContent>
       </Card>
