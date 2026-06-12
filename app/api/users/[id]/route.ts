@@ -21,3 +21,18 @@ export const PATCH = withApiHandler(
     },
   },
 );
+
+export const DELETE = withApiHandler(
+  async (request) => {
+    const id = request.nextUrl.pathname.split("/").pop()!;
+    return service.disable(id);
+  },
+  {
+    roles: [Role.COE],
+    audit: {
+      action: "USER_DISABLED",
+      entityType: "USER",
+      getEntityId: (result) => (result as { id?: string }).id,
+    },
+  },
+);

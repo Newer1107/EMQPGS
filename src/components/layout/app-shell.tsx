@@ -28,12 +28,13 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coordinator/questions", label: "Questions", roles: ["COORDINATOR"] },
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/questions", label: "Moderation Queue", roles: ["MODERATOR"] },
+  { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", roles: ["CONTRIBUTOR"] },
-  { href: "/dashboard/contributor/questions", label: "My Questions", roles: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/questions", label: "My Submissions", roles: ["CONTRIBUTOR"] },
   // Dean
   { href: "/dashboard/dean", label: "Dean Dashboard", roles: ["DEAN"] },
+  { href: "/dashboard/dean/review", label: "Reports", roles: ["DEAN"] },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -44,7 +45,17 @@ const roleLabels: Record<string, string> = {
   DEAN: "Dean",
 };
 
-export function AppShell({ children, role }: { children: React.ReactNode; role: string }) {
+export function AppShell({
+  children,
+  role,
+  userName,
+  userEmail,
+}: {
+  children: React.ReactNode;
+  role: string;
+  userName: string;
+  userEmail: string;
+}) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -55,6 +66,13 @@ export function AppShell({ children, role }: { children: React.ReactNode; role: 
     router.push("/login");
     router.refresh();
   }
+
+  const initials = userName
+    .split(" ")
+    .map((part) => part[0] ?? "")
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <div className="flex min-h-screen">
@@ -78,8 +96,8 @@ export function AppShell({ children, role }: { children: React.ReactNode; role: 
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-[var(--foreground)] text-[var(--background)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]",
+                    ? "bg-black text-white hover:bg-black hover:text-white"
+                    : "bg-transparent text-gray-800 hover:bg-gray-100 hover:text-gray-900",
                 )}
               >
                 {item.label}
@@ -88,7 +106,16 @@ export function AppShell({ children, role }: { children: React.ReactNode; role: 
           })}
         </nav>
         <div className="border-t border-[var(--border)] p-4">
-          <Button variant="ghost" className="w-full justify-start text-sm text-[var(--muted-foreground)]" onClick={handleLogout}>
+          <div className="mb-3 flex items-center gap-3 rounded-xl bg-[var(--muted)] px-3 py-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-[var(--foreground)]">{userName}</p>
+              <p className="truncate text-xs text-[var(--muted-foreground)]">{userEmail}</p>
+            </div>
+          </div>
+          <Button variant="ghost" className="w-full justify-start text-sm text-[var(--foreground)] hover:bg-gray-100" onClick={handleLogout}>
             Sign out
           </Button>
         </div>

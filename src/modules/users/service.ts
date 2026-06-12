@@ -43,7 +43,7 @@ export class UserService {
   }
 
   async verifyCredentials(email: string, password: string) {
-    const user = await this.repository.findByEmail(email);
+    const user = await this.repository.findByEmailWithPassword(email);
     if (!user) throw new AppError("Invalid credentials", 401);
     if (user.status === UserStatus.DISABLED) throw new AppError("Account disabled", 403);
     const isValid = await bcrypt.compare(password, user.passwordHash);

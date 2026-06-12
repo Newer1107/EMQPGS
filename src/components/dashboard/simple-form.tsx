@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,14 +16,20 @@ type Field =
   | { name: string; label: string; type: "textarea" };
 
 export function SimpleForm({ fields, endpoint, title, transform }: { fields: Field[]; endpoint: string; title: string; transform?: (payload: Record<string, FormDataEntryValue>) => unknown }) {
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({});
 
-  async function onSubmit(formData: FormData) {
+  useEffect(() => {
+    setValues(
+      Object.fromEntries(
+        fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
+      ),
+    );
+  }, [fields]);
+
+  async function onSubmit() {
     setLoading(true);
-    setStatus(null);
-
-    const payload = Object.fromEntries(formData.entries());
+    const payload = Object.fromEntries(Object.entries(values));
     const body = transform ? transform(payload) : payload;
 
     const response = await apiFetch(endpoint, {
@@ -35,10 +42,14 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
     setLoading(false);
 
     if (result.success) {
-      setStatus({ type: "success", message: `${title} saved successfully` });
-      document.querySelector("form")?.closest<HTMLFormElement>("form")?.reset();
+      toast.success(`${title} saved successfully`);
+      setValues(
+        Object.fromEntries(
+          fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
+        ),
+      );
     } else {
-      setStatus({ type: "error", message: result.error?.message ?? "Failed to save" });
+      toast.error(result.error?.message ?? "Failed to save");
     }
   }
 
@@ -48,12 +59,23 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
         <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
-        <form className="space-y-4" action={async (formData) => onSubmit(formData)}>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void onSubmit();
+          }}
+        >
           {fields.map((field) => (
             <div key={field.name} className="space-y-2">
               <Label htmlFor={field.name}>{field.label}</Label>
               {field.type === "select" ? (
-                <Select name={field.name} id={field.name}>
+                <Select
+                  name={field.name}
+                  id={field.name}
+                  value={values[field.name] ?? ""}
+                  onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                >
                   <option value="">Select</option>
                   {field.options.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -62,21 +84,23 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
                   ))}
                 </Select>
               ) : field.type === "textarea" ? (
-                <Textarea name={field.name} id={field.name} />
+                <Textarea
+                  name={field.name}
+                  id={field.name}
+                  value={values[field.name] ?? ""}
+                  onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                />
               ) : (
-                <Input type={field.type} name={field.name} id={field.name} />
+                <Input
+                  type={field.type}
+                  name={field.name}
+                  id={field.name}
+                  value={values[field.name] ?? ""}
+                  onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
+                />
               )}
             </div>
           ))}
-          {status && (
-            <div className={`rounded-lg border px-3 py-2 text-sm ${
-              status.type === "success"
-                ? "border-green-200 bg-green-50 text-green-700"
-                : "border-red-200 bg-red-50 text-red-700"
-            }`}>
-              {status.message}
-            </div>
-          )}
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Saving..." : "Save"}
           </Button>
