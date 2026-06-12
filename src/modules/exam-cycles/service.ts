@@ -18,7 +18,13 @@ export class ExamCycleService {
   async update(id: string, data: Partial<ExamCycleInput>) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Exam cycle not found");
-    await this.assertSingleActiveCycle({ ...entity, ...data }, id);
+    await this.assertSingleActiveCycle(
+      {
+        status: data.status ?? entity.status,
+        departmentId: data.departmentId ?? entity.departmentId,
+      },
+      id,
+    );
     return this.repository.update(id, data);
   }
 

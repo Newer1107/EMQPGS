@@ -177,16 +177,22 @@ model User {
 }
 
 model ExamCycle {
-  id           String            @id @default(cuid())
-  academicYear String
-  semester     Int
-  examType     ExamType
-  status       ExamCycleStatus   @default(DRAFT)
-  departmentId String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-  department   Department?       @relation(fields: [departmentId], references: [id])
-  questionBanks QuestionBank[]
+  id                    String            @id @default(cuid())
+  academicYear          String
+  semester              Int
+  examType              ExamType
+  status                ExamCycleStatus   @default(DRAFT)
+  departmentId          String?
+  timetableDocumentRef  String?
+  timetableIssueDate    DateTime?
+  timetableTitle        String?
+  timetableBranch       String?
+  timetableRows         Json?
+  timetableSignature    String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  department            Department?       @relation(fields: [departmentId], references: [id])
+  questionBanks         QuestionBank[]
 
   @@unique([academicYear, semester, examType])
 }
