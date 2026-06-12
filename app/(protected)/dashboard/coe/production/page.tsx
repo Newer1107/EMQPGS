@@ -1,4 +1,5 @@
 import { ExportConsole } from "@/components/production/export-console";
+import { ExaminationTimetableBuilder } from "@/components/production/examination-timetable-builder";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -71,6 +72,8 @@ export default async function CoeProductionPage() {
       </Card>
 
       <ExportConsole banks={banks} />
+
+      <ExaminationTimetableBuilder />
     </div>
   );
 }
