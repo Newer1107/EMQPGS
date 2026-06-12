@@ -9,9 +9,9 @@
 - Run `npm run prisma:deploy`
 - Confirm `.env` contains all required production secrets
 - Confirm MinIO buckets exist, including `system-backups`
-- Confirm worker process is running
-- Confirm AI analysis worker can reach Ollama
-- Confirm backup worker can execute `mysqldump`
+- Confirm Ollama is reachable from the application runtime
+- Confirm backup execution can invoke `mysqldump`
+- Confirm monitoring endpoints reflect direct workflow execution
 
 ## Functional Validation
 

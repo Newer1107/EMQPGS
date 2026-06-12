@@ -1,35 +1,51 @@
 import { BaseRepository } from "@/modules/shared/base-repository";
 import { UserInput } from "@/modules/users/validation";
 
-const publicUserInclude = {
+const publicUserSelect = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  status: true,
+  lastLoginAt: true,
+  departmentId: true,
+  resetTokenExpiry: true,
+  createdAt: true,
+  updatedAt: true,
   department: true,
+} as const;
+
+const authUserSelect = {
+  ...publicUserSelect,
+  passwordHash: true,
+  resetTokenHash: true,
 } as const;
 
 export class UserRepository extends BaseRepository {
   list() {
     return this.prisma.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: publicUserInclude,
+      select: publicUserSelect,
     });
   }
 
   findById(id: string) {
-    return this.prisma.user.findUnique({ where: { id }, include: publicUserInclude });
+    return this.prisma.user.findUnique({ where: { id }, select: publicUserSelect });
   }
 
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, include: publicUserInclude });
+    return this.prisma.user.findUnique({ where: { email }, select: publicUserSelect });
   }
 
   findByEmailWithPassword(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, include: publicUserInclude });
+    return this.prisma.user.findUnique({ where: { email }, select: authUserSelect });
   }
 
   create(data: Omit<UserInput, "password"> & { passwordHash: string }) {
-    return this.prisma.user.create({ data, include: publicUserInclude });
+    return this.prisma.user.create({ data, select: publicUserSelect });
   }
 
   update(id: string, data: Partial<Omit<UserInput, "password"> & { passwordHash?: string }>) {
-    return this.prisma.user.update({ where: { id }, data, include: publicUserInclude });
+    return this.prisma.user.update({ where: { id }, data, select: publicUserSelect });
   }
 }

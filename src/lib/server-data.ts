@@ -1,11 +1,12 @@
 import { Role } from "@prisma/client";
+import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
 import { DashboardService } from "@/modules/dashboard/service";
 import { ProductionService } from "@/modules/production/service";
 
 export async function getDashboardSeed(role: Role) {
-  const user = await prisma.user.findFirst({ where: { role } });
-  if (!user) return null;
+  const user = await getCurrentUserFromCookies();
+  if (user.role !== role) return null;
   return new DashboardService().getRoleDashboard(role, user.id);
 }
 
@@ -23,7 +24,10 @@ export async function getAdminData() {
 }
 
 export async function getQuestionContributionWorkspace(role: Role) {
-  const actor = await prisma.user.findFirst({ where: { role } });
+  const actor = await getCurrentUserFromCookies();
+  if (actor.role !== role) {
+    return null;
+  }
   const questionBank = await prisma.questionBank.findFirst({
     orderBy: { createdAt: "asc" },
     include: {
@@ -52,7 +56,7 @@ export async function getQuestionContributionWorkspace(role: Role) {
     },
   });
 
-  if (!actor || !questionBank) {
+  if (!questionBank) {
     return null;
   }
 

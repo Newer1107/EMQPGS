@@ -29,11 +29,11 @@ export function proxy(request: NextRequest) {
 
   const role = readRoleFromToken(token);
 
-  if (pathname.startsWith("/dashboard/coe") && role !== "COE") return NextResponse.redirect(new URL("/dashboard", request.url));
-  if (pathname.startsWith("/dashboard/coordinator") && role !== "COORDINATOR") return NextResponse.redirect(new URL("/dashboard", request.url));
-  if (pathname.startsWith("/dashboard/moderator") && role !== "MODERATOR") return NextResponse.redirect(new URL("/dashboard", request.url));
-  if (pathname.startsWith("/dashboard/contributor") && role !== "CONTRIBUTOR") return NextResponse.redirect(new URL("/dashboard", request.url));
-  if (pathname.startsWith("/dashboard/dean") && role !== "DEAN") return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (pathname.startsWith("/dashboard/coe") && role !== "COE") return redirectAccessDenied(request, "COE");
+  if (pathname.startsWith("/dashboard/coordinator") && role !== "COORDINATOR") return redirectAccessDenied(request, "COORDINATOR");
+  if (pathname.startsWith("/dashboard/moderator") && role !== "MODERATOR") return redirectAccessDenied(request, "MODERATOR");
+  if (pathname.startsWith("/dashboard/contributor") && role !== "CONTRIBUTOR") return redirectAccessDenied(request, "CONTRIBUTOR");
+  if (pathname.startsWith("/dashboard/dean") && role !== "DEAN") return redirectAccessDenied(request, "DEAN");
 
   return NextResponse.next();
 }
@@ -52,4 +52,10 @@ function readRoleFromToken(token?: string) {
   } catch {
     return undefined;
   }
+}
+
+function redirectAccessDenied(request: NextRequest, deniedRole: string) {
+  const url = new URL("/dashboard", request.url);
+  url.searchParams.set("denied", deniedRole);
+  return NextResponse.redirect(url);
 }

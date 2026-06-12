@@ -17,7 +17,7 @@ The COE landing dashboard provides a bird's-eye summary of the entire platform s
 - Open exam cycles and their current phase
 - Question bank fill rates (approved vs. pending vs. empty slots)
 - Recent audit events
-- System health indicators (queue status, storage usage, service availability)
+- System health indicators (workflow status, storage usage, service availability)
 - Pending dean reviews awaiting selection
 - Export jobs in progress or recently completed
 
@@ -170,10 +170,10 @@ The COE has exclusive access to the system monitoring dashboard.
 
 #### What the COE can see:
 
-- **Service health:** MySQL, Redis, MinIO, Ollama reachability and latency
-- **Queue status:** BullMQ job queue depths, active jobs, failed jobs, retry counts for all queues (AI analysis, paper generation, export, backup, retention cleanup)
+- **Service health:** MySQL, MinIO, Ollama reachability and latency
+- **Workflow status:** in-progress AI analysis, paper generation, export, backup, and cleanup activities
 - **Storage usage:** per-bucket object count and storage size across all MinIO buckets
-- **Background workers:** worker process health and last heartbeat
+- **Application execution health:** recent workflow completion and failure visibility through monitoring and audit data
 - **Nightly backup status:** last backup timestamp, size, success/failure
 - **Retention cleanup:** last run timestamp and objects purged
 - **Rate limiting:** current rate limit counters and window resets

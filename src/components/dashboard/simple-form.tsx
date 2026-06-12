@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,15 +17,10 @@ type Field =
 
 export function SimpleForm({ fields, endpoint, title, transform }: { fields: Field[]; endpoint: string; title: string; transform?: (payload: Record<string, FormDataEntryValue>) => unknown }) {
   const [loading, setLoading] = useState(false);
-  const [values, setValues] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    setValues(
-      Object.fromEntries(
-        fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
-      ),
-    );
-  }, [fields]);
+  const initialValues = Object.fromEntries(
+    fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
+  );
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
 
   async function onSubmit() {
     setLoading(true);
@@ -43,11 +38,7 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
 
     if (result.success) {
       toast.success(`${title} saved successfully`);
-      setValues(
-        Object.fromEntries(
-          fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
-        ),
-      );
+      setValues(initialValues);
     } else {
       toast.error(result.error?.message ?? "Failed to save");
     }

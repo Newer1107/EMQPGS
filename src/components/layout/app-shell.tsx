@@ -29,12 +29,17 @@ const navItems: NavItem[] = [
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
   { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
+  { href: "/dashboard/moderator/approved", label: "Approved", roles: ["MODERATOR"] },
+  { href: "/dashboard/moderator/rejected", label: "Rejected", roles: ["MODERATOR"] },
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", roles: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/my-subjects", label: "My Subjects", roles: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/submit-question", label: "Submit Question", roles: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/questions", label: "My Submissions", roles: ["CONTRIBUTOR"] },
   // Dean
   { href: "/dashboard/dean", label: "Dean Dashboard", roles: ["DEAN"] },
-  { href: "/dashboard/dean/review", label: "Reports", roles: ["DEAN"] },
+  { href: "/dashboard/dean/readiness-overview", label: "Readiness Overview", roles: ["DEAN"] },
+  { href: "/dashboard/dean/reports", label: "Reports", roles: ["DEAN"] },
 ];
 
 const roleLabels: Record<string, string> = {
