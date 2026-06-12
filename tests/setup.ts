@@ -1,5 +1,4 @@
 process.env.DATABASE_URL ??= "mysql://emqpgs:emqpgs@localhost:3306/emqpgs";
-process.env.REDIS_URL ??= "redis://localhost:6379";
 process.env.AUTH_SECRET ??= "12345678901234567890123456789012";
 process.env.AUTH_URL ??= "http://localhost:3000";
 process.env.JWT_ACCESS_SECRET ??= "12345678901234567890123456789012";

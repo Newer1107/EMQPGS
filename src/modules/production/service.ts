@@ -7,19 +7,13 @@ import {
   NotificationType,
   PaperGenerationStatus,
   Role,
+  AiReportStatus,
   type Prisma,
   type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
-import {
-  getAiAnalysisQueue,
-  getExportGenerationQueue,
-  getPaperGenerationQueue,
-  getRetentionCleanupQueue,
-  getSystemBackupQueue,
-} from "@/lib/queue";
 import { logAudit } from "@/lib/audit";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
@@ -190,19 +184,6 @@ export class ProductionService {
     });
   }
 
-  async queueExport(input: ExportInput, actor: Actor) {
-    if (actor.role !== Role.COE) throw new ForbiddenError("Only COE can create exports");
-    const job = await getExportGenerationQueue().add("generate-export", { input, actor });
-    await logAudit({
-      actorId: actor.id,
-      action: "EXPORT_JOB_QUEUED",
-      entityType: "EXPORT_ARTIFACT",
-      entityId: input.questionBankId,
-      metadata: { format: input.format },
-    });
-    return { queued: true, jobId: job.id };
-  }
-
   async createExport(input: ExportInput, actor: Actor) {
     if (actor.role !== Role.COE) throw new ForbiddenError("Only COE can create exports");
     const questionBank = await prisma.questionBank.findUnique({
@@ -316,17 +297,12 @@ export class ProductionService {
     const dbHealthy = await prisma.$queryRaw`SELECT 1`;
     const dbLatencyMs = Date.now() - startedAt;
 
-    const [redisInfo, minioOk, aiQueueCounts, paperQueueCounts, exportQueueCounts, cleanupQueueCounts, backupQueueCounts] = await Promise.all([
-      getRedisHealth(),
+    const [minioOk, pendingAiReports, pendingPapers, pendingExports, pendingBackups, userCount, bankCount, reportCount, exportCount, backupCount, bucketCounts] = await Promise.all([
       this.storageService.checkBucketHealth("exports").then(() => true).catch(() => false),
-      getAiAnalysisQueue().getJobCounts(),
-      getPaperGenerationQueue().getJobCounts(),
-      getExportGenerationQueue().getJobCounts(),
-      getRetentionCleanupQueue().getJobCounts(),
-      getSystemBackupQueue().getJobCounts(),
-    ]);
-
-    const [userCount, bankCount, reportCount, exportCount, backupCount, bucketCounts] = await Promise.all([
+      prisma.aiReport.count({ where: { status: { in: [AiReportStatus.PENDING, AiReportStatus.PROCESSING] } } }),
+      prisma.generatedPaper.count({ where: { status: { in: [PaperGenerationStatus.PENDING, PaperGenerationStatus.PROCESSING] } } }),
+      prisma.exportArtifact.count({ where: { status: ExportArtifactStatus.PENDING } }),
+      prisma.systemBackup.count({ where: { status: BackupStatus.PENDING } }),
       prisma.user.count(),
       prisma.questionBank.count(),
       prisma.aiReport.count(),
@@ -338,7 +314,6 @@ export class ProductionService {
     return {
       health: {
         database: { ok: !!dbHealthy, latencyMs: dbLatencyMs },
-        redis: redisInfo,
         minio: { ok: minioOk },
       },
       metrics: {
@@ -349,19 +324,13 @@ export class ProductionService {
         backups: backupCount,
         buckets: bucketCounts.map((bucket) => ({ bucket: bucket.bucket, count: bucket._count._all })),
       },
-      queues: {
-        aiAnalysis: aiQueueCounts,
-        paperGeneration: paperQueueCounts,
-        exportGeneration: exportQueueCounts,
-        retentionCleanup: cleanupQueueCounts,
-        systemBackup: backupQueueCounts,
+      workflows: {
+        aiReportsInProgress: pendingAiReports,
+        paperGenerationsInProgress: pendingPapers,
+        exportsInProgress: pendingExports,
+        backupsInProgress: pendingBackups,
       },
     };
-  }
-
-  async queueSystemBackup(actor?: Actor) {
-    const job = await getSystemBackupQueue().add("run-system-backup", { actor });
-    return { queued: true, jobId: job.id };
   }
 
   async runSystemBackup(actor?: Actor) {
@@ -519,17 +488,6 @@ function buildSelectedPapers(questionBank: Prisma.QuestionBankGetPayload<{ inclu
       rbtLevel: item.question.rbtLevel,
     })),
   }));
-}
-
-async function getRedisHealth() {
-  try {
-    const { redis } = await import("@/lib/redis");
-    await redis.connect().catch(() => undefined);
-    const pong = await redis.ping();
-    return { ok: pong === "PONG" };
-  } catch {
-    return { ok: false };
-  }
 }
 
 function addDays(days: number) {

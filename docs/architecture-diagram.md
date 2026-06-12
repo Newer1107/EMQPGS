@@ -7,12 +7,9 @@ flowchart LR
   API --> Services[Feature Services]
   Services --> Prisma[Prisma ORM]
   Prisma --> MySQL[(MySQL 8)]
-  Services --> Redis[(Redis)]
   Services --> MinIO[(MinIO)]
   Services --> Ollama[Ollama]
   API --> Audit[Append-only Audit Log]
-  Workers[BullMQ Workers] --> Services
-  Workers --> Redis
   Services --> Exports[PDF / DOCX / ZIP]
   Exports --> MinIO
   Services --> Reports[AI Reports]

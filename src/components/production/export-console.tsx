@@ -29,7 +29,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function queueExport(formData: FormData) {
+  async function createExport(formData: FormData) {
     setBusy(true);
     setMessage("");
     const response = await apiFetch("/api/exports", {
@@ -50,7 +50,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
     });
     const result = await response.json();
     setBusy(false);
-    setMessage(result.success ? "Export queued successfully." : result.error?.message ?? "Unable to queue export");
+    setMessage(result.success ? "Export generated successfully." : result.error?.message ?? "Unable to generate export");
     if (result.success) window.location.reload();
   }
 
@@ -72,7 +72,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
           <CardTitle className="mt-2 text-4xl">Generate Final Documents</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4 xl:grid-cols-3" action={async (formData) => queueExport(formData)}>
+          <form className="grid gap-4 xl:grid-cols-3" action={async (formData) => createExport(formData)}>
             <div className="space-y-2">
               <Label htmlFor="questionBankId">Question Bank</Label>
               <Select id="questionBankId" name="questionBankId">
@@ -113,7 +113,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
             </div>
             <div className="xl:col-span-3 flex items-center justify-between gap-3">
               <p className="text-sm italic text-[var(--muted-foreground)]">{message}</p>
-              <Button type="submit" disabled={busy}>Queue Export</Button>
+              <Button type="submit" disabled={busy}>Generate Export</Button>
             </div>
           </form>
         </CardContent>

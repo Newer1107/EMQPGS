@@ -9,7 +9,7 @@ export default async function CoeMonitoringPage() {
       <div className="section-frame">
         <p className="page-kicker">COE</p>
         <h1 className="page-display mt-4">OBSERVABILITY</h1>
-        <p className="page-lead mt-6">Track platform health, queue activity, storage inventory, and backup readiness.</p>
+        <p className="page-lead mt-6">Track platform health, active document workflows, storage inventory, and backup readiness.</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -17,7 +17,6 @@ export default async function CoeMonitoringPage() {
           <CardHeader><CardTitle>Health Checks</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>Database: {data.health.database.ok ? "Healthy" : "Down"} ({data.health.database.latencyMs} ms)</p>
-            <p>Redis: {data.health.redis.ok ? "Healthy" : "Down"}</p>
             <p>MinIO: {data.health.minio.ok ? "Healthy" : "Down"}</p>
           </CardContent>
         </Card>
@@ -32,13 +31,12 @@ export default async function CoeMonitoringPage() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Queues</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Workflow Activity</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p>AI Analysis Waiting: {data.queues.aiAnalysis.waiting}</p>
-            <p>Paper Generation Waiting: {data.queues.paperGeneration.waiting}</p>
-            <p>Export Generation Waiting: {data.queues.exportGeneration.waiting}</p>
-            <p>Cleanup Waiting: {data.queues.retentionCleanup.waiting}</p>
-            <p>Backup Waiting: {data.queues.systemBackup.waiting}</p>
+            <p>AI Reports In Progress: {data.workflows.aiReportsInProgress}</p>
+            <p>Paper Generations In Progress: {data.workflows.paperGenerationsInProgress}</p>
+            <p>Exports In Progress: {data.workflows.exportsInProgress}</p>
+            <p>Backups In Progress: {data.workflows.backupsInProgress}</p>
           </CardContent>
         </Card>
       </div>

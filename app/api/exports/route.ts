@@ -17,7 +17,7 @@ export const GET = withApiHandler(
 export const POST = withApiHandler(
   async (request, context) => {
     const payload = exportRequestSchema.parse(await parseJson(request));
-    return service.queueExport(payload, context.user!);
+    return service.createExport(payload, context.user!);
   },
   { roles: [Role.COE], audit: { action: "EXPORT_REQUESTED", entityType: "EXPORT_ARTIFACT" } },
 );

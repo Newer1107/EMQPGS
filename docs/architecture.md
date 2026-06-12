@@ -2,11 +2,10 @@
 
 ## Layers
 
-- `app/` — Next.js App Router pages and route handlers
-- `src/modules/*` — feature services, repositories, validators, and workflow engines
-- `src/lib/*` — auth, RBAC, CSRF, rate limiting, queues, storage, logging, and shared infrastructure
-- `prisma/` — schema, migrations, and seed data
-- `workers/` — BullMQ worker bootstrap
+- `app/` - Next.js App Router pages and route handlers
+- `src/modules/*` - feature services, repositories, validators, and workflow engines
+- `src/lib/*` - auth, RBAC, CSRF, rate limiting, storage, logging, and shared infrastructure
+- `prisma/` - schema, migrations, and seed data
 
 ## Core Modules
 
@@ -20,7 +19,7 @@
 - Auth.js credentials login
 - RBAC via `proxy.ts` and `src/lib/api-handler.ts`
 - CSRF validation for all mutating API calls
-- Redis-backed rate limiting
+- In-process rate limiting
 - Structured JSON logging
 - Append-only audit log chain with integrity hash
 - MinIO-only object storage with presigned URLs
@@ -38,4 +37,4 @@
    - Supplementary
    - KT
 8. COE exports final PDF, DOCX, or ZIP bundles
-9. Cleanup and backup workers manage retention and nightly backups
+9. COE backups and retention cleanup run directly through the application

@@ -1,6 +1,6 @@
 # EMQPGS
 
-Examination Management & Question Paper Generation System built with Next.js, TypeScript, Prisma, MySQL, Redis, Auth.js, BullMQ, MinIO, and Ollama.
+Examination Management & Question Paper Generation System built with Next.js, TypeScript, Prisma, MySQL, Auth.js, MinIO, and Ollama.
 
 ## Status
 
@@ -24,8 +24,6 @@ This repository now includes:
 - Next.js route handlers
 - Prisma ORM
 - MySQL 8
-- Redis
-- BullMQ
 
 ### Authentication
 
@@ -60,12 +58,11 @@ Detailed permissions: `docs/rbac-matrix.md`
 
 ### Layering
 
-- `app/` — pages and APIs
-- `src/modules/` — feature modules
-- `src/lib/` — cross-cutting infrastructure
-- `prisma/` — schema, migrations, seed
-- `workers/` — BullMQ workers
-- `docs/` — architecture, security, monitoring, deployment
+- `app/` - pages and APIs
+- `src/modules/` - feature modules
+- `src/lib/` - cross-cutting infrastructure
+- `prisma/` - schema, migrations, seed
+- `docs/` - architecture, security, monitoring, deployment
 
 ### Patterns
 
@@ -120,7 +117,7 @@ See:
   - duplicate detection
   - missing areas
   - quality findings
-  - Bloom’s balance
+  - Bloom's balance
 - Ollama summary overlay
 - JSON and PDF report storage in MinIO
 
@@ -182,11 +179,11 @@ See:
 - structured logs
 - `/api/health`
 - `/api/monitoring`
-- queue monitoring
+- workflow monitoring
 - MinIO monitoring
 - MySQL monitoring
-- nightly backup queue
-- retention cleanup queue
+- on-demand backups
+- artifact retention cleanup
 
 ## Storage Buckets
 
@@ -289,7 +286,7 @@ Important additions for production:
 ### Start Infra
 
 ```bash
-docker compose up -d mysql redis minio minio-init
+docker compose up -d mysql minio minio-init
 ```
 
 ### Install and Generate
@@ -306,11 +303,10 @@ npm run prisma:migrate
 npm run prisma:seed
 ```
 
-### Start App and Worker
+### Start App
 
 ```bash
 npm run dev
-npm run worker
 ```
 
 ## Seed Users
@@ -367,6 +363,6 @@ Coverage currently includes:
 
 ## Notes
 
-- workers register nightly backup and retention cleanup schedules
+- backups and cleanup run directly from application workflows
 - backup execution expects `mysqldump` to be available in the runtime environment
 - AI analysis expects Ollama to be reachable at `OLLAMA_BASE_URL`

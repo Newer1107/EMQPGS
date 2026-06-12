@@ -3,7 +3,6 @@ import { z } from "zod";
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1),
-  REDIS_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(32),
   AUTH_URL: z.string().default("http://localhost:3000"),
   JWT_ACCESS_SECRET: z.string().min(32),
@@ -33,7 +32,6 @@ const envSchema = z.object({
 export const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL,
-  REDIS_URL: process.env.REDIS_URL,
   AUTH_SECRET: process.env.AUTH_SECRET,
   AUTH_URL: process.env.AUTH_URL,
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
