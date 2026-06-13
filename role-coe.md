@@ -233,6 +233,6 @@ The COE is the security administrator of the platform:
 
 | Field | Value |
 |-------|-------|
-| Email | `coe@emqpgs.local` |
+| Email | ` ` |
 | Password | `Password@123` |
 | Role | `COE` |
