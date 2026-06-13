@@ -1,17 +1,34 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { SubjectService } from "@/modules/subjects/service";
-import { subjectSchema } from "@/modules/subjects/validation";
+import { CoordinatorService } from "@/modules/coordinator/service";
+import { z } from "zod";
 
-const service = new SubjectService();
+const service = new CoordinatorService();
+const subjectCreateSchema = z.object({
+  subjectCode: z.string().min(2).max(20).trim().toUpperCase(),
+  subjectName: z.string().min(2).trim(),
+  departmentId: z.string().min(1),
+  semester: z.coerce.number().int().min(1).max(8),
+  creditLoad: z.coerce.number().int().min(1).max(10),
+});
 
-export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] });
+export const GET = withApiHandler(async (request, context) => {
+  const departmentId = request.nextUrl.searchParams.get("departmentId") ?? undefined;
+  const semester = request.nextUrl.searchParams.get("semester");
+  const status = request.nextUrl.searchParams.get("status") as "ACTIVE" | "INACTIVE" | null;
+
+  return service.listSubjects(context.user!, {
+    departmentId,
+    semester: semester ? Number(semester) : undefined,
+    status: status ?? undefined,
+  });
+}, { roles: [Role.COORDINATOR] });
 
 export const POST = withApiHandler(
-  async (request) => {
-    const payload = subjectSchema.parse(await parseJson(request));
-    return service.create(payload);
+  async (request, context) => {
+    const payload = subjectCreateSchema.parse(await parseJson(request));
+    return service.createSubject(context.user!, payload);
   },
-  { roles: [Role.COORDINATOR], audit: { action: "SUBJECT_CREATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
+  { roles: [Role.COORDINATOR], successStatus: 201, audit: { action: "SUBJECT_CREATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
 );

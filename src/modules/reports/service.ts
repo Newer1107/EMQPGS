@@ -101,6 +101,22 @@ export class ReportService {
       data: { status: QuestionBankStatus.REPORT_GENERATED },
     });
 
+    const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: { departmentId: questionBank.subject.departmentId },
+      include: { coordinator: true },
+    });
+    await Promise.all(
+      coordinators.map(({ coordinator }) =>
+        this.notificationService.create(
+          coordinator.id,
+          "AI analysis ready",
+          `AI analysis report is ready for ${questionBank.subject.subjectName}.`,
+          `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
+          NotificationType.INFO,
+        ),
+      ),
+    );
+
     await logAudit({
       actorId: actor.id,
       action: "AI_REPORT_GENERATED",
@@ -126,7 +142,7 @@ export class ReportService {
   async uploadSignedReport(questionBankId: string, fileAssetId: string, actor: Actor) {
     const questionBank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
-      include: { assignments: true },
+      include: { assignments: true, subject: true },
     });
     if (!questionBank) throw new NotFoundError("Question bank not found");
     const isModerator = questionBank.assignments.some((assignment) => assignment.teacherId === actor.id && assignment.assignmentRole === "MODERATOR");
@@ -144,9 +160,12 @@ export class ReportService {
       },
     });
 
-    const coordinators = await prisma.user.findMany({ where: { role: "COORDINATOR" } });
+    const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: { departmentId: questionBank.subject.departmentId },
+      include: { coordinator: true },
+    });
     await Promise.all(
-      coordinators.map((coordinator) =>
+      coordinators.map(({ coordinator }) =>
         this.notificationService.createAndEmail(
           coordinator,
           "Signed HOD report uploaded",
@@ -195,8 +214,8 @@ export class ReportService {
   async generatePapers(questionBankId: string, actor: Actor, variants: PaperVariant[]) {
     const questionBank = await this.getQuestionBankForPaperGeneration(questionBankId);
     if (!questionBank) throw new NotFoundError("Question bank not found");
-    if (questionBank.status !== QuestionBankStatus.LOCKED) {
-      throw new AppError("Question bank must be locked before generating papers", 409);
+    if (questionBank.status !== QuestionBankStatus.LOCKED && questionBank.status !== QuestionBankStatus.REPORT_GENERATED) {
+      throw new AppError("Question bank must have a completed AI report before generating papers", 409);
     }
 
     const generatedPayloads = this.paperGenerator.generate(questionBank, variants);
@@ -300,6 +319,22 @@ export class ReportService {
       metadata: { variants },
     });
 
+    const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: { departmentId: questionBank.subject.departmentId },
+      include: { coordinator: true },
+    });
+    await Promise.all(
+      coordinators.map(({ coordinator }) =>
+        this.notificationService.create(
+          coordinator.id,
+          "Paper generation complete",
+          `Papers A, B, C have been generated for ${questionBank.subject.subjectName}.`,
+          `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
+          NotificationType.SUCCESS,
+        ),
+      ),
+    );
+
     return outputs;
   }
 
@@ -348,6 +383,9 @@ export class ReportService {
       include: {
         subject: true,
         examCycle: true,
+        aiReports: {
+          where: { status: AiReportStatus.COMPLETED },
+        },
         questions: true,
         generatedPapers: {
           include: {

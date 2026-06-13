@@ -1,17 +1,22 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
+import { CoordinatorService } from "@/modules/coordinator/service";
 import { ProductionService } from "@/modules/production/service";
 import { deanReviewSchema } from "@/modules/production/validation";
 
 const service = new ProductionService();
+const coordinatorService = new CoordinatorService();
 
 export const GET = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
+    if (context.user!.role === Role.COORDINATOR) {
+      return coordinatorService.getDeanReviewStatus(context.user!, questionBankId);
+    }
     return service.getDeanReviewWorkspace(questionBankId, context.user!);
   },
-  { roles: [Role.DEAN] },
+  { roles: [Role.COORDINATOR, Role.DEAN] },
 );
 
 export const POST = withApiHandler(

@@ -244,6 +244,10 @@ export class ProductionService {
         departmentId: actor.departmentId ?? undefined,
       },
     });
+    const coordinatorAssignments = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: { departmentId: questionBank.subject.departmentId },
+      include: { coordinator: true },
+    });
 
     await Promise.all([
       ...coeUsers.map((coe) =>
@@ -253,6 +257,15 @@ export class ProductionService {
           `Dean review complete for ${questionBank.subject.subjectName} - ready for export`,
           "/dashboard/coe/production",
           NotificationType.ACTION_REQUIRED,
+        ),
+      ),
+      ...coordinatorAssignments.map(({ coordinator }) =>
+        this.notificationService.create(
+          coordinator.id,
+          "Dean review complete",
+          `Dean review is complete for ${questionBank.subject.subjectName}. Papers have been assigned.`,
+          `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
+          NotificationType.SUCCESS,
         ),
       ),
       this.notificationService.create(

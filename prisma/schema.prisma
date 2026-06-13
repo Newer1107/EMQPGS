@@ -20,6 +20,11 @@ enum UserStatus {
   DISABLED
 }
 
+enum SubjectStatus {
+  ACTIVE
+  INACTIVE
+}
+
 enum ExamType {
   ISE_1
   ISE_2
@@ -145,6 +150,7 @@ model Department {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   users        User[]
+  coordinatorAssignments CoordinatorDepartmentAssignment[]
   subjects     Subject[]
   examCycles   ExamCycle[]
 }
@@ -163,6 +169,7 @@ model User {
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   department       Department?         @relation(fields: [departmentId], references: [id])
+  coordinatorDepartments CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
   assignments      TeacherAssignment[] @relation("assignedTeacher")
   assignedBy       TeacherAssignment[] @relation("assignedBy")
   notifications    Notification[]
@@ -182,6 +189,8 @@ model ExamCycle {
   semester              Int
   examType              ExamType
   status                ExamCycleStatus   @default(DRAFT)
+  startDate             DateTime?
+  endDate               DateTime?
   departmentId          String?
   timetableDocumentRef  String?
   timetableIssueDate    DateTime?
@@ -192,6 +201,7 @@ model ExamCycle {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   department            Department?       @relation(fields: [departmentId], references: [id])
+  subjectLinks          SubjectExamCycleLink[]
   questionBanks         QuestionBank[]
 
   @@unique([academicYear, semester, examType])
@@ -199,17 +209,21 @@ model ExamCycle {
 
 model Subject {
   id                  String         @id @default(cuid())
-  subjectCode         String         @unique
+  subjectCode         String
   subjectName         String
   academicYear        String
   semester            Int
   credits             Int
+  status              SubjectStatus  @default(ACTIVE)
   questionBankDueDate DateTime
   departmentId        String
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   department          Department     @relation(fields: [departmentId], references: [id])
+  examCycleLinks      SubjectExamCycleLink[]
   questionBanks       QuestionBank[]
+
+  @@unique([subjectCode, departmentId])
 }
 
 model QuestionBank {
@@ -246,6 +260,7 @@ model TeacherAssignment {
   questionBankId String
   teacherId      String
   assignmentRole AssignmentRole
+  moduleNumber   Int?
   assignedById   String
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -253,7 +268,29 @@ model TeacherAssignment {
   teacher        User           @relation("assignedTeacher", fields: [teacherId], references: [id])
   assignedBy     User           @relation("assignedBy", fields: [assignedById], references: [id])
 
-  @@unique([questionBankId, teacherId, assignmentRole])
+  @@unique([questionBankId, teacherId, assignmentRole, moduleNumber])
+}
+
+model CoordinatorDepartmentAssignment {
+  id           String     @id @default(cuid())
+  coordinatorId String
+  departmentId String
+  assignedAt   DateTime   @default(now())
+  coordinator  User       @relation("coordinatorDepartmentUser", fields: [coordinatorId], references: [id])
+  department   Department @relation(fields: [departmentId], references: [id])
+
+  @@unique([coordinatorId, departmentId])
+}
+
+model SubjectExamCycleLink {
+  id          String    @id @default(cuid())
+  subjectId    String
+  examCycleId  String
+  linkedAt    DateTime  @default(now())
+  subject      Subject   @relation(fields: [subjectId], references: [id])
+  examCycle    ExamCycle @relation(fields: [examCycleId], references: [id])
+
+  @@unique([subjectId, examCycleId])
 }
 
 model Notification {

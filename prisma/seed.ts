@@ -9,6 +9,7 @@ import {
   QuestionStatus,
   RbtLevel,
   Role,
+  SubjectStatus,
   UserStatus,
   PrismaClient,
 } from "@prisma/client";
@@ -69,12 +70,19 @@ async function main() {
       semester: 5,
       examType: ExamType.ENDSEM,
       status: ExamCycleStatus.ACTIVE,
+      startDate: new Date("2026-11-01T00:00:00.000Z"),
+      endDate: new Date("2026-11-30T00:00:00.000Z"),
       departmentId: cse.id,
     },
   });
 
   const subject = await prisma.subject.upsert({
-    where: { subjectCode: "CS501" },
+    where: {
+      subjectCode_departmentId: {
+        subjectCode: "CS501",
+        departmentId: cse.id,
+      },
+    },
     update: {},
     create: {
       subjectCode: "CS501",
@@ -82,8 +90,37 @@ async function main() {
       academicYear: "2026-2027",
       semester: 5,
       credits: 4,
+      status: SubjectStatus.ACTIVE,
       questionBankDueDate: new Date("2026-08-15T00:00:00.000Z"),
       departmentId: cse.id,
+    },
+  });
+
+  await prisma.coordinatorDepartmentAssignment.upsert({
+    where: {
+      coordinatorId_departmentId: {
+        coordinatorId: users[1].id,
+        departmentId: cse.id,
+      },
+    },
+    update: {},
+    create: {
+      coordinatorId: users[1].id,
+      departmentId: cse.id,
+    },
+  });
+
+  await prisma.subjectExamCycleLink.upsert({
+    where: {
+      subjectId_examCycleId: {
+        subjectId: subject.id,
+        examCycleId: examCycle.id,
+      },
+    },
+    update: {},
+    create: {
+      subjectId: subject.id,
+      examCycleId: examCycle.id,
     },
   });
 
@@ -103,29 +140,34 @@ async function main() {
     },
   });
 
-  await prisma.teacherAssignment.upsert({
+  const moderatorAssignment = await prisma.teacherAssignment.findFirst({
     where: {
-      questionBankId_teacherId_assignmentRole: {
-        questionBankId: questionBank.id,
-        teacherId: users[2].id,
-        assignmentRole: AssignmentRole.MODERATOR,
-      },
-    },
-    update: {},
-    create: {
       questionBankId: questionBank.id,
       teacherId: users[2].id,
       assignmentRole: AssignmentRole.MODERATOR,
-      assignedById: users[1].id,
+      moduleNumber: null,
     },
   });
 
+  if (!moderatorAssignment) {
+    await prisma.teacherAssignment.create({
+      data: {
+        questionBankId: questionBank.id,
+        teacherId: users[2].id,
+        assignmentRole: AssignmentRole.MODERATOR,
+        moduleNumber: null,
+        assignedById: users[1].id,
+      },
+    });
+  }
+
   await prisma.teacherAssignment.upsert({
     where: {
-      questionBankId_teacherId_assignmentRole: {
+      questionBankId_teacherId_assignmentRole_moduleNumber: {
         questionBankId: questionBank.id,
         teacherId: users[3].id,
         assignmentRole: AssignmentRole.CONTRIBUTOR,
+        moduleNumber: 1,
       },
     },
     update: {},
@@ -133,6 +175,7 @@ async function main() {
       questionBankId: questionBank.id,
       teacherId: users[3].id,
       assignmentRole: AssignmentRole.CONTRIBUTOR,
+      moduleNumber: 1,
       assignedById: users[1].id,
     },
   });

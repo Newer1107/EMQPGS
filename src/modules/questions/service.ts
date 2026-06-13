@@ -55,7 +55,12 @@ export class QuestionService {
       throw new ForbiddenError("Only contributors and moderators can reserve slots");
     }
 
-    const isAssignedContributor = questionBank.assignments.some((assignment) => assignment.teacherId === actor.id && assignment.assignmentRole === "CONTRIBUTOR");
+    const isAssignedContributor = questionBank.assignments.some(
+      (assignment) =>
+        assignment.teacherId === actor.id &&
+        assignment.assignmentRole === "CONTRIBUTOR" &&
+        assignment.moduleNumber === input.moduleNumber,
+    );
     const isAssignedModerator = questionBank.assignments.some((assignment) => assignment.teacherId === actor.id && assignment.assignmentRole === "MODERATOR");
 
     if (isContributor && !isAssignedContributor) {
@@ -146,6 +151,15 @@ export class QuestionService {
     });
 
     const moderatorAssignments = updated.questionBank.assignments.filter((assignment) => assignment.assignmentRole === "MODERATOR");
+    const coordinatorRecipients = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: {
+        departmentId: updated.questionBank.subject.departmentId,
+      },
+      include: {
+        coordinator: true,
+      },
+    });
+
     for (const assignment of moderatorAssignments) {
       await this.notificationService.createAndEmail(
         assignment.teacher,
@@ -155,6 +169,18 @@ export class QuestionService {
         NotificationType.ACTION_REQUIRED,
       );
     }
+
+    await Promise.all(
+      coordinatorRecipients.map(({ coordinator }) =>
+        this.notificationService.create(
+          coordinator.id,
+          "Question submitted",
+          `A new question has been submitted by ${updated.contributor.name} in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber}.`,
+          `/dashboard/coordinator/questions?questionId=${updated.id}`,
+          NotificationType.INFO,
+        ),
+      ),
+    );
 
     return updated;
   }
@@ -191,6 +217,15 @@ export class QuestionService {
     } as const;
 
     const contributor = await prisma.user.findUnique({ where: { id: updated.contributorId } });
+    const coordinatorRecipients = await prisma.coordinatorDepartmentAssignment.findMany({
+      where: {
+        departmentId: updated.questionBank.subject.departmentId,
+      },
+      include: {
+        coordinator: true,
+      },
+    });
+
     if (contributor) {
       await this.notificationService.createAndEmail(
         contributor,
@@ -200,6 +235,18 @@ export class QuestionService {
         action === "APPROVE" ? NotificationType.SUCCESS : NotificationType.ACTION_REQUIRED,
       );
     }
+
+    await Promise.all(
+      coordinatorRecipients.map(({ coordinator }) =>
+        this.notificationService.create(
+          coordinator.id,
+          "Moderation action",
+          `Question in ${updated.questionBank.subject.subjectName} Module ${updated.moduleNumber} has been ${targetStatus.toLowerCase().replaceAll("_", " ")} by ${actor.name}.`,
+          `/dashboard/coordinator/questions?questionId=${updated.id}`,
+          targetStatus === QuestionStatus.APPROVED ? NotificationType.SUCCESS : NotificationType.ACTION_REQUIRED,
+        ),
+      ),
+    );
 
     await logAudit({
       actorId: actor.id,

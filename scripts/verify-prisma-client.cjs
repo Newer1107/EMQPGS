@@ -4,6 +4,8 @@ const path = require("node:path");
 
 const clientDir = path.join(process.cwd(), "node_modules", ".prisma", "client");
 const clientIndexPath = path.join(clientDir, "index.js");
+const generatedSchemaPath = path.join(clientDir, "schema.prisma");
+const sourceSchemaPath = path.join(process.cwd(), "prisma", "schema.prisma");
 
 if (!fs.existsSync(clientIndexPath)) {
   fail(
@@ -14,7 +16,18 @@ if (!fs.existsSync(clientIndexPath)) {
   );
 }
 
+if (!fs.existsSync(generatedSchemaPath)) {
+  fail(
+    [
+      "Generated Prisma schema snapshot was not found.",
+      "Run `npm run prisma:generate` before starting the app.",
+    ].join("\n"),
+  );
+}
+
 const clientSource = fs.readFileSync(clientIndexPath, "utf8");
+const generatedSchema = normalizeNewlines(fs.readFileSync(generatedSchemaPath, "utf8")).trim();
+const sourceSchema = normalizeNewlines(fs.readFileSync(sourceSchemaPath, "utf8")).trim();
 
 if (!clientSource.includes('"copyEngine": true')) {
   fail(
@@ -22,6 +35,15 @@ if (!clientSource.includes('"copyEngine": true')) {
       "Prisma client was generated without a local query engine (`copyEngine: false`).",
       "That switches the client into Accelerate/Data Proxy mode and breaks this MySQL app.",
       "Run `npm run prisma:generate` and make sure no `--no-engine` flag or Prisma no-engine env var is being used.",
+    ].join("\n"),
+  );
+}
+
+if (generatedSchema !== sourceSchema) {
+  fail(
+    [
+      "Prisma client is out of sync with `prisma/schema.prisma`.",
+      "Run `npm run prisma:generate` to regenerate the client before starting the app.",
     ].join("\n"),
   );
 }
@@ -41,4 +63,12 @@ if (!hasWindowsEngine && !hasNativeLibraryEngine) {
 function fail(message) {
   console.error(`\n[prisma:verify-client] ${message}\n`);
   process.exit(1);
+}
+
+function normalizeNewlines(value) {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/\s+/g, " "))
+    .join("\n");
 }

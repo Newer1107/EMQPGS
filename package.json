@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run prisma:verify-client && next dev",
-    "build": "npm run prisma:verify-client && next build",
-    "start": "npm run prisma:verify-client && next start",
+    "dev": "npm run prisma:generate && npm run prisma:verify-client && next dev",
+    "build": "npm run prisma:generate && npm run prisma:verify-client && next build",
+    "start": "npm run prisma:generate && npm run prisma:verify-client && next start",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",

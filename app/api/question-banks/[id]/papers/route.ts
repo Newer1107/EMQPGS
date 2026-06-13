@@ -1,24 +1,21 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
-import { ReportService } from "@/modules/reports/service";
-import { paperGenerationSchema } from "@/modules/reports/validation";
+import { CoordinatorService } from "@/modules/coordinator/service";
 
-const service = new ReportService();
+const service = new CoordinatorService();
 
 export const GET = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    return service.listGeneratedPapers(questionBankId);
+    return service.listGeneratedPapers(context.user!, questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE] },
+  { roles: [Role.COORDINATOR] },
 );
 
 export const POST = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    const payload = paperGenerationSchema.parse(await parseJson(request));
-    return service.generatePapers(questionBankId, context.user!, payload.variants);
+    return service.triggerPaperGeneration(context.user!, questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.COE], audit: { action: "PAPER_GENERATION_REQUESTED", entityType: "GENERATED_PAPER" } },
+  { roles: [Role.COORDINATOR], audit: { action: "PAPER_GENERATION_REQUESTED", entityType: "GENERATED_PAPER" } },
 );

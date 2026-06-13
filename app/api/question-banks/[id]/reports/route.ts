@@ -1,21 +1,21 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { ReportService } from "@/modules/reports/service";
+import { CoordinatorService } from "@/modules/coordinator/service";
 
-const service = new ReportService();
+const service = new CoordinatorService();
 
 export const GET = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    return service.listAiReports(questionBankId);
+    return service.listAiReports(context.user!, questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE] },
+  { roles: [Role.COORDINATOR] },
 );
 
 export const POST = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    return service.createAiReport(questionBankId, context.user!);
+    return service.triggerAiAnalysis(context.user!, questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE], audit: { action: "AI_REPORT_REQUESTED", entityType: "AI_REPORT" } },
+  { roles: [Role.COORDINATOR], audit: { action: "AI_REPORT_REQUESTED", entityType: "AI_REPORT" } },
 );
