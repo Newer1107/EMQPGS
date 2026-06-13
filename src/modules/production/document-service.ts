@@ -30,46 +30,79 @@ export class DocumentService {
     const bold = await pdf.embedFont(StandardFonts.TimesRomanBold);
     const mono = await pdf.embedFont(StandardFonts.Courier);
 
+    const PAGE_WIDTH = 842;
+    const PAGE_HEIGHT = 1191;
+    const MARGIN_X = 48;
+    const CONTENT_START_Y = PAGE_HEIGHT - 72;
+    const MARGIN_BOTTOM = 90;
+    const CONTENT_WIDTH = 720;
+
     for (const paper of papers) {
-      const page = pdf.addPage([842, 1191]);
-      let y = 1120;
-      page.drawText(paper.institutionName, { x: 48, y, size: 16, font: bold });
-      y -= 24;
-      page.drawText(paper.label, { x: 48, y, size: 26, font: bold });
-      y -= 24;
-      page.drawText(`${paper.subjectName} (${paper.subjectCode})`, { x: 48, y, size: 14, font: serif });
-      y -= 16;
-      page.drawText(`${paper.examType} • ${paper.examDate} • ${paper.duration} • ${paper.maximumMarks} Marks`, { x: 48, y, size: 12, font: mono });
+      let page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      let y = CONTENT_START_Y;
+
+      const ensureSpace = (needed: number) => {
+        if (y - needed < MARGIN_BOTTOM) {
+          page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+          y = CONTENT_START_Y;
+        }
+      };
+
+      ensureSpace(24);
+      page.drawText(paper.institutionName, { x: MARGIN_X, y, size: 16, font: bold });
       y -= 24;
 
-      page.drawText("Instructions", { x: 48, y, size: 14, font: bold });
+      ensureSpace(26);
+      page.drawText(paper.label, { x: MARGIN_X, y, size: 26, font: bold });
+      y -= 24;
+
+      ensureSpace(16);
+      page.drawText(`${paper.subjectName} (${paper.subjectCode})`, { x: MARGIN_X, y, size: 14, font: serif });
+      y -= 16;
+
+      ensureSpace(14);
+      page.drawText(
+        `${paper.examType} • ${paper.examDate} • ${paper.duration} • ${paper.maximumMarks} Marks`,
+        { x: MARGIN_X, y, size: 12, font: mono },
+      );
+      y -= 24;
+
+      ensureSpace(18);
+      page.drawText("Instructions", { x: MARGIN_X, y, size: 14, font: bold });
       y -= 18;
+
       for (const instruction of paper.instructions) {
-        page.drawText(`• ${instruction}`, { x: 56, y, size: 11, font: serif, maxWidth: 720, lineHeight: 14 });
+        ensureSpace(16);
+        page.drawText(`• ${instruction}`, {
+          x: MARGIN_X + 8,
+          y,
+          size: 11,
+          font: serif,
+          maxWidth: CONTENT_WIDTH,
+          lineHeight: 14,
+        });
         y -= 16;
       }
       y -= 10;
 
       for (const [index, question] of paper.questions.entries()) {
-        page.drawText(`${index + 1}. [M${question.moduleNumber} • ${question.marks}M • ${question.coMapping} • ${question.rbtLevel}]`, {
-          x: 48,
-          y,
-          size: 10,
-          font: mono,
-        });
+        ensureSpace(48);
+        page.drawText(
+          `${index + 1}. [M${question.moduleNumber} • ${question.marks}M • ${question.coMapping} • ${question.rbtLevel}]`,
+          { x: MARGIN_X, y, size: 10, font: mono },
+        );
         y -= 14;
+
+        ensureSpace(34);
         page.drawText(question.questionText, {
-          x: 56,
+          x: MARGIN_X + 8,
           y,
           size: 12,
           font: serif,
-          maxWidth: 720,
+          maxWidth: CONTENT_WIDTH,
           lineHeight: 16,
         });
         y -= 34;
-        if (y < 90) {
-          y = 1120;
-        }
       }
     }
 

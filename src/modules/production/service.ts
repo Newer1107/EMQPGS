@@ -604,16 +604,17 @@ export class ProductionService {
 
     try {
       const databaseUrl = new URL(env.DATABASE_URL);
+      const password = decodeURIComponent(databaseUrl.password);
       const args = [
         `--host=${databaseUrl.hostname}`,
         `--port=${databaseUrl.port || "3306"}`,
         `--user=${decodeURIComponent(databaseUrl.username)}`,
-        `--password=${decodeURIComponent(databaseUrl.password)}`,
         databaseUrl.pathname.replace("/", ""),
       ];
 
       const { stdout } = await execFileAsync("mysqldump", args, {
         maxBuffer: 50 * 1024 * 1024,
+        env: { ...process.env, MYSQL_PWD: password },
       });
 
       const buffer = Buffer.from(stdout, "utf8");

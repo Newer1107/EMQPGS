@@ -89,8 +89,12 @@ type QuestionDetail = {
 
 async function readApi<T>(input: string, init?: RequestInit) {
   const response = await apiFetch(input, init);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
+    throw new Error(body.error?.message ?? `Request failed with status ${response.status}`);
+  }
   const result = await response.json();
-  if (!response.ok || !result.success) {
+  if (!result.success) {
     throw new Error(result.error?.message ?? "Request failed");
   }
   return result.data as T;
@@ -302,30 +306,46 @@ export function ModerationWorkspace() {
                   </TR>
                 </THead>
                 <TBody>
-                  {questions.map((question) => (
-                    <TR
-                      key={question.id}
-                      className={selectedQuestionId === question.id ? "bg-[var(--muted)]" : ""}
-                      onClick={() => setSelectedQuestionId(question.id)}
-                    >
-                      <TD className="max-w-sm whitespace-normal">
-                        <p className="line-clamp-2">{question.questionText}</p>
-                        <p className="text-xs text-[var(--muted-foreground)]">
-                          {question.questionBank.subject.subjectCode} / {question.questionBank.examCycle.academicYear}
-                        </p>
+                  {questions.length === 0 ? (
+                    <TR>
+                      <TD colSpan={8} className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+                        No matching questions found.
                       </TD>
-                      <TD>{question.marks}</TD>
-                      <TD>{question.moduleNumber}</TD>
-                      <TD>{question.coMapping}</TD>
-                      <TD>{question.rbtLevel}</TD>
-                      <TD>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</TD>
-                      <TD>
-                        <p>{question.contributor.name}</p>
-                        <p className="text-xs text-[var(--muted-foreground)]">{question.contributor.email}</p>
-                      </TD>
-                      <TD>{question.submittedAt ? new Date(question.submittedAt).toLocaleString() : "Not submitted"}</TD>
                     </TR>
-                  ))}
+                  ) : (
+                    questions.map((question) => (
+                      <TR
+                        key={question.id}
+                        className={`cursor-pointer ${selectedQuestionId === question.id ? "bg-[var(--muted)]" : ""}`}
+                        onClick={() => setSelectedQuestionId(question.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedQuestionId(question.id);
+                          }
+                        }}
+                      >
+                        <TD className="max-w-sm whitespace-normal">
+                          <p className="line-clamp-2">{question.questionText}</p>
+                          <p className="text-xs text-[var(--muted-foreground)]">
+                            {question.questionBank.subject.subjectCode} / {question.questionBank.examCycle.academicYear}
+                          </p>
+                        </TD>
+                        <TD>{question.marks}</TD>
+                        <TD>{question.moduleNumber}</TD>
+                        <TD>{question.coMapping}</TD>
+                        <TD>{question.rbtLevel}</TD>
+                        <TD>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</TD>
+                        <TD>
+                          <p>{question.contributor.name}</p>
+                          <p className="text-xs text-[var(--muted-foreground)]">{question.contributor.email}</p>
+                        </TD>
+                        <TD>{question.submittedAt ? new Date(question.submittedAt).toLocaleString() : "Not submitted"}</TD>
+                      </TR>
+                    ))
+                  )}
                 </TBody>
               </Table>
             </div>

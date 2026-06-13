@@ -27,20 +27,25 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
     const payload = Object.fromEntries(Object.entries(values));
     const body = transform ? transform(payload) : payload;
 
-    const response = await apiFetch(endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    try {
+      const response = await apiFetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    const result = await response.json();
-    setLoading(false);
+      const result = await response.json();
 
-    if (result.success) {
-      toast.success(`${title} saved successfully`);
-      setValues(initialValues);
-    } else {
-      toast.error(result.error?.message ?? "Failed to save");
+      if (response.ok && result.success) {
+        toast.success(`${title} saved successfully`);
+        setValues(initialValues);
+      } else {
+        toast.error(result.error?.message ?? "Failed to save");
+      }
+    } catch {
+      toast.error("Network request failed. Please check your connection.");
+    } finally {
+      setLoading(false);
     }
   }
 

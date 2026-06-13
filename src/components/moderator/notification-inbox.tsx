@@ -31,41 +31,65 @@ export function NotificationInbox({
     if (!target || target.isRead) return;
 
     setBusy(true);
-    const response = await apiFetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationIds: [id] }),
-    });
-    const result = await response.json();
-    setBusy(false);
+    try {
+      const response = await apiFetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationIds: [id] }),
+      });
 
-    if (!response.ok || !result.success) {
-      toast.error(result.error?.message ?? "Failed to mark notification as read.");
-      return;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
+        toast.error(body.error?.message ?? "Failed to mark notification as read.");
+        return;
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        toast.error(result.error?.message ?? "Failed to mark notification as read.");
+        return;
+      }
+
+      setNotifications((current) => current.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
+      setCount((current) => Math.max(0, current - 1));
+    } catch {
+      toast.error("Network request failed. Please check your connection.");
+    } finally {
+      setBusy(false);
     }
-
-    setNotifications((current) => current.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
-    setCount((current) => Math.max(0, current - 1));
   }
 
   async function clearAll() {
     setBusy(true);
-    const response = await apiFetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ markAll: true }),
-    });
-    const result = await response.json();
-    setBusy(false);
+    try {
+      const response = await apiFetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
 
-    if (!response.ok || !result.success) {
-      toast.error(result.error?.message ?? "Failed to clear notifications.");
-      return;
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
+        toast.error(body.error?.message ?? "Failed to clear notifications.");
+        return;
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        toast.error(result.error?.message ?? "Failed to clear notifications.");
+        return;
+      }
+
+      setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
+      setCount(0);
+      toast.success("Notifications cleared.");
+    } catch {
+      toast.error("Network request failed. Please check your connection.");
+    } finally {
+      setBusy(false);
     }
-
-    setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
-    setCount(0);
-    toast.success("Notifications cleared.");
   }
 
   return (

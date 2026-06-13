@@ -43,8 +43,12 @@ type BankAssignments = Record<string, AssignmentSummary[]>;
 
 async function readApi<T>(input: string, init?: RequestInit) {
   const response = await apiFetch(input, init);
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
+    throw new Error(body.error?.message ?? `Request failed with status ${response.status}`);
+  }
   const result = await response.json();
-  if (!response.ok || !result.success) {
+  if (!result.success) {
     throw new Error(result.error?.message ?? "Request failed");
   }
   return result.data as T;
@@ -93,8 +97,12 @@ export function AssignmentsManager() {
   );
 
   async function refreshBank(bankId: string) {
-    const data = await readApi<AssignmentSummary[]>(`/api/question-banks/${bankId}/assignments`);
-    setAssignmentsByBank((current) => ({ ...current, [bankId]: data }));
+    try {
+      const data = await readApi<AssignmentSummary[]>(`/api/question-banks/${bankId}/assignments`);
+      setAssignmentsByBank((current) => ({ ...current, [bankId]: data }));
+    } catch (refreshError) {
+      toast.error(refreshError instanceof Error ? refreshError.message : "Failed to refresh assignment data.");
+    }
   }
 
   async function submitAssignment() {

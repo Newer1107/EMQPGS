@@ -65,9 +65,12 @@ export function AppShell({
   const filteredNavItems = navItems.filter((item) => item.roles.includes(role));
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // Proceed with redirect even if the logout request fails
+    }
     router.push("/login");
-    router.refresh();
   }
 
   const initials = userName

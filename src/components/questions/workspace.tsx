@@ -53,10 +53,12 @@ export function QuestionWorkspace({
   actor,
   questionBank,
   mode,
+  onMutation,
 }: {
   actor: Actor;
   questionBank: WorkspaceQuestionBank;
   mode: "contributor" | "moderator" | "coordinator";
+  onMutation?: () => void;
 }) {
   const [notification, setNotification] = useState<Notification | null>(null);
   const [busyKey, setBusyKey] = useState("");
@@ -83,135 +85,183 @@ export function QuestionWorkspace({
 
   async function reserveSlot(formData: FormData) {
     setBusyKey("reserve");
-    const payload = {
-      questionBankId: questionBank.id,
-      moduleNumber: Number(formData.get("moduleNumber")),
-      marks: Number(formData.get("marks")),
-      slotNumber: Number(formData.get("slotNumber")),
-    };
+    try {
+      const payload = {
+        questionBankId: questionBank.id,
+        moduleNumber: Number(formData.get("moduleNumber")),
+        marks: Number(formData.get("marks")),
+        slotNumber: Number(formData.get("slotNumber")),
+      };
 
-    const response = await apiFetch("/api/question-slots", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const response = await apiFetch("/api/question-slots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
 
-    const result = await response.json();
-    setBusyKey("");
-    if (result.success) {
-      showSuccess("Slot reserved successfully");
-    } else {
-      showError(result.error?.message ?? "Unable to reserve slot");
+      if (result.success) {
+        showSuccess("Slot reserved successfully");
+        onMutation?.();
+      } else {
+        showError(result.error?.message ?? "Unable to reserve slot");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
+    } finally {
+      setBusyKey("");
     }
   }
 
   async function saveQuestion(formData: FormData) {
     setBusyKey("question");
-    const questionId = String(formData.get("questionId") || "");
-    const payload = {
-      slotId: String(formData.get("slotId") || ""),
-      questionText: String(formData.get("questionText") || ""),
-      coMapping: String(formData.get("coMapping") || ""),
-      rbtLevel: String(formData.get("rbtLevel") || ""),
-      teachingIndex: String(formData.get("teachingIndex") || "") || null,
-      difficultyLevel: String(formData.get("difficultyLevel") || "") || null,
-    };
+    try {
+      const questionId = String(formData.get("questionId") || "");
+      const slotId = String(formData.get("slotId") || "");
 
-    const response = await apiFetch(questionId ? `/api/questions/${questionId}` : "/api/questions", {
-      method: questionId ? "PATCH" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      if (!slotId && !questionId) {
+        showError("Please select a reserved slot before creating a question.");
+        return;
+      }
 
-    const result = await response.json();
-    setBusyKey("");
-    if (result.success) {
-      showSuccess("Question saved successfully");
-    } else {
-      showError(result.error?.message ?? "Unable to save question");
+      const payload = {
+        slotId,
+        questionText: String(formData.get("questionText") || ""),
+        coMapping: String(formData.get("coMapping") || ""),
+        rbtLevel: String(formData.get("rbtLevel") || ""),
+        teachingIndex: String(formData.get("teachingIndex") || "") || null,
+        difficultyLevel: String(formData.get("difficultyLevel") || "") || null,
+      };
+
+      const response = await apiFetch(questionId ? `/api/questions/${questionId}` : "/api/questions", {
+        method: questionId ? "PATCH" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        showSuccess("Question saved successfully");
+        onMutation?.();
+      } else {
+        showError(result.error?.message ?? "Unable to save question");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
+    } finally {
+      setBusyKey("");
     }
   }
 
   async function submitQuestion(questionId: string) {
     setBusyKey(questionId);
-    const response = await apiFetch(`/api/questions/${questionId}/submit`, { method: "POST" });
-    const result = await response.json();
-    setBusyKey("");
-    if (result.success) {
-      showSuccess("Question submitted for moderation");
-    } else {
-      showError(result.error?.message ?? "Unable to submit");
+    try {
+      const response = await apiFetch(`/api/questions/${questionId}/submit`, { method: "POST" });
+      const result = await response.json();
+
+      if (result.success) {
+        showSuccess("Question submitted for moderation");
+        onMutation?.();
+      } else {
+        showError(result.error?.message ?? "Unable to submit");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
+    } finally {
+      setBusyKey("");
     }
   }
 
   async function moderateQuestion(questionId: string, action: "APPROVE" | "REJECT" | "REQUEST_REVISION") {
     const remark = window.prompt("Optional moderation remark") ?? "";
     setBusyKey(`${questionId}-${action}`);
-    const response = await apiFetch(`/api/questions/${questionId}/moderate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, remark }),
-    });
-    const result = await response.json();
-    setBusyKey("");
-    if (result.success) {
-      showSuccess("Moderation action recorded");
-    } else {
-      showError(result.error?.message ?? "Unable to moderate");
+    try {
+      const response = await apiFetch(`/api/questions/${questionId}/moderate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, remark }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        showSuccess("Moderation action recorded");
+        onMutation?.();
+      } else {
+        showError(result.error?.message ?? "Unable to moderate");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
+    } finally {
+      setBusyKey("");
     }
   }
 
   async function uploadAttachment(questionId: string, file: File) {
     setBusyKey(`upload-${questionId}`);
-    const presignResponse = await apiFetch(`/api/questions/${questionId}/attachments/presign`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName: file.name, mimeType: file.type || "application/octet-stream", size: file.size }),
-    });
-    const presignResult = await presignResponse.json();
-    if (!presignResult.success) {
+    try {
+      const presignResponse = await apiFetch(`/api/questions/${questionId}/attachments/presign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: file.name, mimeType: file.type || "application/octet-stream", size: file.size }),
+      });
+      const presignResult = await presignResponse.json();
+      if (!presignResult.success) {
+        showError(presignResult.error?.message ?? "Unable to create upload URL");
+        return;
+      }
+
+      await fetch(presignResult.data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+
+      const attachResponse = await apiFetch(`/api/questions/${questionId}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileAssetId: presignResult.data.asset.id }),
+      });
+      const attachResult = await attachResponse.json();
+
+      if (attachResult.success) {
+        showSuccess("Attachment uploaded");
+        onMutation?.();
+      } else {
+        showError(attachResult.error?.message ?? "Unable to attach file");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
+    } finally {
       setBusyKey("");
-      showError(presignResult.error?.message ?? "Unable to create upload URL");
-      return;
-    }
-
-    await fetch(presignResult.data.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type || "application/octet-stream" },
-      body: file,
-    });
-
-    const attachResponse = await apiFetch(`/api/questions/${questionId}/attachments`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileAssetId: presignResult.data.asset.id }),
-    });
-    const attachResult = await attachResponse.json();
-    setBusyKey("");
-    if (attachResult.success) {
-      showSuccess("Attachment uploaded");
-    } else {
-      showError(attachResult.error?.message ?? "Unable to attach file");
     }
   }
 
   async function openAttachment(attachmentId: string) {
-    const response = await fetch(`/api/question-attachments/${attachmentId}/download`);
-    const result = await response.json();
-    if (result.success) {
-      window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
-    } else {
-      showError(result.error?.message ?? "Unable to open attachment");
+    try {
+      const response = await fetch(`/api/question-attachments/${attachmentId}/download`);
+      const result = await response.json();
+      if (result.success) {
+        window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
+      } else {
+        showError(result.error?.message ?? "Unable to open attachment");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
     }
   }
 
   async function deleteAttachment(attachmentId: string) {
-    const response = await apiFetch(`/api/question-attachments/${attachmentId}`, { method: "DELETE" });
-    const result = await response.json();
-    if (result.success) {
-      showSuccess("Attachment deleted");
-    } else {
-      showError(result.error?.message ?? "Unable to delete attachment");
+    try {
+      const response = await apiFetch(`/api/question-attachments/${attachmentId}`, { method: "DELETE" });
+      const result = await response.json();
+      if (result.success) {
+        showSuccess("Attachment deleted");
+        onMutation?.();
+      } else {
+        showError(result.error?.message ?? "Unable to delete attachment");
+      }
+    } catch {
+      showError("Network request failed. Please check your connection.");
     }
   }
 

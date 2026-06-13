@@ -74,27 +74,44 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
       setLoading(true);
       setError("");
 
-      const response = await apiFetch(`/api/question-banks/${questionBankId}/dean-review`);
-      const result = await response.json();
+      try {
+        const response = await apiFetch(`/api/question-banks/${questionBankId}/dean-review`);
 
-      if (!active) return;
+        if (!active) return;
 
-      if (!result.success) {
-        setError(result.error?.message ?? "Unable to load dean review workspace.");
-        setLoading(false);
-        return;
+        if (!response.ok) {
+          const body = await response.json().catch(() => ({ error: { message: "Unable to load dean review workspace." } }));
+          setError(body.error?.message ?? "Unable to load dean review workspace.");
+          setLoading(false);
+          return;
+        }
+
+        const result = await response.json();
+
+        if (!result.success) {
+          setError(result.error?.message ?? "Unable to load dean review workspace.");
+          setLoading(false);
+          return;
+        }
+
+        const workspace = result.data as WorkspaceData;
+        setData(workspace);
+        if (workspace.deanReview) {
+          setSelection({
+            regularPaper: workspace.deanReview.regularPaper,
+            supplementaryPaper: workspace.deanReview.supplementaryPaper,
+            ktPaper: workspace.deanReview.ktPaper,
+          });
+        }
+      } catch {
+        if (active) {
+          setError("Network request failed. Please check your connection.");
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
-
-      const workspace = result.data as WorkspaceData;
-      setData(workspace);
-      if (workspace.deanReview) {
-        setSelection({
-          regularPaper: workspace.deanReview.regularPaper,
-          supplementaryPaper: workspace.deanReview.supplementaryPaper,
-          ktPaper: workspace.deanReview.ktPaper,
-        });
-      }
-      setLoading(false);
     }
 
     void loadWorkspace();
@@ -122,29 +139,32 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
     setError("");
     setMessage("");
 
-    await apiFetch("/api/auth/csrf", { method: "GET" });
+    try {
+      const response = await apiFetch(`/api/question-banks/${questionBankId}/dean-review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          regularPaper: selection.regularPaper,
+          supplementaryPaper: selection.supplementaryPaper,
+          ktPaper: selection.ktPaper,
+        }),
+      });
 
-    const response = await apiFetch(`/api/question-banks/${questionBankId}/dean-review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        regularPaper: selection.regularPaper,
-        supplementaryPaper: selection.supplementaryPaper,
-        ktPaper: selection.ktPaper,
-      }),
-    });
+      const result = await response.json();
 
-    const result = await response.json();
-    setSubmitting(false);
+      if (!result.success) {
+        setError(result.error?.message ?? "Unable to submit dean selection.");
+        return;
+      }
 
-    if (!result.success) {
-      setError(result.error?.message ?? "Unable to submit dean selection.");
-      return;
+      setMessage("Selection submitted successfully.");
+      router.push("/dashboard/dean");
+      router.refresh();
+    } catch {
+      setError("Network request failed. Please check your connection.");
+    } finally {
+      setSubmitting(false);
     }
-
-    setMessage("Selection submitted successfully.");
-    router.push("/dashboard/dean");
-    router.refresh();
   }
 
   if (loading) {

@@ -32,36 +32,45 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
   async function createExport(formData: FormData) {
     setBusy(true);
     setMessage("");
-    const response = await apiFetch("/api/exports", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        questionBankId: formData.get("questionBankId"),
-        format: formData.get("format"),
-        examDate: formData.get("examDate"),
-        duration: formData.get("duration"),
-        maximumMarks: Number(formData.get("maximumMarks")),
-        institutionName: formData.get("institutionName"),
-        instructions: String(formData.get("instructions") ?? "")
-          .split("\n")
-          .map((item) => item.trim())
-          .filter(Boolean),
-      }),
-    });
-    const result = await response.json();
-    setBusy(false);
-    setMessage(result.success ? "Export generated successfully." : result.error?.message ?? "Unable to generate export");
-    if (result.success) window.location.reload();
+    try {
+      const response = await apiFetch("/api/exports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questionBankId: formData.get("questionBankId"),
+          format: formData.get("format"),
+          examDate: formData.get("examDate"),
+          duration: formData.get("duration"),
+          maximumMarks: Number(formData.get("maximumMarks")),
+          institutionName: formData.get("institutionName"),
+          instructions: String(formData.get("instructions") ?? "")
+            .split("\n")
+            .map((item) => item.trim())
+            .filter(Boolean),
+        }),
+      });
+      const result = await response.json();
+      setMessage(result.success ? "Export generated successfully." : result.error?.message ?? "Unable to generate export");
+      if (result.success) window.location.reload();
+    } catch {
+      setMessage("Network request failed. Please check your connection.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function downloadExport(exportId: string) {
-    const response = await apiFetch(`/api/exports/${exportId}/download`);
-    const result = await response.json();
-    if (result.success) {
-      window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
-      return;
+    try {
+      const response = await apiFetch(`/api/exports/${exportId}/download`);
+      const result = await response.json();
+      if (result.success) {
+        window.open(result.data.downloadUrl, "_blank", "noopener,noreferrer");
+        return;
+      }
+      setMessage(result.error?.message ?? "Unable to download export");
+    } catch {
+      setMessage("Network request failed. Please check your connection.");
     }
-    setMessage(result.error?.message ?? "Unable to download export");
   }
 
   return (

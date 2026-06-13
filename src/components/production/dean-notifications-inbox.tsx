@@ -26,19 +26,23 @@ export function DeanNotificationsInbox({
   const unreadCount = notifications.filter((notification) => !notification.isRead).length;
 
   async function markAsRead(notificationId: string) {
-    const response = await apiFetch("/api/notifications", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notificationIds: [notificationId] }),
-    });
-    const result = await response.json();
-    if (!result.success) return;
+    try {
+      const response = await apiFetch("/api/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationIds: [notificationId] }),
+      });
+      const result = await response.json();
+      if (!result.success) return;
 
-    setNotifications((current) =>
-      current.map((notification) =>
-        notification.id === notificationId ? { ...notification, isRead: true } : notification,
-      ),
-    );
+      setNotifications((current) =>
+        current.map((notification) =>
+          notification.id === notificationId ? { ...notification, isRead: true } : notification,
+        ),
+      );
+    } catch {
+      // Silently fail — this is a non-critical UX enhancement
+    }
   }
 
   return (

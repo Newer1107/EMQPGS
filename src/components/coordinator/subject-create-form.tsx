@@ -73,41 +73,46 @@ export function SubjectCreateForm({ departments }: Props) {
     setLoading(true);
     setErrors({});
 
-    const response = await apiFetch("/api/subjects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: values.name.trim(),
-        code: values.code.trim(),
-        semester: Number(values.semester),
-        credits: Number(values.credits),
-        departmentId: values.departmentId,
-      }),
-    });
-
-    const result = await response.json();
-    setLoading(false);
-
-    if (response.status === 201 && result.success) {
-      setOpen(false);
-      setValues({
-        name: "",
-        code: "",
-        semester: "",
-        credits: "",
-        departmentId: departments[0]?.id ?? "",
+    try {
+      const response = await apiFetch("/api/subjects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: values.name.trim(),
+          code: values.code.trim(),
+          semester: Number(values.semester),
+          credits: Number(values.credits),
+          departmentId: values.departmentId,
+        }),
       });
-      toast.success("Subject created successfully.");
-      router.refresh();
-      return;
-    }
 
-    if (response.status === 409) {
-      setErrors({ code: "This subject code already exists in this department." });
-      return;
-    }
+      const result = await response.json();
 
-    setErrors({ form: result.error?.message ?? "Failed to create subject." });
+      if (response.ok && result.success) {
+        setOpen(false);
+        setValues({
+          name: "",
+          code: "",
+          semester: "",
+          credits: "",
+          departmentId: departments[0]?.id ?? "",
+        });
+        toast.success("Subject created successfully.");
+        router.refresh();
+        return;
+      }
+
+      if (response.status === 409) {
+        setErrors({ code: "This subject code already exists in this department." });
+        return;
+      }
+
+      setErrors({ form: result.error?.message ?? "Failed to create subject." });
+    } catch {
+      setErrors({ form: "Network request failed. Please check your connection." });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

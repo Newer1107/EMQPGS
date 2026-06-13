@@ -198,47 +198,51 @@ export function ExamCycleTimetableManager({
   async function submitForm() {
     setIsSaving(true);
 
-    const payload = {
-      academicYear: form.academicYear,
-      semester: Number(form.semester),
-      examType: form.examType,
-      status: form.status,
-      departmentId: form.departmentId || null,
-      timetableDocumentRef: form.timetableDocumentRef,
-      timetableIssueDate: form.timetableIssueDate,
-      timetableTitle: form.timetableTitle,
-      timetableBranch: form.timetableBranch,
-      timetableSignature: form.timetableSignature,
-      timetableRows: form.timetableRows.map(({ dateDay, time, paper }) => ({ dateDay, time, paper })),
-    };
+    try {
+      const payload = {
+        academicYear: form.academicYear,
+        semester: Number(form.semester),
+        examType: form.examType,
+        status: form.status,
+        departmentId: form.departmentId || null,
+        timetableDocumentRef: form.timetableDocumentRef,
+        timetableIssueDate: form.timetableIssueDate,
+        timetableTitle: form.timetableTitle,
+        timetableBranch: form.timetableBranch,
+        timetableSignature: form.timetableSignature,
+        timetableRows: form.timetableRows.map(({ dateDay, time, paper }) => ({ dateDay, time, paper })),
+      };
 
-    const endpoint = selectedCycleId ? `/api/exam-cycles/${selectedCycleId}` : "/api/exam-cycles";
-    const method = selectedCycleId ? "PATCH" : "POST";
+      const endpoint = selectedCycleId ? `/api/exam-cycles/${selectedCycleId}` : "/api/exam-cycles";
+      const method = selectedCycleId ? "PATCH" : "POST";
 
-    const response = await apiFetch(endpoint, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+      const response = await apiFetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
 
-    const result = await response.json();
-    setIsSaving(false);
-
-    if (!result.success) {
-      toast.error(result.error?.message ?? "Failed to save examination cycle");
-      return;
-    }
-
-    const savedCycle = result.data as StoredExamCycle;
-    setCycles((current) => {
-      if (selectedCycleId) {
-        return current.map((cycle) => (cycle.id === savedCycle.id ? savedCycle : cycle));
+      if (!result.success) {
+        toast.error(result.error?.message ?? "Failed to save examination cycle");
+        return;
       }
-      return [savedCycle, ...current];
-    });
 
-    toast.success(selectedCycleId ? "Examination cycle updated" : "Examination cycle created");
-    editCycle(savedCycle);
+      const savedCycle = result.data as StoredExamCycle;
+      setCycles((current) => {
+        if (selectedCycleId) {
+          return current.map((cycle) => (cycle.id === savedCycle.id ? savedCycle : cycle));
+        }
+        return [savedCycle, ...current];
+      });
+
+      toast.success(selectedCycleId ? "Examination cycle updated" : "Examination cycle created");
+      editCycle(savedCycle);
+    } catch {
+      toast.error("Network request failed. Please check your connection.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (

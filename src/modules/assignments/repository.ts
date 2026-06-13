@@ -14,7 +14,12 @@ export class AssignmentRepository extends BaseRepository {
 
   replaceAssignments(questionBankId: string, assignedById: string, moderatorId?: string, contributorIds: string[] = []) {
     return this.prisma.$transaction(async (tx) => {
-      await tx.teacherAssignment.deleteMany({ where: { questionBankId } });
+      await tx.teacherAssignment.deleteMany({
+        where: {
+          questionBankId,
+          assignmentRole: AssignmentRole.CONTRIBUTOR,
+        },
+      });
 
       const rows = [
         ...(moderatorId

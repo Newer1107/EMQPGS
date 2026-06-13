@@ -1062,6 +1062,30 @@ All environment variables are documented in `.env.example`. Copy this file to `.
 | `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API base URL |
 | `OLLAMA_MODEL` | `llama3.1` | Ollama model identifier for AI summaries |
 
+### Email / SMTP (OAuth2)
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SMTP_HOST` | `smtp.gmail.com` | SMTP server hostname |
+| `SMTP_PORT` | `587` | SMTP server port (587 for STARTTLS, 465 for SSL) |
+| `SMTP_USER` | — | SMTP username / email address (e.g. `tcet.cercd@tcetmumbai.in`) |
+| `SMTP_PASS` | — | SMTP password (used if OAuth2 credentials are not provided) |
+| `SMTP_FROM` | `EMQPGS <noreply@emqpgs.local>` | Sender address for outgoing emails |
+| `GOOGLE_CLIENT_ID` | — | Google OAuth2 client ID (for Gmail OAuth2 authentication) |
+| `GOOGLE_CLIENT_SECRET` | — | Google OAuth2 client secret |
+| `GOOGLE_REFRESH_TOKEN` | — | Google OAuth2 refresh token |
+
+**OAuth2 setup for Gmail:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+2. Create an OAuth 2.0 Client ID (application type: Web application)
+3. Enable the Gmail API for the project
+4. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in `.env`
+5. Generate a refresh token using the [OAuth 2.0 Playground](https://developers.google.com/oauthplayground):
+   - Step 1: Select `https://mail.google.com/` scope
+   - Step 2: Exchange authorization code → use your client ID/secret
+   - Step 3: Copy the refresh token to `GOOGLE_REFRESH_TOKEN`
+6. If OAuth2 credentials are not set, the system falls back to `SMTP_USER`/`SMTP_PASS` basic auth, then finally to `ConsoleEmailProvider` (logs to console).
+
 ### Institution & Branding
 
 | Variable | Default | Description |
