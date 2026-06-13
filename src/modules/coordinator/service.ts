@@ -720,7 +720,7 @@ export class CoordinatorService {
 
     const statusHistory = [
       { status: "CREATED", actor: question.contributor.name, timestamp: question.createdAt.toISOString() },
-      ...(question.submittedAt ? [{ status: "SUBMITTED", actor: question.contributor.name, timestamp: question.submittedAt.toISOString() }] : []),
+      ...(question.submittedAt ? [{ status: question.status === QuestionStatus.REVISION_SUBMITTED ? "REVISION_SUBMITTED" : "PENDING", actor: question.contributor.name, timestamp: question.submittedAt.toISOString() }] : []),
       ...(question.reviewedAt ? [{ status: question.status, actor: "Moderator", timestamp: question.reviewedAt.toISOString() }] : []),
     ];
 
@@ -866,7 +866,7 @@ function summarizeBankSlots(
   for (const slot of slots) {
     if (slot.question) {
       filledCount += 1;
-      if (slot.question.status === QuestionStatus.SUBMITTED) pendingModerationCount += 1;
+      if (slot.question.status === QuestionStatus.PENDING || slot.question.status === QuestionStatus.REVISION_SUBMITTED) pendingModerationCount += 1;
       if (slot.question.status === QuestionStatus.APPROVED) approvedCount += 1;
       if (slot.question.status === QuestionStatus.REJECTED || slot.question.status === QuestionStatus.REVISION_REQUESTED) rejectedCount += 1;
     }

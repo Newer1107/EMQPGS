@@ -37,6 +37,19 @@ export class QuestionService {
   }
 
   async listQuestions(questionBankId: string, actor: Actor) {
+    if (actor.role === Role.MODERATOR) {
+      const assignment = await prisma.moderatorBankAssignment.findUnique({
+        where: {
+          moderatorId_questionBankId: {
+            moderatorId: actor.id,
+            questionBankId,
+          },
+        },
+      });
+      if (!assignment) {
+        throw new ForbiddenError("You do not have access to this question bank");
+      }
+    }
     return this.repository.listForQuestionBank(questionBankId, actor);
   }
 
@@ -123,7 +136,11 @@ export class QuestionService {
 
     const updated = await this.repository.updateQuestion(id, {
       ...normalizeQuestionUpdate(input),
-      ...(actor.role === Role.CONTRIBUTOR ? { status: QuestionStatus.DRAFT } : {}),
+      ...(actor.role === Role.CONTRIBUTOR
+        ? {
+            status: question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_REQUESTED : QuestionStatus.DRAFT,
+          }
+        : {}),
     });
 
     await logAudit({
@@ -143,14 +160,64 @@ export class QuestionService {
     this.ensureQuestionBankMutable(question.questionBank.status);
     if (question.contributorId !== actor.id) throw new ForbiddenError("Only the contributor can submit this question");
     if (question.questionText.trim().length < 15) throw new AppError("Question text must be at least 15 characters", 400);
+    if (question.status !== QuestionStatus.DRAFT && question.status !== QuestionStatus.REVISION_REQUESTED) {
+      throw new AppError("Question cannot be submitted in its current status.", 409);
+    }
 
-    const updated = await this.repository.updateQuestion(id, {
-      status: QuestionStatus.SUBMITTED,
-      submittedAt: new Date(),
-      moderatorRemark: null,
+    const nextStatus =
+      question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_SUBMITTED : QuestionStatus.PENDING;
+
+    const updated = await prisma.$transaction(async (tx) => {
+      const revisionCount = await tx.questionRevision.count({
+        where: { questionId: id },
+      });
+
+      const result = await tx.question.update({
+        where: { id },
+        data: {
+          status: nextStatus,
+          submittedAt: new Date(),
+        },
+        include: {
+          contributor: true,
+          attachments: {
+            include: {
+              fileAsset: true,
+            },
+          },
+          slot: true,
+          questionBank: {
+            include: {
+              subject: true,
+              examCycle: true,
+              assignments: { include: { teacher: true } },
+            },
+          },
+        },
+      });
+
+      await tx.questionRevision.create({
+        data: {
+          questionId: id,
+          versionNumber: revisionCount + 1,
+          questionText: result.questionText,
+          submittedById: actor.id,
+          submittedAt: result.submittedAt ?? new Date(),
+          moderatorComment: question.moderatorRemark ?? null,
+        },
+      });
+
+      return result;
     });
 
-    const moderatorAssignments = updated.questionBank.assignments.filter((assignment) => assignment.assignmentRole === "MODERATOR");
+    const moderatorAssignments = await prisma.moderatorBankAssignment.findMany({
+      where: {
+        questionBankId: updated.questionBankId,
+      },
+      include: {
+        moderator: true,
+      },
+    });
     const coordinatorRecipients = await prisma.coordinatorDepartmentAssignment.findMany({
       where: {
         departmentId: updated.questionBank.subject.departmentId,
@@ -162,9 +229,11 @@ export class QuestionService {
 
     for (const assignment of moderatorAssignments) {
       await this.notificationService.createAndEmail(
-        assignment.teacher,
-        `Question submitted for ${updated.questionBank.subject.subjectCode}`,
-        `A contributor submitted Module ${updated.moduleNumber}, ${updated.marks}-mark Slot ${updated.slotNumber}.`,
+        assignment.moderator,
+        nextStatus === QuestionStatus.REVISION_SUBMITTED ? `Revision resubmitted for ${updated.questionBank.subject.subjectCode}` : `Question submitted for ${updated.questionBank.subject.subjectCode}`,
+        nextStatus === QuestionStatus.REVISION_SUBMITTED
+          ? `${updated.contributor.name} has resubmitted a revised question in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber}.`
+          : `A new question has been submitted by ${updated.contributor.name} in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber}.`,
         "/dashboard/moderator/questions",
         NotificationType.ACTION_REQUIRED,
       );
@@ -262,6 +331,19 @@ export class QuestionService {
   async getQuestion(id: string, actor: Actor) {
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
+    if (actor.role === Role.MODERATOR) {
+      const assignment = await prisma.moderatorBankAssignment.findUnique({
+        where: {
+          moderatorId_questionBankId: {
+            moderatorId: actor.id,
+            questionBankId: question.questionBankId,
+          },
+        },
+      });
+      if (!assignment) {
+        throw new ForbiddenError("You cannot view this question");
+      }
+    }
     if (!canViewQuestion(actor, question)) throw new ForbiddenError("You cannot view this question");
     return question;
   }

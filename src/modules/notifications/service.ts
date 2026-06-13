@@ -38,6 +38,17 @@ export class NotificationService {
     return { count: result.count };
   }
 
+  async markAllAsRead(recipientId: string) {
+    const result = await prisma.notification.updateMany({
+      where: {
+        recipientId,
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
+    return { count: result.count };
+  }
+
   async markByActionUrlAsRead(recipientId: string, actionUrl: string) {
     const result = await prisma.notification.updateMany({
       where: {

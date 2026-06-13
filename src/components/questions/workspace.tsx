@@ -394,7 +394,7 @@ export function QuestionWorkspace({
                     </TD>
                     <TD>
                       <div className="flex flex-col gap-2">
-                        {mode === "contributor" && question.status !== "SUBMITTED" && question.status !== "APPROVED" ? (
+                        {mode === "contributor" && question.status !== "PENDING" && question.status !== "REVISION_SUBMITTED" && question.status !== "APPROVED" ? (
                           <Button size="sm" type="button" onClick={() => submitQuestion(question.id)} disabled={busyKey === question.id}>
                             {busyKey === question.id ? "..." : "Submit"}
                           </Button>

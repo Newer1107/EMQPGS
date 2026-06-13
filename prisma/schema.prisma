@@ -135,10 +135,11 @@ enum DifficultyLevel {
 
 enum QuestionStatus {
   DRAFT
-  SUBMITTED
+  PENDING
   APPROVED
   REJECTED
   REVISION_REQUESTED
+  REVISION_SUBMITTED
 }
 
 model Department {
@@ -172,11 +173,14 @@ model User {
   coordinatorDepartments CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
   assignments      TeacherAssignment[] @relation("assignedTeacher")
   assignedBy       TeacherAssignment[] @relation("assignedBy")
+  moderatorBankAssignments ModeratorBankAssignment[] @relation("moderatorBankUser")
   notifications    Notification[]
   auditLogs        AuditLog[]
   questionBanks    QuestionBank[]      @relation("questionBankCreator")
   questionSlots    QuestionSlot[]      @relation("slotReservedBy")
   contributedQuestions Question[]      @relation("questionContributor")
+  moderationEvents ModerationEvent[]   @relation("moderationEventActor")
+  submittedRevisions QuestionRevision[] @relation("revisionSubmitter")
   uploadedAttachments QuestionAttachment[] @relation("attachmentUploader")
   deanReviews      DeanReview[]        @relation("deanReviewSelector")
   exportArtifacts  ExportArtifact[]    @relation("exportArtifactGenerator")
@@ -239,6 +243,7 @@ model QuestionBank {
   examCycle    ExamCycle           @relation(fields: [examCycleId], references: [id])
   createdBy    User                @relation("questionBankCreator", fields: [createdById], references: [id])
   assignments  TeacherAssignment[]
+  moderatorAssignments ModeratorBankAssignment[]
   questionSlots QuestionSlot[]
   questions    Question[]
   aiReports    AiReport[]
@@ -363,7 +368,7 @@ model QuestionSlot {
 model Question {
   id              String           @id @default(cuid())
   questionBankId  String
-  slotId          String           @unique
+  slotId          String?          @unique
   questionText    String
   moduleNumber    Int
   marks           Int
@@ -385,8 +390,10 @@ model Question {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   questionBank    QuestionBank     @relation(fields: [questionBankId], references: [id])
-  slot            QuestionSlot     @relation(fields: [slotId], references: [id])
+  slot            QuestionSlot?    @relation(fields: [slotId], references: [id])
   contributor     User             @relation("questionContributor", fields: [contributorId], references: [id])
+  moderationEvents ModerationEvent[]
+  revisions       QuestionRevision[]
   attachments     QuestionAttachment[]
   generatedPaperItems GeneratedPaperItem[]
 
@@ -406,6 +413,46 @@ model QuestionAttachment {
   uploadedBy   User       @relation("attachmentUploader", fields: [uploadedById], references: [id])
 
   @@unique([questionId, fileAssetId])
+}
+
+model ModerationEvent {
+  id          String   @id @default(cuid())
+  questionId  String
+  moderatorId String
+  action      String
+  note        String?
+  createdAt   DateTime @default(now())
+  question    Question @relation(fields: [questionId], references: [id])
+  moderator   User     @relation("moderationEventActor", fields: [moderatorId], references: [id])
+
+  @@index([questionId, createdAt])
+  @@index([moderatorId, createdAt])
+}
+
+model QuestionRevision {
+  id               String   @id @default(cuid())
+  questionId       String
+  versionNumber    Int
+  questionText     String
+  submittedById    String
+  submittedAt      DateTime
+  moderatorComment String?
+  question         Question @relation(fields: [questionId], references: [id])
+  submittedBy      User     @relation("revisionSubmitter", fields: [submittedById], references: [id])
+
+  @@unique([questionId, versionNumber])
+  @@index([questionId, submittedAt])
+}
+
+model ModeratorBankAssignment {
+  id             String       @id @default(cuid())
+  moderatorId    String
+  questionBankId String
+  assignedAt     DateTime     @default(now())
+  moderator      User         @relation("moderatorBankUser", fields: [moderatorId], references: [id])
+  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
+
+  @@unique([moderatorId, questionBankId])
 }
 
 model AiReport {

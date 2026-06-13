@@ -161,6 +161,20 @@ async function main() {
     });
   }
 
+  await prisma.moderatorBankAssignment.upsert({
+    where: {
+      moderatorId_questionBankId: {
+        moderatorId: users[2].id,
+        questionBankId: questionBank.id,
+      },
+    },
+    update: {},
+    create: {
+      moderatorId: users[2].id,
+      questionBankId: questionBank.id,
+    },
+  });
+
   await prisma.teacherAssignment.upsert({
     where: {
       questionBankId_teacherId_assignmentRole_moduleNumber: {
@@ -232,8 +246,25 @@ async function main() {
         teachingIndex: "TI-ALG-01",
         difficultyLevel: DifficultyLevel.MEDIUM,
         contributorId: users[3].id,
-        status: QuestionStatus.SUBMITTED,
+        status: QuestionStatus.PENDING,
         submittedAt: new Date(),
+      },
+    });
+
+    await prisma.questionRevision.upsert({
+      where: {
+        questionId_versionNumber: {
+          questionId: question.id,
+          versionNumber: 1,
+        },
+      },
+      update: {},
+      create: {
+        questionId: question.id,
+        versionNumber: 1,
+        questionText: question.questionText,
+        submittedById: users[3].id,
+        submittedAt: question.submittedAt ?? new Date(),
       },
     });
 

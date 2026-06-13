@@ -1,36 +1,76 @@
 import Link from "next/link";
-import { Role } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { getDashboardSeed } from "@/lib/server-data";
+import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { NotificationInbox } from "@/components/moderator/notification-inbox";
+import { ModeratorService } from "@/modules/moderation/service";
 
 export default async function ModeratorDashboardPage() {
-  const data = await getDashboardSeed(Role.MODERATOR);
-  if (!data) return null;
+  const actor = await getCurrentUserFromCookies();
+  const service = new ModeratorService();
+  const data = await service.getDashboard(actor);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Moderator Dashboard</h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate question submissions</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {data.stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle>Summary Counts</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 text-sm">
+            <p>Pending review: {data.summary.pending}</p>
+            <p>Approved: {data.summary.approved}</p>
+            <p>Rejected: {data.summary.rejected}</p>
+            <p>Revision requested: {data.summary.revisionRequested}</p>
+            <p>Awaiting revision resubmission: {data.summary.awaitingRevisionResubmission}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Questions Awaiting Revision Resubmission</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {data.awaitingRevisionResubmission.map((item) => (
+              <Link key={item.id} href={`/dashboard/moderator/questions?questionId=${item.id}`} className="block rounded-lg border border-[var(--border)] p-3">
+                <p className="font-medium">{item.subjectName}</p>
+                <p className="text-[var(--muted-foreground)]">Module {item.moduleNumber} · {item.markType}-mark · {item.contributorName}</p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Recent Moderation Activity</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {data.recentModerationActivity.map((item) => (
+              <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
+                <p className="font-medium">{item.subjectName}</p>
+                <p className="text-[var(--muted-foreground)]">{item.action} · {new Date(item.timestamp).toLocaleString()}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Quick-Access Bank List</CardTitle></CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {data.quickAccessBanks.map((bank) => (
+              <Link key={bank.id} href={`/dashboard/moderator/questions?bankId=${bank.id}`} className="block rounded-lg border border-[var(--border)] p-3">
+                <p className="font-medium">{bank.subjectName}</p>
+                <p className="text-[var(--muted-foreground)]">{bank.examCycle}</p>
+                <p>{bank.pendingCount} pending · {bank.revisionSubmittedCount} revision submitted</p>
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="xl:col-span-2">
+          <CardHeader><CardTitle>Notification Inbox</CardTitle></CardHeader>
+          <CardContent>
+            <NotificationInbox initialNotifications={data.notifications} unreadCount={data.unreadNotificationCount} />
+          </CardContent>
+        </Card>
       </div>
-      <Card>
-        <CardHeader><CardTitle>Pending Reviews</CardTitle></CardHeader>
-        <CardContent>
-          {data.pendingTasks.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">No pending reviews</p>
-          ) : (
-            <ul className="space-y-2">
-              {data.pendingTasks.map((task) => <li key={task} className="text-sm">{task}</li>)}
-            </ul>
-          )}
-          <Link href="/dashboard/moderator/questions" className="mt-4 inline-flex text-sm font-medium text-[var(--foreground)] hover:underline">
-            Open moderation queue &rarr;
-          </Link>
-        </CardContent>
-      </Card>
     </div>
   );
 }

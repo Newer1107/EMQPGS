@@ -87,10 +87,11 @@ export const difficultyLabels: Record<DifficultyLevel, string> = {
 
 export const questionStatusLabels: Record<QuestionStatus, string> = {
   DRAFT: "Draft",
-  SUBMITTED: "Submitted",
+  PENDING: "Pending",
   APPROVED: "Approved",
   REJECTED: "Rejected",
   REVISION_REQUESTED: "Revision Requested",
+  REVISION_SUBMITTED: "Revision Submitted",
 };
 
 export const rbacMatrix: Record<Role, string[]> = {

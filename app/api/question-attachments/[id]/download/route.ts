@@ -18,6 +18,17 @@ export const GET = withApiHandler(async (request, context) => {
   if (context.user!.role === Role.CONTRIBUTOR && attachment.question.contributorId !== context.user!.id) {
     throw new ForbiddenError("You cannot access this attachment");
   }
+  if (context.user!.role === Role.MODERATOR) {
+    const assignment = await prisma.moderatorBankAssignment.findFirst({
+      where: {
+        moderatorId: context.user!.id,
+        questionBankId: attachment.question.questionBankId,
+      },
+    });
+    if (!assignment) {
+      throw new ForbiddenError("You cannot access this attachment");
+    }
+  }
 
   return storageService.createDownloadLink(attachment.fileAssetId);
 }, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });
