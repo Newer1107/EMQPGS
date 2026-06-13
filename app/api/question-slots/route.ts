@@ -12,7 +12,7 @@ export const GET = withApiHandler(async (request) => {
     return [];
   }
   return service.listSlots(questionBankId);
-}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE, Role.DEAN] });
+}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });
 
 export const POST = withApiHandler(
   async (request, context) => {

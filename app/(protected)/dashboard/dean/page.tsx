@@ -1,32 +1,96 @@
-import { Role } from "@prisma/client";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/dashboard/stat-card";
-import { getDashboardSeed } from "@/lib/server-data";
+import { DeanNotificationsInbox } from "@/components/production/dean-notifications-inbox";
+import { getDeanReviewData } from "@/lib/server-data";
 
 export default async function DeanDashboardPage() {
-  const data = await getDashboardSeed(Role.DEAN);
-  if (!data) return null;
+  const data = await getDeanReviewData();
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dean Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Approval visibility and readiness overview</p>
+    <div className="space-y-8">
+      <div className="section-frame">
+        <p className="page-kicker">Dean</p>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="page-display">FINAL PAPER REVIEW</h1>
+            <p className="page-lead mt-6">Review AI-scored candidate papers and assign the regular, supplementary, and KT slots.</p>
+          </div>
+          <Badge className="shrink-0">{data.unreadNotificationCount} unread</Badge>
+        </div>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {data.stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
-      </div>
+
+      <section className="grid gap-6 xl:grid-cols-[1.25fr,0.95fr]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Reviews</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {data.pendingReviews.length === 0 ? (
+              <p className="text-sm text-[var(--muted-foreground)]">No pending dean reviews.</p>
+            ) : data.pendingReviews.map((item) => (
+              <div key={item.id} className="rounded-xl border border-[var(--border)] p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-base font-semibold">{item.subjectCode} · {item.subjectName}</p>
+                    <p className="mt-1 text-sm text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                      Generated {item.generationTimestamp ? new Date(item.generationTimestamp).toLocaleString() : "Unavailable"}
+                    </p>
+                  </div>
+                  <Link className="text-sm font-medium underline underline-offset-4" href={`/dashboard/dean/review?bank=${item.id}`}>
+                    Review papers
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <DeanNotificationsInbox initialNotifications={data.notifications} />
+      </section>
+
       <Card>
-        <CardHeader><CardTitle>Readiness Notes</CardTitle></CardHeader>
-        <CardContent>
-          {data.pendingTasks.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">No readiness notes</p>
-          ) : (
-            <ul className="space-y-2">
-              {data.pendingTasks.map((task) => <li key={task} className="text-sm">{task}</li>)}
-            </ul>
-          )}
+        <CardHeader>
+          <CardTitle>Completed Reviews</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {data.completedReviews.length === 0 ? (
+            <p className="text-sm text-[var(--muted-foreground)]">No completed dean reviews yet.</p>
+          ) : data.completedReviews.map((item) => (
+            <div key={item.id} className="rounded-xl border border-[var(--border)] p-4">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-base font-semibold">{item.subjectCode} · {item.subjectName}</p>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                    Generated {item.generationTimestamp ? new Date(item.generationTimestamp).toLocaleString() : "Unavailable"}
+                  </p>
+                </div>
+                <Link className="text-sm font-medium underline underline-offset-4" href={`/dashboard/dean/review?bank=${item.id}`}>
+                  View review
+                </Link>
+              </div>
+              {item.reviewSummary ? (
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <ReviewSummary label="Regular" value={item.reviewSummary.regularPaper} />
+                  <ReviewSummary label="Supplementary" value={item.reviewSummary.supplementaryPaper} />
+                  <ReviewSummary label="KT" value={item.reviewSummary.ktPaper} />
+                </div>
+              ) : null}
+            </div>
+          ))}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function ReviewSummary({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg bg-[var(--muted)] p-3">
+      <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">{label}</p>
+      <p className="mt-1 text-sm font-semibold">{value}</p>
     </div>
   );
 }

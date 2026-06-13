@@ -64,7 +64,13 @@ export async function getQuestionContributionWorkspace(role: Role) {
 }
 
 export async function getDeanReviewData() {
-  return new ProductionService().listDeanReviewQueue();
+  const actor = await getCurrentUserFromCookies();
+  return new ProductionService().getDeanDashboardData(actor);
+}
+
+export async function getDeanReviewWorkspaceData(questionBankId: string) {
+  const actor = await getCurrentUserFromCookies();
+  return new ProductionService().getDeanReviewWorkspace(questionBankId, actor);
 }
 
 export async function getCoeProductionData() {

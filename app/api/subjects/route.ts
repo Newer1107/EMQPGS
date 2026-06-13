@@ -6,7 +6,7 @@ import { subjectSchema } from "@/modules/subjects/validation";
 
 const service = new SubjectService();
 
-export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] });
+export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] });
 
 export const POST = withApiHandler(
   async (request) => {

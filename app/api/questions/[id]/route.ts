@@ -9,7 +9,7 @@ const service = new QuestionService();
 export const GET = withApiHandler(async (request, context) => {
   const id = request.nextUrl.pathname.split("/").pop()!;
   return service.getQuestion(id, context.user!);
-}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE, Role.DEAN] });
+}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });
 
 export const PATCH = withApiHandler(
   async (request, context) => {

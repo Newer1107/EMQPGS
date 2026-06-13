@@ -6,7 +6,7 @@ import { examCycleSchema } from "@/modules/exam-cycles/validation";
 
 const service = new ExamCycleService();
 
-export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.DEAN] });
+export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR] });
 
 export const POST = withApiHandler(
   async (request) => {

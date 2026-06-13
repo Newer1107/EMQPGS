@@ -413,9 +413,6 @@ model GeneratedPaper {
   questionBank      QuestionBank           @relation(fields: [questionBankId], references: [id])
   paperFileAsset    FileAsset?             @relation("generatedPaperFileAsset", fields: [paperFileAssetId], references: [id])
   items             GeneratedPaperItem[]
-  selectedAsRegular DeanReview[]           @relation("regularPaper")
-  selectedAsSupplementary DeanReview[]     @relation("supplementaryPaper")
-  selectedAsKt      DeanReview[]           @relation("ktPaper")
 
   @@unique([questionBankId, variant])
 }
@@ -432,21 +429,18 @@ model GeneratedPaperItem {
 }
 
 model DeanReview {
-  id                   String         @id @default(cuid())
-  questionBankId       String         @unique
-  regularPaperId       String
-  supplementaryPaperId String
-  ktPaperId            String
-  selectedById         String
-  notes                String?
-  selectedAt           DateTime       @default(now())
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
-  questionBank         QuestionBank   @relation(fields: [questionBankId], references: [id])
-  regularPaper         GeneratedPaper @relation("regularPaper", fields: [regularPaperId], references: [id])
-  supplementaryPaper   GeneratedPaper @relation("supplementaryPaper", fields: [supplementaryPaperId], references: [id])
-  ktPaper              GeneratedPaper @relation("ktPaper", fields: [ktPaperId], references: [id])
-  selectedBy           User           @relation("deanReviewSelector", fields: [selectedById], references: [id])
+  id                 String       @id @default(cuid())
+  questionBankId     String       @unique
+  regularPaper       PaperVariant @map("regularPaperId")
+  supplementaryPaper PaperVariant @map("supplementaryPaperId")
+  ktPaper            PaperVariant @map("ktPaperId")
+  reviewedById       String       @map("selectedById")
+  notes              String?
+  reviewedAt         DateTime     @default(now()) @map("selectedAt")
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  questionBank       QuestionBank @relation(fields: [questionBankId], references: [id])
+  reviewedBy         User         @relation("deanReviewSelector", fields: [reviewedById], references: [id])
 }
 
 model ExportArtifact {

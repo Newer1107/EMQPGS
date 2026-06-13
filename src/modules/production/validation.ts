@@ -1,11 +1,19 @@
-import { ExportFormat } from "@prisma/client";
+import { ExportFormat, PaperVariant } from "@prisma/client";
 import { z } from "zod";
 
 export const deanReviewSchema = z.object({
-  regularPaperId: z.string().min(1),
-  supplementaryPaperId: z.string().min(1),
-  ktPaperId: z.string().min(1),
-  notes: z.string().max(2000).optional(),
+  regularPaper: z.nativeEnum(PaperVariant),
+  supplementaryPaper: z.nativeEnum(PaperVariant),
+  ktPaper: z.nativeEnum(PaperVariant),
+}).superRefine((value, ctx) => {
+  const distinctValues = new Set([value.regularPaper, value.supplementaryPaper, value.ktPaper]);
+  if (distinctValues.size !== 3) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Each exam slot must be assigned to a different paper.",
+      path: ["regularPaper"],
+    });
+  }
 });
 
 export const exportRequestSchema = z.object({

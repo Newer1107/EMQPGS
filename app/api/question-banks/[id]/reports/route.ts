@@ -9,7 +9,7 @@ export const GET = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     return service.listAiReports(questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE, Role.DEAN] },
+  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE] },
 );
 
 export const POST = withApiHandler(

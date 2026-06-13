@@ -11,7 +11,7 @@ export const GET = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     return service.listGeneratedPapers(questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE, Role.DEAN] },
+  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE] },
 );
 
 export const POST = withApiHandler(

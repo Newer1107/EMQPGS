@@ -9,7 +9,7 @@ const service = new QuestionService();
 export const GET = withApiHandler(async (request, context) => {
   const id = request.nextUrl.pathname.split("/").slice(-2)[0]!;
   return service.listAttachments(id, context.user!);
-}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE, Role.DEAN] });
+}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });
 
 export const POST = withApiHandler(
   async (request, context) => {

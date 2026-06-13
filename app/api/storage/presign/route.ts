@@ -25,5 +25,5 @@ export const POST = withApiHandler(
       uploadedById: context.user?.id,
     });
   },
-  { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] },
+  { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] },
 );

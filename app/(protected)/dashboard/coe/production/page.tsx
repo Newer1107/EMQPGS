@@ -35,9 +35,9 @@ export default async function CoeProductionPage() {
                 (() => {
                   const review = bank.deanReview as
                     | {
-                        regularPaper: { variant: string };
-                        supplementaryPaper: { variant: string };
-                        ktPaper: { variant: string };
+                        regularPaper: string;
+                        supplementaryPaper: string;
+                        ktPaper: string;
                       }
                     | null;
 
@@ -53,9 +53,9 @@ export default async function CoeProductionPage() {
                       <TD>
                         {review ? (
                           <div className="space-y-1 text-sm">
-                            <p>Regular: {review.regularPaper.variant}</p>
-                            <p>Supplementary: {review.supplementaryPaper.variant}</p>
-                            <p>KT: {review.ktPaper.variant}</p>
+                            <p>Regular: {review.regularPaper}</p>
+                            <p>Supplementary: {review.supplementaryPaper}</p>
+                            <p>KT: {review.ktPaper}</p>
                           </div>
                         ) : (
                           <span className="text-sm text-[var(--muted-foreground)]">Pending dean review</span>

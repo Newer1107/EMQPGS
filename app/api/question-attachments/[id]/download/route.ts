@@ -20,4 +20,4 @@ export const GET = withApiHandler(async (request, context) => {
   }
 
   return storageService.createDownloadLink(attachment.fileAssetId);
-}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE, Role.DEAN] });
+}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });

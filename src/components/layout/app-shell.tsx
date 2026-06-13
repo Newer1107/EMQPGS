@@ -38,8 +38,6 @@ const navItems: NavItem[] = [
   { href: "/dashboard/contributor/questions", label: "My Submissions", roles: ["CONTRIBUTOR"] },
   // Dean
   { href: "/dashboard/dean", label: "Dean Dashboard", roles: ["DEAN"] },
-  { href: "/dashboard/dean/readiness-overview", label: "Readiness Overview", roles: ["DEAN"] },
-  { href: "/dashboard/dean/reports", label: "Reports", roles: ["DEAN"] },
 ];
 
 const roleLabels: Record<string, string> = {

@@ -10,7 +10,7 @@ export const GET = withApiHandler(async (request, context) => {
   const questionBankId = request.nextUrl.searchParams.get("questionBankId");
   if (!questionBankId) return [];
   return service.listQuestions(questionBankId, context.user!);
-}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE, Role.DEAN] });
+}, { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.COE] });
 
 export const POST = withApiHandler(
   async (request, context) => {

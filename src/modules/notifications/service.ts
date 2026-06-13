@@ -5,11 +5,17 @@ import { EmailService } from "@/modules/notifications/email-service";
 export class NotificationService {
   constructor(private readonly emailService = new EmailService()) {}
 
-  listForUser(recipientId: string) {
+  listForUser(recipientId: string, take = 10) {
     return prisma.notification.findMany({
       where: { recipientId },
       orderBy: { createdAt: "desc" },
-      take: 10,
+      take,
+    });
+  }
+
+  unreadCount(recipientId: string) {
+    return prisma.notification.count({
+      where: { recipientId, isRead: false },
     });
   }
 
@@ -17,6 +23,31 @@ export class NotificationService {
     return prisma.notification.create({
       data: { recipientId, title, message, actionUrl, type },
     });
+  }
+
+  async markAsRead(recipientId: string, notificationIds: string[]) {
+    if (notificationIds.length === 0) return { count: 0 };
+    const result = await prisma.notification.updateMany({
+      where: {
+        recipientId,
+        id: { in: notificationIds },
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
+    return { count: result.count };
+  }
+
+  async markByActionUrlAsRead(recipientId: string, actionUrl: string) {
+    const result = await prisma.notification.updateMany({
+      where: {
+        recipientId,
+        actionUrl,
+        isRead: false,
+      },
+      data: { isRead: true },
+    });
+    return { count: result.count };
   }
 
   async createAndEmail(

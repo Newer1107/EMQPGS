@@ -6,7 +6,7 @@ import { questionBankSchema } from "@/modules/question-banks/validation";
 
 const service = new QuestionBankService();
 
-export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] });
+export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] });
 
 export const POST = withApiHandler(
   async (request, context) => {

@@ -9,6 +9,7 @@ import { enforceRateLimit } from "@/lib/rate-limit";
 
 type RouteOptions = {
   roles?: Role[];
+  successStatus?: number;
   audit?: {
     action: string;
     entityType: string;
@@ -51,9 +52,9 @@ export function withApiHandler<T>(
         method: request.method,
         path: request.nextUrl.pathname,
         actorId: user?.id ?? null,
-        statusCode: 200,
+        statusCode: options?.successStatus ?? 200,
       });
-      return NextResponse.json({ success: true, data: result });
+      return NextResponse.json({ success: true, data: result }, { status: options?.successStatus ?? 200 });
     } catch (error) {
       return handleApiError(error, request);
     }
