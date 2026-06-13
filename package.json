@@ -3,13 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "npm run prisma:verify-client && next dev",
+    "build": "npm run prisma:verify-client && next build",
+    "start": "npm run prisma:verify-client && next start",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "postinstall": "npm run prisma:generate && npm run prisma:verify-client",
     "prisma:generate": "prisma generate",
+    "prisma:verify-client": "node scripts/verify-prisma-client.cjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts"
