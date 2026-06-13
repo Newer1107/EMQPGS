@@ -1,19 +1,35 @@
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { CoordinatorService } from "@/modules/coordinator/service";
+import { SubjectCreateForm } from "@/components/coordinator/subject-create-form";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { prisma } from "@/lib/db";
 
 export default async function SubjectsManagementPage() {
   const actor = await getCurrentUserFromCookies();
   const service = new CoordinatorService();
-  const subjects = await service.listSubjects(actor);
+  const [subjects, departmentIds] = await Promise.all([
+    service.listSubjects(actor),
+    service.getAssignedDepartmentIds(actor),
+  ]);
+  const departments = await prisma.department.findMany({
+    where: {
+      id: { in: departmentIds },
+    },
+    select: {
+      id: true,
+      name: true,
+    },
+    orderBy: { name: "asc" },
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Subjects</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Read-only subject visibility limited to your assigned departments.</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create and view subjects limited to your assigned departments.</p>
       </div>
+      <SubjectCreateForm departments={departments} />
       <DataTableCard title="Branch Subjects">
         <Table>
           <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Semester</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH></TR></THead>

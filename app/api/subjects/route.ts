@@ -1,17 +1,17 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { ForbiddenError } from "@/lib/errors";
+import { AppError, ForbiddenError } from "@/lib/errors";
 import { CoordinatorService } from "@/modules/coordinator/service";
 import { z } from "zod";
 
 const service = new CoordinatorService();
 const subjectCreateSchema = z.object({
-  subjectCode: z.string().min(2).max(20).trim().toUpperCase(),
-  subjectName: z.string().min(2).trim(),
+  name: z.string().trim().min(1, "Subject name is required."),
+  code: z.string().trim().min(1, "Subject code is required.").max(20).transform((value) => value.toUpperCase()),
   departmentId: z.string().min(1),
-  semester: z.coerce.number().int().min(1).max(8),
-  creditLoad: z.coerce.number().int().min(1).max(10),
+  semester: z.coerce.number().int().positive(),
+  credits: z.coerce.number().positive(),
 });
 
 export const GET = withApiHandler(async (request, context) => {
@@ -27,8 +27,26 @@ export const GET = withApiHandler(async (request, context) => {
 }, { roles: [Role.COORDINATOR] });
 
 export const POST = withApiHandler(
-  async () => {
-    throw new ForbiddenError("Coordinators are not authorized to create subjects.");
+  async (request, context) => {
+    const payload = subjectCreateSchema.parse(await parseJson(request));
+    if (!context.user || (context.user.role !== Role.COORDINATOR && context.user.role !== Role.COE)) {
+      throw new ForbiddenError();
+    }
+
+    try {
+      return await service.createSubject(context.user, {
+        subjectCode: payload.code,
+        subjectName: payload.name,
+        departmentId: payload.departmentId,
+        semester: payload.semester,
+        creditLoad: Math.trunc(payload.credits),
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        throw new AppError("Invalid subject payload.", 400, "VALIDATION_ERROR", error.flatten());
+      }
+      throw error;
+    }
   },
-  { roles: [Role.COORDINATOR] },
+  { roles: [Role.COORDINATOR, Role.COE], successStatus: 201, audit: { action: "SUBJECT_CREATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
 );

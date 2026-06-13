@@ -202,7 +202,29 @@ export class CoordinatorService {
   }
 
   async createSubject(actor: Actor, payload: SubjectPayload) {
-    await this.assertDepartmentAccess(actor, payload.departmentId);
+    const department = await prisma.department.findUnique({
+      where: { id: payload.departmentId },
+      select: { id: true },
+    });
+    if (!department) {
+      throw new NotFoundError("Department not found");
+    }
+    if (actor.role === Role.COORDINATOR) {
+      await this.assertDepartmentAccess(actor, payload.departmentId);
+    }
+
+    const existingSubject = await prisma.subject.findUnique({
+      where: {
+        subjectCode_departmentId: {
+          subjectCode: payload.subjectCode,
+          departmentId: payload.departmentId,
+        },
+      },
+      select: { id: true },
+    });
+    if (existingSubject) {
+      throw new AppError("This subject code already exists in this department.", 409);
+    }
 
     return prisma.subject.create({
       data: {
