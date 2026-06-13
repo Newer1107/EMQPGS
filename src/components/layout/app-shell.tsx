@@ -98,8 +98,8 @@ export function AppShell({
                 href={item.href}
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-black text-white hover:bg-black hover:text-white"
+                    isActive
+                    ? "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
                     : "bg-transparent text-gray-800 hover:bg-gray-100 hover:text-gray-900",
                 )}
               >
