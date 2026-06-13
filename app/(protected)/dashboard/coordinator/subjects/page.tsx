@@ -1,48 +1,37 @@
-import { DataTableCard } from "@/components/dashboard/data-table-card";
-import { SimpleForm } from "@/components/dashboard/simple-form";
+import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { CoordinatorService } from "@/modules/coordinator/service";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { getAdminData } from "@/lib/server-data";
+import { DataTableCard } from "@/components/dashboard/data-table-card";
 
 export default async function SubjectsManagementPage() {
-  const data = await getAdminData();
+  const actor = await getCurrentUserFromCookies();
+  const service = new CoordinatorService();
+  const subjects = await service.listSubjects(actor);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Subjects</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Manage academic subjects</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Read-only subject visibility limited to your assigned departments.</p>
       </div>
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
-        <DataTableCard title="All Subjects">
-          <Table>
-            <THead><TR><TH>Code</TH><TH>Name</TH><TH>Year</TH><TH>Semester</TH><TH>Credits</TH><TH>Due Date</TH></TR></THead>
-            <TBody>
-              {data.subjects.map((subject) => (
-                <TR key={subject.id}>
-                  <TD className="font-medium">{subject.subjectCode}</TD>
-                  <TD>{subject.subjectName}</TD>
-                  <TD>{subject.academicYear}</TD>
-                  <TD>{subject.semester}</TD>
-                  <TD>{subject.credits}</TD>
-                  <TD>{subject.questionBankDueDate.toISOString().slice(0, 10)}</TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
-        </DataTableCard>
-        <SimpleForm
-          title="Create Subject"
-          endpoint="/api/subjects"
-          fields={[
-            { name: "subjectCode", label: "Subject Code", type: "text" },
-            { name: "subjectName", label: "Subject Name", type: "text" },
-            { name: "academicYear", label: "Academic Year", type: "text" },
-            { name: "semester", label: "Semester", type: "number" },
-            { name: "credits", label: "Credits", type: "number" },
-            { name: "questionBankDueDate", label: "Question Bank Due Date", type: "date" },
-            { name: "departmentId", label: "Department", type: "select", options: data.departments.map((d) => ({ value: d.id, label: d.name })) },
-          ]}
-        />
-      </div>
+      <DataTableCard title="Branch Subjects">
+        <Table>
+          <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Semester</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH></TR></THead>
+          <TBody>
+            {subjects.map((subject) => (
+              <TR key={subject.id}>
+                <TD>{subject.department.name}</TD>
+                <TD className="font-medium">{subject.subjectCode}</TD>
+                <TD>{subject.subjectName}</TD>
+                <TD>{subject.semester}</TD>
+                <TD>{subject.credits}</TD>
+                <TD>{subject.status}</TD>
+                <TD>{subject.examCycleLinks.map((link) => `${link.examCycle.academicYear} / Sem ${link.examCycle.semester} / ${link.examCycle.examType}`).join(", ") || "Not linked"}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </DataTableCard>
     </div>
   );
 }

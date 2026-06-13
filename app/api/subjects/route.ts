@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
+import { ForbiddenError } from "@/lib/errors";
 import { CoordinatorService } from "@/modules/coordinator/service";
 import { z } from "zod";
 
@@ -26,9 +27,8 @@ export const GET = withApiHandler(async (request, context) => {
 }, { roles: [Role.COORDINATOR] });
 
 export const POST = withApiHandler(
-  async (request, context) => {
-    const payload = subjectCreateSchema.parse(await parseJson(request));
-    return service.createSubject(context.user!, payload);
+  async () => {
+    throw new ForbiddenError("Coordinators are not authorized to create subjects.");
   },
-  { roles: [Role.COORDINATOR], successStatus: 201, audit: { action: "SUBJECT_CREATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
+  { roles: [Role.COORDINATOR] },
 );

@@ -52,6 +52,18 @@ type BankFilters = {
   status?: "ACTIVE" | "LOCKED";
 };
 
+type AssignmentSummary = {
+  assignmentId: string;
+  moduleNumber: number;
+  contributor: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  questionsSubmittedCount: number;
+  canReassign: boolean;
+};
+
 export class CoordinatorService {
   constructor(
     private readonly notifications = new NotificationService(),
@@ -411,7 +423,7 @@ export class CoordinatorService {
       }
     }
 
-    return prisma.teacherAssignment.findMany({
+    const assignments = await prisma.teacherAssignment.findMany({
       where: {
         questionBank: {
           subject: {
@@ -426,6 +438,42 @@ export class CoordinatorService {
       },
       orderBy: [{ questionBankId: "asc" }, { moduleNumber: "asc" }],
     });
+
+    const questionCounts = await prisma.question.groupBy({
+      by: ["questionBankId", "moduleNumber", "contributorId"],
+      where: {
+        questionBank: {
+          subject: {
+            departmentId: { in: departmentIds },
+          },
+        },
+        ...(questionBankId ? { questionBankId } : {}),
+      },
+      _count: {
+        _all: true,
+      },
+    });
+
+    const countByKey = new Map(
+      questionCounts.map((item) => [`${item.questionBankId}:${item.moduleNumber}:${item.contributorId}`, item._count._all]),
+    );
+
+    return assignments
+      .filter((assignment) => assignment.assignmentRole === AssignmentRole.CONTRIBUTOR && assignment.moduleNumber != null)
+      .map((assignment) => {
+        const questionsSubmittedCount = countByKey.get(`${assignment.questionBankId}:${assignment.moduleNumber}:${assignment.teacherId}`) ?? 0;
+        return {
+          assignmentId: assignment.id,
+          moduleNumber: assignment.moduleNumber!,
+          contributor: {
+            id: assignment.teacher.id,
+            name: assignment.teacher.name,
+            email: assignment.teacher.email,
+          },
+          questionsSubmittedCount,
+          canReassign: questionsSubmittedCount === 0,
+        } satisfies AssignmentSummary;
+      });
   }
 
   async assignContributor(actor: Actor, questionBankId: string, moduleNumber: number, contributorId: string) {
@@ -441,6 +489,16 @@ export class CoordinatorService {
     }
     if (contributor.departmentId !== bank.subject.departmentId) {
       throw new ForbiddenError("Contributor must belong to the same department.");
+    }
+    const existingAssignment = await prisma.teacherAssignment.findFirst({
+      where: {
+        questionBankId,
+        assignmentRole: AssignmentRole.CONTRIBUTOR,
+        moduleNumber,
+      },
+    });
+    if (existingAssignment) {
+      throw new AppError("That module already has an assignment.", 409);
     }
 
     const assignment = await prisma.teacherAssignment.create({
@@ -465,7 +523,17 @@ export class CoordinatorService {
       NotificationType.ACTION_REQUIRED,
     );
 
-    return assignment;
+    return {
+      assignmentId: assignment.id,
+      moduleNumber,
+      contributor: {
+        id: assignment.teacher.id,
+        name: assignment.teacher.name,
+        email: assignment.teacher.email,
+      },
+      questionsSubmittedCount: 0,
+      canReassign: true,
+    } satisfies AssignmentSummary;
   }
 
   async reassignContributor(actor: Actor, questionBankId: string, assignmentId: string, contributorId: string) {
@@ -490,7 +558,7 @@ export class CoordinatorService {
       },
     });
     if (submittedQuestions > 0) {
-      throw new AppError("Contributor cannot be reassigned after submitting questions for this module.", 409);
+      throw new AppError("Cannot reassign - contributor has already submitted questions.", 409);
     }
 
     const contributor = await prisma.user.findUnique({ where: { id: contributorId } });
@@ -502,11 +570,23 @@ export class CoordinatorService {
       throw new ForbiddenError("Contributor must belong to the same department.");
     }
 
-    return prisma.teacherAssignment.update({
+    const updated = await prisma.teacherAssignment.update({
       where: { id: assignmentId },
       data: { teacherId: contributorId },
       include: { teacher: true, questionBank: { include: { subject: true } } },
     });
+
+    return {
+      assignmentId: updated.id,
+      moduleNumber: updated.moduleNumber!,
+      contributor: {
+        id: updated.teacher.id,
+        name: updated.teacher.name,
+        email: updated.teacher.email,
+      },
+      questionsSubmittedCount: 0,
+      canReassign: true,
+    } satisfies AssignmentSummary;
   }
 
   async removeAssignment(actor: Actor, questionBankId: string, assignmentId: string) {
@@ -521,7 +601,7 @@ export class CoordinatorService {
     await this.assertDepartmentAccess(actor, assignment.questionBank.subject.departmentId);
 
     await prisma.teacherAssignment.delete({ where: { id: assignmentId } });
-    return { removed: true };
+    return { deleted: true };
   }
 
   async notifyAssignment(actor: Actor, questionBankId: string, assignmentId: string) {
@@ -539,16 +619,27 @@ export class CoordinatorService {
     await this.notifications.createAndEmail(
       assignment.teacher,
       "Contribution reminder",
-      `Please begin contributing to ${assignment.questionBank.subject.subjectName}${assignment.moduleNumber ? ` for Module ${assignment.moduleNumber}` : ""}.`,
+      `You have been assigned to contribute questions for ${assignment.questionBank.subject.subjectName} - Module ${assignment.moduleNumber}. Please log in and begin your contribution.`,
       "/dashboard/contributor/my-subjects",
       NotificationType.ACTION_REQUIRED,
     );
 
-    return { notified: true };
+    return { notified: true, contributorName: assignment.teacher.name };
   }
 
   async listQuestions(actor: Actor, filters: QuestionFilters = {}) {
     const departmentIds = await this.getAssignedDepartmentIds(actor);
+    if (filters.subjectId) {
+      const subject = await prisma.subject.findUnique({
+        where: { id: filters.subjectId },
+        select: { departmentId: true },
+      });
+      if (!subject) throw new NotFoundError("Subject not found");
+      if (!departmentIds.includes(subject.departmentId)) {
+        throw new ForbiddenError("You do not have access to that subject.");
+      }
+    }
+
     return prisma.question.findMany({
       where: {
         questionBank: {
@@ -569,6 +660,27 @@ export class CoordinatorService {
       },
       orderBy: { submittedAt: "desc" },
       take: 100,
+    });
+  }
+
+  async listContributors(actor: Actor, departmentId?: string) {
+    const departmentIds = await this.getAssignedDepartmentIds(actor);
+    if (departmentId && !departmentIds.includes(departmentId)) {
+      throw new ForbiddenError("You do not have access to that department.");
+    }
+
+    return prisma.user.findMany({
+      where: {
+        role: Role.CONTRIBUTOR,
+        departmentId: departmentId ?? { in: departmentIds },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        departmentId: true,
+      },
+      orderBy: [{ name: "asc" }, { email: "asc" }],
     });
   }
 

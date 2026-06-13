@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
+import { CoordinatorService } from "@/modules/coordinator/service";
 import { DashboardService } from "@/modules/dashboard/service";
 import { ProductionService } from "@/modules/production/service";
 
@@ -28,7 +29,16 @@ export async function getQuestionContributionWorkspace(role: Role) {
   if (actor.role !== role) {
     return null;
   }
+  const coordinatorDepartmentIds =
+    role === Role.COORDINATOR ? await new CoordinatorService().getAssignedDepartmentIds(actor) : null;
   const questionBank = await prisma.questionBank.findFirst({
+    where: coordinatorDepartmentIds
+      ? {
+          subject: {
+            departmentId: { in: coordinatorDepartmentIds },
+          },
+        }
+      : undefined,
     orderBy: { createdAt: "asc" },
     include: {
       subject: true,
