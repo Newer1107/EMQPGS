@@ -4,6 +4,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(32),
+  PORT: z.coerce.number().int().positive().default(3000),
+  HOSTNAME: z.string().default("localhost"),
   AUTH_URL: z.string().default("http://localhost:3000"),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
@@ -37,11 +39,21 @@ const envSchema = z.object({
   SENTRY_DSN: z.string().optional(),
 });
 
+function defaultAuthUrl(): string {
+  if (process.env.AUTH_URL) return process.env.AUTH_URL;
+  const host = process.env.HOSTNAME || "localhost";
+  const port = process.env.PORT || "3000";
+  const scheme = port === "443" ? "https" : "http";
+  return `${scheme}://${host}:${port}`;
+}
+
 export const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
   DATABASE_URL: process.env.DATABASE_URL,
   AUTH_SECRET: process.env.AUTH_SECRET,
-  AUTH_URL: process.env.AUTH_URL,
+  PORT: process.env.PORT,
+  HOSTNAME: process.env.HOSTNAME,
+  AUTH_URL: defaultAuthUrl(),
   JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
   JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
   ACCESS_TOKEN_TTL_MINUTES: process.env.ACCESS_TOKEN_TTL_MINUTES,

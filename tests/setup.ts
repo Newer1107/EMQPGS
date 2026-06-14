@@ -1,6 +1,8 @@
 process.env.DATABASE_URL ??= "mysql://emqpgs:emqpgs@localhost:3306/emqpgs";
 process.env.AUTH_SECRET ??= "12345678901234567890123456789012";
-process.env.AUTH_URL ??= "http://localhost:3000";
+process.env.PORT ??= "3000";
+process.env.HOSTNAME ??= "localhost";
+process.env.AUTH_URL ??= `http://localhost:${process.env.PORT || "3000"}`;
 process.env.JWT_ACCESS_SECRET ??= "12345678901234567890123456789012";
 process.env.JWT_REFRESH_SECRET ??= "abcdefghijklmnopqrstuvwxyz123456";
 process.env.ACCESS_TOKEN_TTL_MINUTES ??= "15";
