@@ -1,14 +1,15 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import {
+  AiReportStatus,
   BackupStatus,
   ExportArtifactStatus,
   ExportFormat,
   NotificationType,
-  PaperVariant,
   PaperGenerationStatus,
+  PaperVariant,
+  QuestionBankStatus,
   Role,
-  AiReportStatus,
   type Prisma,
   type User,
 } from "@prisma/client";
@@ -18,6 +19,7 @@ import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
+import { ENTITY_TYPES } from "@/lib/constants";
 import { DocumentService } from "@/modules/production/document-service";
 
 const execFileAsync = promisify(execFile);
@@ -241,7 +243,7 @@ export class ProductionService {
     const coeUsers = await prisma.user.findMany({
       where: {
         role: Role.COE,
-        departmentId: actor.departmentId ?? undefined,
+        departmentId: questionBank.subject.departmentId,
       },
     });
     const coordinatorAssignments = await prisma.coordinatorDepartmentAssignment.findMany({
@@ -281,7 +283,7 @@ export class ProductionService {
     await logAudit({
       actorId: actor.id,
       action: "DEAN_SELECTION_SUBMITTED",
-      entityType: "DEAN_REVIEW",
+      entityType: ENTITY_TYPES.DEAN_REVIEW,
       entityId: review.id,
       metadata: {
         questionBankId,
@@ -319,7 +321,7 @@ export class ProductionService {
   private async listDeanQuestionBanks(actor: Actor) {
     return prisma.questionBank.findMany({
       where: {
-        status: "LOCKED",
+        status: QuestionBankStatus.LOCKED,
         subject: { departmentId: actor.departmentId! },
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
@@ -334,7 +336,7 @@ export class ProductionService {
     const questionBank = await prisma.questionBank.findFirst({
       where: {
         id: questionBankId,
-        status: "LOCKED",
+        status: QuestionBankStatus.LOCKED,
         subject: { departmentId: actor.departmentId! },
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
@@ -515,7 +517,7 @@ export class ProductionService {
         body: buffer,
         size: buffer.byteLength,
         uploadedById: actor.id,
-        linkedEntityType: "EXPORT_ARTIFACT",
+        linkedEntityType: ENTITY_TYPES.EXPORT_ARTIFACT,
         linkedEntityId: artifact.id,
       });
 
@@ -625,7 +627,7 @@ export class ProductionService {
         body: buffer,
         size: buffer.byteLength,
         uploadedById: actor?.id ?? null,
-        linkedEntityType: "SYSTEM_BACKUP",
+        linkedEntityType: ENTITY_TYPES.SYSTEM_BACKUP,
         linkedEntityId: backup.id,
       });
 

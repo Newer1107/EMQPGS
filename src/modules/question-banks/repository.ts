@@ -1,6 +1,8 @@
 import { BaseRepository } from "@/modules/shared/base-repository";
 import { QuestionBankInput } from "@/modules/question-banks/validation";
 
+type WhereInput = { id: string; version?: number };
+
 export class QuestionBankRepository extends BaseRepository {
   list() {
     return this.prisma.questionBank.findMany({
@@ -28,7 +30,16 @@ export class QuestionBankRepository extends BaseRepository {
     return this.prisma.questionBank.create({ data });
   }
 
-  update(id: string, data: Partial<QuestionBankInput> & { lockedAt?: Date | null }) {
-    return this.prisma.questionBank.update({ where: { id }, data });
+  update(
+    where: WhereInput,
+    data: Partial<QuestionBankInput> & {
+      lockedAt?: Date | null;
+      version?: { increment: number };
+    },
+  ) {
+    return this.prisma.questionBank.update({
+      where,
+      data,
+    });
   }
 }

@@ -18,9 +18,10 @@ export class UserService {
   async create(data: UserInput) {
     const existing = await this.repository.findByEmail(data.email);
     if (existing) throw new AppError("Email already exists", 409);
-    if (!data.password) throw new AppError("Password is required", 400);
-    const passwordHash = await bcrypt.hash(data.password, 12);
-    return this.repository.create({ ...data, passwordHash });
+    const { password, ...rest } = data;
+    if (!password) throw new AppError("Password is required", 400);
+    const passwordHash = await bcrypt.hash(password, 12);
+    return this.repository.create({ ...rest, passwordHash });
   }
 
   async update(id: string, data: Partial<UserInput>) {

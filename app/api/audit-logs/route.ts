@@ -6,6 +6,6 @@ export const GET = withApiHandler(async () => {
   return prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
-    include: { actor: true },
+    include: { actor: { select: { id: true, name: true, email: true, role: true } } },
   });
 }, { roles: [Role.COE] });

@@ -1,4 +1,5 @@
 import {
+  AiReportStatus,
   AssignmentRole,
   ExamCycleStatus,
   NotificationType,
@@ -6,14 +7,16 @@ import {
   QuestionStatus,
   Role,
   SubjectStatus,
-  type Prisma,
   type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { withOptimisticLock, buildOptimisticUpdate, buildOptimisticWhere } from "@/lib/optimistic-lock";
+import { withUniqueCheck } from "@/lib/db-helpers";
 import { NotificationService } from "@/modules/notifications/service";
 import { QuestionService } from "@/modules/questions/service";
 import { ReportService } from "@/modules/reports/service";
+import { QUESTION_MODULE_COUNT, QUESTION_SLOT_COUNT, QUESTION_MARKS } from "@/modules/questions/slot-template";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
@@ -77,38 +80,70 @@ export class CoordinatorService {
     const [departments, activeCycles, questionBanks, recentQuestions, notifications] = await Promise.all([
       prisma.department.findMany({
         where: { id: { in: departmentIds } },
-        include: {
-          subjects: { where: { status: SubjectStatus.ACTIVE } },
-          examCycles: { where: { status: "ACTIVE" } },
+        select: {
+          id: true,
+          name: true,
+          subjects: { where: { status: SubjectStatus.ACTIVE }, select: { id: true } },
+          examCycles: { where: { status: ExamCycleStatus.ACTIVE }, select: { id: true } },
         },
       }),
       prisma.examCycle.findMany({
         where: {
           departmentId: { in: departmentIds },
-          status: "ACTIVE",
+          status: ExamCycleStatus.ACTIVE,
         },
-        include: {
-          department: true,
-          questionBanks: true,
+        select: {
+          id: true,
+          academicYear: true,
+          semester: true,
+          examType: true,
+          startDate: true,
+          endDate: true,
+          department: { select: { name: true } },
+          _count: { select: { questionBanks: true } },
         },
         orderBy: { createdAt: "desc" },
       }),
       prisma.questionBank.findMany({
         where: { subject: { departmentId: { in: departmentIds } } },
-        include: {
-          subject: { include: { department: true } },
-          examCycle: true,
-          questionSlots: { include: { question: true } },
-          questions: { include: { contributor: true } },
-          assignments: { where: { assignmentRole: AssignmentRole.CONTRIBUTOR } },
+        select: {
+          id: true,
+          status: true,
+          subject: {
+            select: {
+              id: true,
+              subjectName: true,
+              subjectCode: true,
+              departmentId: true,
+              department: { select: { name: true } },
+            },
+          },
+          examCycle: {
+            select: { id: true, academicYear: true, semester: true, examType: true },
+          },
+          questionSlots: {
+            select: {
+              id: true,
+              reservedById: true,
+              question: { select: { status: true } },
+            },
+          },
+          assignments: {
+            where: { assignmentRole: AssignmentRole.CONTRIBUTOR },
+            select: { moduleNumber: true },
+          },
         },
         orderBy: { updatedAt: "desc" },
       }),
       prisma.question.findMany({
         where: { questionBank: { subject: { departmentId: { in: departmentIds } } } },
-        include: {
-          contributor: true,
-          questionBank: { include: { subject: true } },
+        select: {
+          id: true,
+          status: true,
+          submittedAt: true,
+          createdAt: true,
+          contributor: { select: { name: true } },
+          questionBank: { select: { subject: { select: { subjectName: true } } } },
         },
         orderBy: { submittedAt: "desc" },
         take: 12,
@@ -131,7 +166,7 @@ export class CoordinatorService {
         startDate: cycle.startDate?.toISOString() ?? null,
         endDate: cycle.endDate?.toISOString() ?? null,
         department: cycle.department?.name ?? "Unassigned",
-        initializedBanks: cycle.questionBanks.length,
+        initializedBanks: cycle._count.questionBanks,
       })),
       subjectBankStatuses: questionBanks.map((bank) => {
         const slotStats = summarizeBankSlots(bank.questionSlots);
@@ -153,7 +188,7 @@ export class CoordinatorService {
       })),
       pendingTeacherAssignments: questionBanks.flatMap((bank) => {
         const assignedModules = new Set(bank.assignments.map((assignment) => assignment.moduleNumber).filter((value): value is number => value != null));
-        return Array.from({ length: 6 }, (_, index) => index + 1)
+        return Array.from({ length: QUESTION_MODULE_COUNT }, (_, index) => index + 1)
           .filter((moduleNumber) => !assignedModules.has(moduleNumber))
           .map((moduleNumber) => ({
             bankId: bank.id,
@@ -187,13 +222,36 @@ export class CoordinatorService {
         ...(filters.semester ? { semester: filters.semester } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
-      include: {
-        department: true,
-        examCycleLinks: { include: { examCycle: true } },
+      select: {
+        id: true,
+        subjectCode: true,
+        subjectName: true,
+        academicYear: true,
+        semester: true,
+        credits: true,
+        status: true,
+        questionBankDueDate: true,
+        departmentId: true,
+        createdAt: true,
+        updatedAt: true,
+        department: { select: { id: true, name: true, code: true } },
+        examCycleLinks: {
+          select: {
+            id: true,
+            examCycle: { select: { id: true, academicYear: true, semester: true, examType: true, status: true } },
+          },
+        },
         questionBanks: {
-          include: {
-            questionSlots: { include: { question: true } },
-            examCycle: true,
+          select: {
+            id: true,
+            status: true,
+            examCycle: { select: { id: true, examType: true } },
+            questionSlots: {
+              select: {
+                id: true,
+                question: { select: { status: true } },
+              },
+            },
           },
         },
       },
@@ -213,32 +271,23 @@ export class CoordinatorService {
       await this.assertDepartmentAccess(actor, payload.departmentId);
     }
 
-    const existingSubject = await prisma.subject.findUnique({
-      where: {
-        subjectCode_departmentId: {
-          subjectCode: payload.subjectCode,
-          departmentId: payload.departmentId,
-        },
-      },
-      select: { id: true },
-    });
-    if (existingSubject) {
-      throw new AppError("This subject code already exists in this department.", 409);
-    }
-
-    return prisma.subject.create({
-      data: {
-        subjectCode: payload.subjectCode,
-        subjectName: payload.subjectName,
-        academicYear: currentAcademicYear(),
-        semester: payload.semester,
-        credits: payload.creditLoad,
-        status: SubjectStatus.ACTIVE,
-        questionBankDueDate: addDays(30),
-        departmentId: payload.departmentId,
-      },
-      include: { department: true },
-    });
+    return withUniqueCheck(
+      () =>
+        prisma.subject.create({
+          data: {
+            subjectCode: payload.subjectCode,
+            subjectName: payload.subjectName,
+            academicYear: currentAcademicYear(),
+            semester: payload.semester,
+            credits: payload.creditLoad,
+            status: SubjectStatus.ACTIVE,
+            questionBankDueDate: addDays(30),
+            departmentId: payload.departmentId,
+          },
+          include: { department: true },
+        }),
+      "Subject_subjectCode_departmentId_key",
+    );
   }
 
   async updateSubject(actor: Actor, subjectId: string, payload: SubjectUpdatePayload) {
@@ -306,15 +355,47 @@ export class CoordinatorService {
           departmentId: filters.departmentId ?? { in: departmentIds },
         },
         ...(filters.examCycleId ? { examCycleId: filters.examCycleId } : {}),
-        ...(filters.status ? { status: filters.status === "LOCKED" ? QuestionBankStatus.LOCKED : { not: QuestionBankStatus.LOCKED } } : {}),
+        ...(filters.status ? { status: filters.status === QuestionBankStatus.LOCKED ? QuestionBankStatus.LOCKED : { not: QuestionBankStatus.LOCKED } } : {}),
       },
-      include: {
-        subject: { include: { department: true, examCycleLinks: true } },
-        examCycle: true,
-        questionSlots: { include: { question: true } },
-        aiReports: { orderBy: { createdAt: "desc" }, take: 1 },
-        generatedPapers: { orderBy: { variant: "asc" } },
-        deanReview: { include: { reviewedBy: true } },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        subject: {
+          select: {
+            id: true,
+            subjectName: true,
+            subjectCode: true,
+            semester: true,
+            department: { select: { id: true, name: true } },
+          },
+        },
+        examCycle: {
+          select: { id: true, academicYear: true, semester: true, examType: true },
+        },
+        questionSlots: {
+          select: {
+            id: true,
+            question: { select: { status: true } },
+          },
+        },
+        aiReports: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { id: true, status: true },
+        },
+        generatedPapers: {
+          orderBy: { variant: "asc" },
+          select: { id: true, variant: true, status: true },
+        },
+        deanReview: {
+          select: {
+            id: true,
+            reviewedBy: { select: { id: true, name: true } },
+            reviewedAt: true,
+          },
+        },
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -325,7 +406,7 @@ export class CoordinatorService {
       const readiness = approvedSlots >= 60
         ? bank.generatedPapers.length > 0
           ? "Ready for Dean Review"
-          : bank.aiReports[0]?.status === "COMPLETED"
+          : bank.aiReports[0]?.status === AiReportStatus.COMPLETED
             ? "Ready for Generation"
             : "Ready for AI Analysis"
         : "Insufficient approved questions";
@@ -423,13 +504,17 @@ export class CoordinatorService {
       throw new AppError("Exam cycle must have an end date before the bank can be locked.", 409);
     }
 
-    return prisma.questionBank.update({
-      where: { id: questionBankId },
-      data: {
-        status: QuestionBankStatus.LOCKED,
-        lockedAt: new Date(),
-      },
-    });
+    return withOptimisticLock(
+      () =>
+        prisma.questionBank.update({
+          where: buildOptimisticWhere(questionBankId, bank.version),
+          data: buildOptimisticUpdate({
+            status: QuestionBankStatus.LOCKED,
+            lockedAt: new Date(),
+          }),
+        }),
+      "Question bank",
+    );
   }
 
   async listAssignments(actor: Actor, questionBankId?: string) {
@@ -512,30 +597,24 @@ export class CoordinatorService {
     if (contributor.departmentId !== bank.subject.departmentId) {
       throw new ForbiddenError("Contributor must belong to the same department.");
     }
-    const existingAssignment = await prisma.teacherAssignment.findFirst({
-      where: {
-        questionBankId,
-        assignmentRole: AssignmentRole.CONTRIBUTOR,
-        moduleNumber,
-      },
-    });
-    if (existingAssignment) {
-      throw new AppError("That module already has an assignment.", 409);
-    }
 
-    const assignment = await prisma.teacherAssignment.create({
-      data: {
-        questionBankId,
-        teacherId: contributorId,
-        assignmentRole: AssignmentRole.CONTRIBUTOR,
-        moduleNumber,
-        assignedById: actor.id,
-      },
-      include: {
-        teacher: true,
-        questionBank: { include: { subject: true } },
-      },
-    });
+    const assignment = await withUniqueCheck(
+      () =>
+        prisma.teacherAssignment.create({
+          data: {
+            questionBankId,
+            teacherId: contributorId,
+            assignmentRole: AssignmentRole.CONTRIBUTOR,
+            moduleNumber,
+            assignedById: actor.id,
+          },
+          include: {
+            teacher: true,
+            questionBank: { include: { subject: true } },
+          },
+        }),
+      "TeacherAssignment_questionBankId_teacherId_assignmentRole_moduleNumber_key",
+    );
 
     await this.notifications.create(
       contributorId,
@@ -675,10 +754,17 @@ export class CoordinatorService {
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.contributorId ? { contributorId: filters.contributorId } : {}),
       },
-      include: {
-        contributor: true,
-        attachments: { include: { fileAsset: true } },
-        questionBank: { include: { subject: true } },
+      select: {
+        id: true,
+        questionText: true,
+        moduleNumber: true,
+        marks: true,
+        slotNumber: true,
+        status: true,
+        submittedAt: true,
+        createdAt: true,
+        contributor: { select: { id: true, name: true, email: true } },
+        questionBank: { select: { id: true, subject: { select: { subjectName: true, subjectCode: true } } } },
       },
       orderBy: { submittedAt: "desc" },
       take: 100,
@@ -857,7 +943,7 @@ function summarizeBankSlots(
     } | null;
   }>,
 ) {
-  const totalSlots = 126;
+  const totalSlots = QUESTION_MODULE_COUNT * QUESTION_MARKS.length * QUESTION_SLOT_COUNT;
   let filledCount = 0;
   let pendingModerationCount = 0;
   let approvedCount = 0;

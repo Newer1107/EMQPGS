@@ -29,8 +29,13 @@
 
 ## Security Validation
 
-- CSRF token required on mutating routes
+- CSRF token required on mutating routes (timing-safe comparison, origin check vs `AUTH_URL`)
 - Unauthorized export requests return `403`
 - Rate limit returns `429` when exceeded
-- Locked banks reject edits
-- Audit log entries are created for security-critical actions
+- Locked banks reject edits (immutability enforced at service layer)
+- Audit log entries are created for security-critical actions (request body NOT auto-captured)
+- Zod validation errors return `400` (not `500`)
+- Free-text fields reject HTML tags (charset regex validation)
+- Question bank status transitions enforce state machine (invalid transitions return `409`)
+- Coordinator decision APPROVED sets status to `APPROVED` (not `LOCKED`); lock must be explicit
+- Moderator slot override gated by `ModeratorBankAssignment`

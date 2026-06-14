@@ -2,7 +2,7 @@
 
 ## Development
 
-1. Copy `.env.example` to `.env`
+1. Copy `.env` and adjust values for your environment (no `.env.example` exists — the committed `.env` is the reference)
 2. Run `docker compose up -d mysql minio minio-init`
 3. Run `npm ci`
 4. Run `npx prisma generate`
@@ -30,8 +30,15 @@
    - `JWT_REFRESH_SECRET`
    - `CSRF_SECRET`
    - `HEALTHCHECK_TOKEN`
-2. Use managed MySQL and object storage where available
-3. Run at least one web replica
-4. Ensure Ollama is reachable if AI analysis is enabled
-5. Trigger and verify backups from the application
-6. Monitor `/api/monitoring` and workflow activity after release
+2. Set `AUTH_URL` to the application's canonical URL (used for CSRF origin verification — must match what the browser sees)
+3. Use managed MySQL and object storage where available
+4. Run at least one web replica
+5. Ensure `mysqldump` is available in the runtime environment for backups (Docker image includes `mysql-client`)
+6. Ensure Ollama is reachable if AI analysis is enabled
+7. Trigger and verify backups from the application
+8. Monitor `/api/monitoring` and workflow activity after release
+
+### Notes
+
+- There is no `.env.example` file in the repository; the committed `.env` is the only env file. Copy it and adjust secrets for production.
+- `CSRF_SECRET` falls back to `AUTH_SECRET` if unset (dev convenience only — always set explicitly in production).

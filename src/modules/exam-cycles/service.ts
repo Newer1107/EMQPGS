@@ -1,7 +1,9 @@
+import { ExamCycleStatus, Prisma } from "@prisma/client";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { ExamCycleRepository } from "@/modules/exam-cycles/repository";
 import { ExamCycleInput } from "@/modules/exam-cycles/validation";
 import { prisma } from "@/lib/db";
+import { withUniqueCheck } from "@/lib/db-helpers";
 
 export class ExamCycleService {
   constructor(private readonly repository = new ExamCycleRepository()) {}
@@ -11,36 +13,71 @@ export class ExamCycleService {
   }
 
   async create(data: ExamCycleInput) {
-    await this.assertSingleActiveCycle(data);
-    return this.repository.create(data);
+    if (data.status === ExamCycleStatus.ACTIVE) {
+      return this.activateInTransaction(ExamCycleStatus.ACTIVE, data.departmentId ?? null, undefined, data);
+    }
+    return withUniqueCheck(
+      () => this.repository.create(data),
+      "ExamCycle_academicYear_semester_examType_key",
+    );
   }
 
   async update(id: string, data: Partial<ExamCycleInput>) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Exam cycle not found");
-    await this.assertSingleActiveCycle(
-      {
-        status: data.status ?? entity.status,
-        departmentId: data.departmentId ?? entity.departmentId,
-      },
-      id,
-    );
+
+    const mergedStatus = data.status ?? entity.status;
+    const mergedDept = data.departmentId ?? entity.departmentId;
+
+    if (mergedStatus === ExamCycleStatus.ACTIVE) {
+      return this.activateInTransaction(
+        ExamCycleStatus.ACTIVE,
+        mergedDept,
+        id,
+        data,
+      );
+    }
+
     return this.repository.update(id, data);
   }
 
-  private async assertSingleActiveCycle(data: Partial<ExamCycleInput>, excludeId?: string) {
-    if (data.status !== "ACTIVE") return;
+  private async activateInTransaction(
+    status: ExamCycleStatus,
+    departmentId: string | null,
+    excludeId?: string,
+    updateData?: Partial<ExamCycleInput> | ExamCycleInput,
+  ) {
+    return prisma.$transaction(
+      async (tx) => {
+        const existing = await tx.examCycle.findFirst({
+          where: {
+            id: excludeId ? { not: excludeId } : undefined,
+            status: ExamCycleStatus.ACTIVE,
+            departmentId: departmentId ?? null,
+          },
+        });
 
-    const existing = await prisma.examCycle.findFirst({
-      where: {
-        id: excludeId ? { not: excludeId } : undefined,
-        status: "ACTIVE",
-        departmentId: data.departmentId ?? null,
+        if (existing) {
+          throw new AppError(
+            "Another active exam cycle already exists for this department",
+            409,
+          );
+        }
+
+        if (updateData && excludeId) {
+          return tx.examCycle.update({
+            where: { id: excludeId },
+            data: updateData,
+          });
+        }
+
+        if (updateData && !excludeId) {
+          return tx.examCycle.create({ data: updateData as ExamCycleInput });
+        }
+
+        return null;
       },
-    });
-
-    if (existing) {
-      throw new AppError("Another active exam cycle already exists for this department", 409);
-    }
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 }

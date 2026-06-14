@@ -330,12 +330,14 @@ The COE is the super-administrator role responsible for platform setup, user man
 
 **Exam Cycle Management:**
 - **List exam cycles**: `GET /api/exam-cycles` — returns cycles with academic year, semester, exam type, status, and timetable dates.
-- **Create exam cycle**: `POST /api/exam-cycles` — academic year, semester (1–8), exam type (REGULAR/SUPPLEMENTARY/KT), department association, exam timetable dates (start, end, result date).
+- **Create exam cycle**: `POST /api/exam-cycles` — academic year, semester (1–8), exam type (ISE_1/ISE_2/ENDSEM/SUPPLEMENTARY/KT), department association, exam timetable dates.
 - **Update exam cycle**: `PATCH /api/exam-cycles/[id]` — update status or timetable fields.
 - **Single-active-cycle constraint**: Only one exam cycle per department can be `ACTIVE` at a time. Activating a new cycle automatically deactivates the previous active cycle.
 
 **Exam Types:**
-- `REGULAR` — Standard end-of-semester examination
+- `ISE_1` — In-Semester Examination 1
+- `ISE_2` — In-Semester Examination 2
+- `ENDSEM` — End-Semester Examination
 - `SUPPLEMENTARY` — Supplementary / re-examination
 - `KT` — Backlog / keep-term examination
 
@@ -374,27 +376,44 @@ The Coordinator is the operational manager for each department's examination cyc
 - **Initialise question bank**: `POST /api/question-banks` — creates a question bank for a subject under a specific exam cycle. Upon creation, the system automatically generates **126 question slots** (6 modules × 3 mark categories × 7 slots each), forming a complete coverage grid. The bank starts in `DRAFT` status.
 - **List question banks**: `GET /api/question-banks` — with optional filters: `subjectId`, `examCycleId`, `status`.
 - **View question bank detail**: `GET /api/question-banks/[id]` — returns the bank with all 126 slots (showing reserved/filled status), AI reports, generated papers, dean review status, and teacher assignments.
-- **Update bank status**: `PATCH /api/question-banks/[id]/status` — transition through: `DRAFT → IN_PROGRESS → READY_FOR_REVIEW → LOCKED`. Moderators can also update status.
-- **Lock bank**: `PATCH /api/question-banks/[id]/lock` — sets status to `LOCKED`. Once locked, the bank becomes **immutable**: no new questions can be added, no existing questions can be edited, and no moderation actions can be taken. Locking triggers the bank for AI analysis and paper generation.
+- **Update bank status**: `PATCH /api/question-banks/[id]/status` — transitions are validated against a state transition table (see below). Moderators can also update status.
+- **Lock bank**: `PATCH /api/question-banks/[id]/lock` — **canonical lock path**. Sets status to `LOCKED`. Once locked, the bank becomes **immutable**: no new questions can be added, no existing questions can be edited, and no moderation actions can be taken. Validates the exam cycle is `ACTIVE` and has an end date. This is the **only** way to reach `LOCKED` status (coordinator decision APPROVED no longer locks the bank).
 
 **Teacher Assignment Management:**
 - **List assignments**: `GET /api/question-banks/[id]/assignments` — returns all moderator and contributor assignments for a bank, grouped by module.
 - **Assign contributor**: `POST /api/question-banks/[id]/assignments` — assigns a contributor (faculty) to a specific module in a question bank. Validates that the user has the `CONTRIBUTOR` role. Multiple contributors can be assigned to different modules within the same bank.
-- **Assign moderator**: Also handled through `POST /api/question-banks/[id]/assignments` — assigns a moderator to oversee the entire question bank (or specific modules). Validates `MODERATOR` role.
+- **Assign moderator**: `POST /api/question-banks/[id]/assignments/moderator` — assigns a moderator to oversee the question bank. Validates `MODERATOR` role and prevents duplicate assignments (409 Conflict if already assigned). Sends an `ACTION_REQUIRED` notification to the moderator.
 - **Reassign**: `PUT /api/question-banks/[id]/assignments/[assignmentId]` — changes the assigned user or module.
 - **Remove assignment**: `DELETE /api/question-banks/[id]/assignments/[assignmentId]` — removes a teacher from the bank. Does not delete their submitted questions.
 - **Notify contributor**: `POST /api/question-banks/[id]/assignments/[assignmentId]/notify` — sends an in-app notification to the assigned contributor informing them of their assignment, due dates, and module details.
 
-**Question Bank Status Flow:**
+**Question Bank Status Flow (enforced by state transition table):**
 ```
-DRAFT ──► IN_PROGRESS ──► READY_FOR_REVIEW ──► LOCKED
-  │            │                  │                │
-  │   Contributors draft    All 126 slots    Immutable;
-  │   questions; slots      filled + all     triggers AI
-  │   being reserved        questions        analysis &
-  │                          moderated        paper gen
+DRAFT ──► IN_PROGRESS ──► UNDER_MODERATION ──► MODERATED
+  │            │                                      │
+  │   Contributors draft    All 126 slots      Questions
+  │   questions              moderated        moderated
   │
-  └── Coordinator configures bank settings, assigns teachers
+  MODERATED ──► REPORT_GENERATED ──► AWAITING_HOD_SIGN
+                      │                      │
+              AI analysis done        HOD signs report
+                      │                      │
+              AWAITING_HOD_SIGN ◄── SIGNED_REPORT_UPLOADED
+                                        │
+                              AWAITING_COORDINATOR_APPROVAL
+                                        │
+                              ┌─────────┼─────────┐
+                          APPROVED   REJECTED    (any status)
+                              │         │            │
+                              │    AWAITING_HOD     │
+                              │     _SIGN (rework)  │
+                              └──────┬──────────────┘
+                                     │
+                                    LOCKED
+                                  (explicit PATCH /api/question-banks/[id]/lock)
+
+All statuses can fast-lock → LOCKED. No exits from LOCKED.
+Coordinator decision APPROVED → APPROVED (not LOCKED). Lock must be explicit.
 ```
 
 **Triggering AI Analysis:**
@@ -410,9 +429,10 @@ DRAFT ──► IN_PROGRESS ──► READY_FOR_REVIEW ──► LOCKED
 
 **Coordinator Decision:**
 - `POST /api/question-banks/[id]/coordinator-decision` — after reviewing AI reports and generated papers, the Coordinator can:
-  - `APPROVE` — forward the bank and papers to the Dean for final selection
-  - `REJECT` — send the bank back for further work (questions need revision, coverage is insufficient)
+  - `APPROVE` — sets bank status to `APPROVED` (not `LOCKED`). The bank must be explicitly locked via `PATCH /api/question-banks/[id]/lock` before paper generation.
+  - `REJECT` — sends the bank back to `AWAITING_HOD_SIGN` for further work (questions need revision, coverage is insufficient)
 - Decision is recorded with a reason/comment.
+- **Important:** Approval does NOT lock the bank. The coordinator must lock separately via the canonical lock path.
 
 **Signed HOD Report:**
 - Moderators upload a signed HOD (Head of Department) approval report via:
@@ -442,19 +462,19 @@ The Contributor (typically a faculty member) drafts exam questions within their 
 
 **Question Status Flow:**
 ```
-DRAFT ──► PENDING_MODERATION ──► APPROVED
-  ▲              │                    │
-  │              ▼                    ▼
-  │      REVISION_REQUESTED    (included in
-  │              │             paper generation)
-  │              │
-  └──────────────┘
-         (contributor edits and resubmits)
+DRAFT ──► PENDING ──► APPROVED
+  ▲          │            │
+  │          ▼            │
+  │   REVISION_REQUESTED  │
+  │          │            │
+  │   REVISION_SUBMITTED ─┘
+  │
+  └── (contributor edits and resubmits)
 
-DRAFT ──► PENDING_MODERATION ──► REJECTED
-                                    │
-                              (contributor may
-                               create replacement)
+DRAFT ──► PENDING ──► REJECTED
+                        │
+                  (contributor may
+                   create replacement)
 ```
 
 **Slot Reservation System:**
@@ -485,7 +505,7 @@ The Moderator is responsible for quality assurance — reviewing every submitted
 **Dashboard & Moderation Queue:**
 - `GET /api/moderation/questions` — the moderator's primary workspace. Supports comprehensive filtering:
   - `bankId` — filter by question bank
-  - `status` — filter by `PENDING_MODERATION`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`
+  - `status` — filter by `PENDING`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`, `REVISION_SUBMITTED`
   - `module` — filter by module (1–6)
   - `marks` — filter by mark category (2, 5, 10)
   - `contributorId` — filter by the contributor who submitted
@@ -500,7 +520,7 @@ The Moderator is responsible for quality assurance — reviewing every submitted
 - **Approve**: `PATCH /api/moderation/questions/[id]/approve` — marks question as `APPROVED`. Approved questions are immediately available for paper generation. An optional moderator comment can be included.
 - **Reject**: `PATCH /api/moderation/questions/[id]/reject` — marks question as `REJECTED`. Requires a mandatory `reason` field. Rejected questions cannot be included in papers. Contributors can create replacement questions in the freed slot.
 - **Request revision**: `PATCH /api/moderation/questions/[id]/request-revision` — marks question as `REVISION_REQUESTED` and requires `revisionInstructions` explaining what the contributor should fix. The question returns to `DRAFT` status for the contributor to edit.
-- **Override approved**: `PATCH /api/moderation/questions/[id]/override` — if a previously approved question needs to be sent back (e.g., a policy change or new quality concern), the moderator can override it back to `PENDING_MODERATION` status.
+- **Override approved**: `PATCH /api/moderation/questions/[id]/override` — if a previously approved question needs to be sent back (e.g., a policy change or new quality concern), the moderator can override it back to `PENDING` status.
 
 **Moderation Events:**
 - Every moderation action creates a `ModerationEvent` record with:
@@ -588,7 +608,7 @@ When Ollama is available at the configured `OLLAMA_BASE_URL`:
 4. Both the raw analysis data (JSON) and the rendered report (PDF) are stored in MinIO
 
 **Report Storage:**
-- Analysis results are stored as `AiReport` records in the database with status tracking (`PENDING`, `RUNNING`, `COMPLETED`, `FAILED`)
+- Analysis results are stored as `AiReport` records in the database with status tracking (`PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`)
 - PDF renders are stored in the `generated-papers` MinIO bucket
 - Reports are linked to their parent question bank for retrieval
 
@@ -637,7 +657,7 @@ The Paper Generation Engine (`src/modules/reports/paper-generator.ts`) assembles
 **Usage Tracking:**
 - When a question is included in a generated paper, its usage is tracked:
   - `usageCount` — incremented each time
-  - `lastUsedExam` — the exam type (REGULAR/SUPPLEMENTARY/KT)
+  - `lastUsedExam` — the exam type (ISE_1/ISE_2/ENDSEM/SUPPLEMENTARY/KT)
   - `lastUsedYear` — academic year
   - `lastUsedSemester` — semester number
   - `lastUsedType` — paper variant (A/B/C)
@@ -681,7 +701,7 @@ The Dean is the final academic authority who selects which paper variants will b
 - Selection is stored as a `DeanReview` record linked to the question bank.
 
 **Post-Selection Flow:**
-- Once the Dean submits selections, the question bank status transitions to `FINALISED`
+- Once the Dean submits selections, the review is recorded
 - The COE gains access to the selected papers in the production console for export
 - No further modifications can be made to the question bank or its questions
 
@@ -841,9 +861,9 @@ The database consists of **23 models** with **16 enums**, managed by Prisma ORM 
 | `Role` | `COE`, `COORDINATOR`, `MODERATOR`, `CONTRIBUTOR`, `DEAN` |
 | `UserStatus` | `ACTIVE`, `DISABLED` |
 | `SubjectStatus` | `ACTIVE`, `INACTIVE` |
-| `ExamType` | `REGULAR`, `SUPPLEMENTARY`, `KT` |
+| `ExamType` | `ISE_1`, `ISE_2`, `ENDSEM`, `SUPPLEMENTARY`, `KT` |
 | `ExamCycleStatus` | `DRAFT`, `ACTIVE`, `CLOSED` |
-| `QuestionBankStatus` | `DRAFT`, `IN_PROGRESS`, `READY_FOR_REVIEW`, `LOCKED`, `FINALISED` |
+| `QuestionBankStatus` | `DRAFT`, `IN_PROGRESS`, `UNDER_MODERATION`, `MODERATED`, `REPORT_GENERATED`, `AWAITING_HOD_SIGN`, `SIGNED_REPORT_UPLOADED`, `AWAITING_COORDINATOR_APPROVAL`, `APPROVED`, `LOCKED` |
 | `AiReportStatus` | `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` |
 | `PaperGenerationStatus` | `PENDING`, `RUNNING`, `COMPLETED`, `FAILED` |
 | `PaperVariant` | `PAPER_A`, `PAPER_B`, `PAPER_C` |
@@ -856,7 +876,7 @@ The database consists of **23 models** with **16 enums**, managed by Prisma ORM 
 | `CourseOutcome` | `CO1`, `CO2`, `CO3`, `CO4`, `CO5`, `CO6` |
 | `RbtLevel` | `L1` (Remember), `L2` (Understand), `L3` (Apply), `L4` (Analyse), `L5` (Evaluate), `L6` (Create) |
 | `DifficultyLevel` | `EASY`, `MEDIUM`, `HARD` |
-| `QuestionStatus` | `DRAFT`, `PENDING_MODERATION`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED` |
+| `QuestionStatus` | `DRAFT`, `PENDING`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`, `REVISION_SUBMITTED` |
 
 The complete Prisma schema is at `prisma/schema.prisma`.
 
@@ -924,7 +944,7 @@ The complete Prisma schema is at `prisma/schema.prisma`.
 | `POST` | `/api/question-banks` | Required | Coordinator | Initialise bank with 126-slot grid |
 | `GET` | `/api/question-banks/[id]` | Required | Coordinator+ | Get bank detail with slots, reports, papers, review |
 | `PATCH` | `/api/question-banks/[id]/status` | Required | Coordinator, Moderator | Update bank status |
-| `PATCH` | `/api/question-banks/[id]/lock` | Required | Coordinator | Lock bank (make immutable) |
+| `PATCH` | `/api/question-banks/[id]/lock` | Required | Coordinator | Lock bank (canonical lock path — only way to reach LOCKED) |
 | `GET` | `/api/question-banks/[id]/reports` | Required | COE, Coordinator, Moderator | List AI reports |
 | `POST` | `/api/question-banks/[id]/reports` | Required | COE, Coordinator, Moderator | Trigger AI analysis |
 | `GET` | `/api/question-banks/[id]/papers` | Required | COE, Coordinator, Moderator | List generated papers |
@@ -933,10 +953,11 @@ The complete Prisma schema is at `prisma/schema.prisma`.
 | `POST` | `/api/question-banks/[id]/dean-review` | Required | Dean | Submit dean paper selections |
 | `GET` | `/api/question-banks/[id]/assignments` | Required | Coordinator | List teacher assignments |
 | `POST` | `/api/question-banks/[id]/assignments` | Required | Coordinator | Assign teacher to bank |
+| `POST` | `/api/question-banks/[id]/assignments/moderator` | Required | Coordinator | Assign moderator to bank (validates role, prevents duplicates) |
 | `PUT` | `/api/question-banks/[id]/assignments/[assignmentId]` | Required | Coordinator | Reassign teacher |
 | `DELETE` | `/api/question-banks/[id]/assignments/[assignmentId]` | Required | Coordinator | Remove assignment |
 | `POST` | `/api/question-banks/[id]/assignments/[assignmentId]/notify` | Required | Coordinator | Notify assigned contributor |
-| `POST` | `/api/question-banks/[id]/coordinator-decision` | Required | Coordinator | Approve or reject bank for dean review |
+| `POST` | `/api/question-banks/[id]/coordinator-decision` | Required | Coordinator | Approve (→ APPROVED, not LOCKED) or reject (→ AWAITING_HOD_SIGN) bank for dean review |
 | `POST` | `/api/question-banks/[id]/signed-report` | Required | Moderator | Record signed HOD report upload |
 | `POST` | `/api/question-banks/[id]/signed-report/presign` | Required | Moderator | Get presigned URL for HOD report upload |
 
@@ -1015,7 +1036,7 @@ Full API documentation with request/response schemas: `docs/api-documentation.md
 
 ## Environment Variables
 
-All environment variables are documented in `.env.example`. Copy this file to `.env` and configure as needed.
+All environment variables are documented in `.env` (the committed configuration file). Copy this file and adjust secrets for production.
 
 ### Required Variables
 
@@ -1113,7 +1134,7 @@ All environment variables are documented in `.env.example`. Copy this file to `.
 ```
 EMQPGS/
 │
-├── .env.example                          # Documented environment variable template
+├── .env                                  # Environment configuration (committed local config)
 ├── .gitignore                            # Git ignore rules
 ├── AGENTS.md                             # AI agent behaviour rules for the repo
 ├── CLAUDE.md                             # Claude-specific assistant instructions
@@ -1205,20 +1226,21 @@ EMQPGS/
 │       │   ├── [id]/link-cycle/route.ts  # POST (link to exam cycle)
 │       │   └── [id]/deactivate/route.ts  # PATCH (deactivate)
 │       │
-│       ├── question-banks/               # Question bank operations
-│       │   ├── route.ts                  # GET (list), POST (initialise with slots)
-│       │   ├── [id]/route.ts             # GET (detail)
-│       │   ├── [id]/status/route.ts      # PATCH (update status)
-│       │   ├── [id]/lock/route.ts        # PATCH (lock bank)
-│       │   ├── [id]/reports/route.ts     # GET (list), POST (trigger AI)
-│       │   ├── [id]/papers/route.ts      # GET (list), POST (trigger generation)
-│       │   ├── [id]/dean-review/route.ts # GET (status), POST (submit selection)
-│       │   ├── [id]/assignments/route.ts # GET (list), POST (assign)
-│       │   ├── [id]/assignments/[assignmentId]/route.ts  # PUT (reassign), DELETE (remove)
-│       │   ├── [id]/assignments/[assignmentId]/notify/route.ts # POST (notify)
-│       │   ├── [id]/coordinator-decision/route.ts # POST (approve/reject)
-│       │   ├── [id]/signed-report/route.ts        # POST (record upload)
-│       │   └── [id]/signed-report/presign/route.ts # POST (presigned URL)
+│   ├── question-banks/               # Question bank operations
+│   │   ├── route.ts                  # GET (list), POST (initialise with slots)
+│   │   ├── [id]/route.ts             # GET (detail)
+│   │   ├── [id]/status/route.ts      # PATCH (update status, validated against transition table)
+│   │   ├── [id]/lock/route.ts        # PATCH (canonical lock path — only way to reach LOCKED)
+│   │   ├── [id]/reports/route.ts     # GET (list), POST (trigger AI)
+│   │   ├── [id]/papers/route.ts      # GET (list), POST (trigger generation)
+│   │   ├── [id]/dean-review/route.ts # GET (status), POST (submit selection)
+│   │   ├── [id]/assignments/route.ts # GET (list), POST (assign)
+│   │   ├── [id]/assignments/moderator/route.ts  # POST (assign moderator, RBAC + duplicate check)
+│   │   ├── [id]/assignments/[assignmentId]/route.ts  # PUT (reassign), DELETE (remove)
+│   │   ├── [id]/assignments/[assignmentId]/notify/route.ts # POST (notify)
+│   │   ├── [id]/coordinator-decision/route.ts # POST (approve→APPROVED, reject→AWAITING_HOD_SIGN)
+│   │   ├── [id]/signed-report/route.ts        # POST (record upload)
+│   │   └── [id]/signed-report/presign/route.ts # POST (presigned URL)
 │       │
 │       ├── questions/                    # Question lifecycle
 │       │   ├── route.ts                  # GET (list), POST (create)
@@ -1310,7 +1332,8 @@ EMQPGS/
 │   │   │   └── validation.ts           # Zod schema for SubjectInput
 │   │   │
 │   │   ├── question-banks/             # Question bank management
-│   │   │   ├── service.ts              # Bank CRUD with 126-slot grid initialisation, lock check
+│   │   │   ├── transitions.ts          # State transition table (10 states, forward-only DAG)
+│   │   │   ├── service.ts              # Bank CRUD with 126-slot grid initialisation, lock check, transition enforcement
 │   │   │   ├── repository.ts           # Database queries with transaction support
 │   │   │   └── validation.ts           # Zod schema for QuestionBankInput
 │   │   │
@@ -1410,17 +1433,23 @@ EMQPGS/
 │   ├── requirements-matrix.md          # Requirements traceability matrix
 │   └── security-checklist.md           # Security hardening checklist
 │
-├── tests/                               # ─── Test suite ───
+├── tests/                               # ─── Test suite (82 tests across 12 files) ───
 │   ├── setup.ts                        # Test environment variable defaults
 │   ├── unit/
-│   │   ├── slot-template.test.ts       # 126-slot matrix generation verification
-│   │   ├── analysis-engine.test.ts     # Deterministic analysis coverage tests
-│   │   └── paper-generator.test.ts     # Balanced paper generation constraint tests
+│   │   ├── slot-template.test.ts       # 126-slot matrix generation verification (2 tests)
+│   │   ├── analysis-engine.test.ts     # Deterministic analysis coverage tests (1 test)
+│   │   ├── paper-generator.test.ts     # Balanced paper generation constraint tests (1 test)
+│   │   ├── security.test.ts            # N3,N4,H2,H4,N13,N15,N14 security fixes (18 tests)
+│   │   ├── remediation.test.ts         # N1,C1,C2,C5 remediation tests (8 tests)
+│   │   ├── remediation-csrf.test.ts    # H1 CSRF timing-safe tests (3 tests)
+│   │   ├── question-bank-status.test.ts # State transition table verification (31 tests)
+│   │   ├── coordinator-decision.test.ts # Coordinator decision lock path tests (5 tests)
+│   │   └── moderator-assignment.test.ts # Moderator assignment API tests (6 tests)
 │   ├── integration/
-│   │   ├── question-service.test.ts    # Full question lifecycle integration tests
-│   │   └── report-locking.test.ts      # Locked bank immutability behaviour tests
+│   │   ├── question-service.test.ts    # Full question lifecycle integration tests (3 tests)
+│   │   └── report-locking.test.ts      # Locked bank immutability behaviour tests (1 test)
 │   └── permission/
-│       └── question-permissions.test.ts # RBAC permission enforcement tests
+│       └── question-permissions.test.ts # RBAC permission enforcement tests (3 tests)
 │
 ├── scripts/
 │   └── verify-prisma-client.cjs        # Prisma client integrity checker (pre-launch)
@@ -1444,10 +1473,9 @@ EMQPGS/
 ```bash
 git clone <repository-url>
 cd EMQPGS
-cp .env.example .env
 ```
 
-Edit `.env` and set secure values for all secrets (`AUTH_SECRET`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`). The defaults for MySQL, MinIO, and Ollama work with the provided Docker Compose setup.
+The repository includes a committed `.env` with development defaults. Edit it and set secure values for all secrets (`AUTH_SECRET`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CSRF_SECRET`). The defaults for MySQL, MinIO, and Ollama work with the provided Docker Compose setup.
 
 ### Step 2: Start Infrastructure Services
 
@@ -1604,6 +1632,10 @@ Vitest with Node.js environment, configured in `vitest.config.ts`:
 | **Integration: Question Service** | `tests/integration/question-service.test.ts` | Full question lifecycle: creation with auto slot reservation, editing, submission for moderation, moderation approval/rejection, revision request handling, attachment management. |
 | **Integration: Report Locking** | `tests/integration/report-locking.test.ts` | Bank locking behaviour: immutability after lock (no edits, no new questions, no moderation actions), report generation constraints, paper generation preconditions. |
 | **Permission: RBAC** | `tests/permission/question-permissions.test.ts` | Permission enforcement: canView (contributor sees own, moderator sees all), canEdit (only draft + own), canModerate (moderator only, only pending questions), coordinator read-only access. |
+| **Unit: State Transitions** | `tests/unit/question-bank-status.test.ts` | Question bank state machine: all valid transitions (12), all non-LOCKED fast-lock transitions (9), invalid transitions (7), service-level enforcement (3). 31 tests. |
+| **Unit: Coordinator Decision** | `tests/unit/coordinator-decision.test.ts` | Coordinator decision flow: APPROVED→APPROVED (not LOCKED), REJECTED→AWAITING_HOD_SIGN, permission checks, lockedAt always null. 5 tests. |
+| **Unit: Moderator Assignment** | `tests/unit/moderator-assignment.test.ts` | Moderator assignment: create, 404 (bank/moderator), 400 (wrong role), 409 (duplicate), notification sent. 6 tests. |
+| **Unit: Security Remediation** | `tests/unit/security.test.ts`, `tests/unit/remediation.test.ts`, `tests/unit/remediation-csrf.test.ts` | N1 (audit passwordHash leak), C1 (user creation 500), C2 (Zod→400), H1 (CSRF length guard), N3 (moderator IDOR), N4 (dean notification), H2 (audit body), H4 (XSS charset), N13 (CSP), N15 (CSRF origin), N14 (ID min). 29 tests. |
 
 ### Writing Tests
 
@@ -1630,10 +1662,14 @@ Test files should:
 | **Password Hashing** | bcrypt with 12 salt rounds for all stored passwords | `src/modules/users/service.ts` |
 | **Short-Lived Signed URLs** | All MinIO presigned URLs expire after configurable seconds (default: 900) | `src/lib/storage/` |
 | **Append-Only Audit Log** | All mutations logged with SHA-256 hash chain for tamper evidence | `src/lib/audit.ts` |
-| **Immutable Locked Banks** | Once locked, question banks cannot be modified — no edits, additions, or moderation actions | `src/modules/question-banks/service.ts`, `src/modules/questions/service.ts` |
-| **HTTP Security Headers** | Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy | `next.config.ts` |
-| **Input Validation** | Zod schemas validate all request bodies, query params, and path params at every API boundary | `src/modules/*/validation.ts` |
-| **Error Sanitisation** | Production errors return generic messages; detailed errors only in development | `src/lib/errors.ts`, `src/lib/api-handler.ts` |
+| **Immutable Locked Banks** | Once locked, question banks cannot be modified — no edits, additions, or moderation actions; canonical lock path only | `src/modules/question-banks/service.ts`, `src/modules/questions/service.ts` |
+| **State Machine Enforcement** | Question bank status transitions validated via code-level transition table (10 states, forward-only DAG) | `src/modules/question-banks/transitions.ts`, `src/modules/question-banks/service.ts` |
+| **HTTP Security Headers** | Content-Security-Policy (no `unsafe-eval`, restricted `connect-src`, `frame-ancestors 'none'`), X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy | `next.config.ts` |
+| **Input Validation** | Zod schemas validate all request bodies, query params, and path params at every API boundary; ID fields validated with `.min(1)`; free-text fields validated with charset regex (stored XSS prevention) | `src/modules/*/validation.ts` |
+| **Error Sanitisation** | Production errors return generic messages; Zod errors return 400 (not 500) with formatted messages; detailed stack traces only in development | `src/lib/errors.ts`, `src/lib/api-handler.ts` |
+| **Timing-Safe CSRF** | HMAC-SHA256 CSRF verification with length guard before `timingSafeEqual` comparison; origin check uses `AUTH_URL` (not `host` header) | `src/lib/csrf.ts` |
+| **Audit Log Safety** | Request body NOT auto-captured in audit metadata (prevents accidental sensitive-data logging) | `src/lib/audit.ts` |
+| **Object-Level Authorisation** | Moderator slot override gated by `ModeratorBankAssignment`; dean notifications scoped to own department | `src/modules/questions/permissions.ts`, `src/modules/notifications/service.ts` |
 | **Environment Variable Validation** | All env vars parsed and validated via Zod at startup; app refuses to start with missing/invalid configuration | `src/lib/env.ts` |
 | **Secure Cookie Attributes** | HttpOnly, Secure, SameSite=Lax on all auth cookies | `src/lib/jwt.ts`, `src/lib/csrf.ts` |
 
@@ -1793,7 +1829,7 @@ The 6 modules × 3 mark categories (2, 5, 10 marks) × 7 slots per category = 12
 
 ### Immutable Locked Banks
 
-- Once a question bank is locked (`PATCH /api/question-banks/[id]/lock`), the following operations are blocked:
+- Once a question bank is locked (`PATCH /api/question-banks/[id]/lock` — the **canonical lock path**), the following operations are blocked:
   - Creating new questions
   - Editing existing questions
   - Submitting questions for moderation
@@ -1802,11 +1838,12 @@ The 6 modules × 3 mark categories (2, 5, 10 marks) × 7 slots per category = 12
   - Adding or removing attachments
 - The lock is irreversible. Locked banks can only be read.
 - Unlock is not supported — if a bank needs changes after locking, a new bank must be created.
+- The coordinator decision APPROVED does NOT lock the bank (status → `APPROVED`). Locking must be an explicit, separate step.
 
 ### Coordinator Decision Finality
 
-- Once a Coordinator approves a bank and forwards it to the Dean, the decision is final
-- Rejection sends the bank back for further work but does not unlock it
+- Once a Coordinator approves a bank (`APPROVED` status), it still needs an explicit lock (`PATCH /api/question-banks/[id]/lock`) to reach `LOCKED` before paper generation
+- Rejection sends the bank back to `AWAITING_HOD_SIGN` for further work
 - The Dean's paper selection is also final and irrevocable
 
 ### Rate Limiting

@@ -2,8 +2,8 @@ import { QuestionBankStatus } from "@prisma/client";
 import { z } from "zod";
 
 export const questionBankSchema = z.object({
-  subjectId: z.string(),
-  examCycleId: z.string(),
+  subjectId: z.string().min(1),
+  examCycleId: z.string().min(1),
   status: z.nativeEnum(QuestionBankStatus).optional(),
 });
 

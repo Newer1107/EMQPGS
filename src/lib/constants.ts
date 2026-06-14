@@ -94,6 +94,22 @@ export const questionStatusLabels: Record<QuestionStatus, string> = {
   REVISION_SUBMITTED: "Revision Submitted",
 };
 
+export const ENTITY_TYPES = {
+  QUESTION: "QUESTION",
+  AI_REPORT: "AI_REPORT",
+  GENERATED_PAPER: "GENERATED_PAPER",
+  QUESTION_BANK_SIGNED_REPORT: "QUESTION_BANK_SIGNED_REPORT",
+  EXPORT_ARTIFACT: "EXPORT_ARTIFACT",
+  SYSTEM_BACKUP: "SYSTEM_BACKUP",
+  QUESTION_BANK: "QUESTION_BANK",
+  USER: "USER",
+  SUBJECT: "SUBJECT",
+  EXAM_CYCLE: "EXAM_CYCLE",
+  DEPARTMENT: "DEPARTMENT",
+  DEAN_REVIEW: "DEAN_REVIEW",
+  NOTIFICATION: "NOTIFICATION",
+} as const;
+
 export const rbacMatrix: Record<Role, string[]> = {
   COE: [
     "users:create",

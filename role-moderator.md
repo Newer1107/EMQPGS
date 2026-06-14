@@ -124,6 +124,7 @@ Moderators receive in-platform notifications for:
 - A Contributor resubmits a revised question (`REVISION_SUBMITTED`)
 - A question bank is approaching its moderation deadline
 - A coordinator has flagged a bank for urgent review
+- They have been assigned as moderator to a question bank (`ACTION_REQUIRED` notification)
 
 Moderators can mark notifications as read individually or bulk-clear them from the dashboard.
 
@@ -191,11 +192,13 @@ All moderation actions (approve, reject, request revision) are performed through
 
 ## Security Model
 
-- Moderators can only review questions in banks explicitly assigned to them
+- Moderators can only review questions in banks explicitly assigned to them (via `ModeratorBankAssignment`)
 - Object-level authorization prevents cross-department question access
+- Slot override permission checked against `ModeratorBankAssignment` — only assigned moderators can override
 - All moderation decisions are recorded in the append-only audit trail
 - Moderators cannot delete questions — only approve or reject (soft state transitions)
 - Session idle timeout applies; inactive sessions are terminated per `SESSION_IDLE_TIMEOUT_MINUTES`
+- Moderator assignment duplicates are rejected by the API (409 Conflict)
 
 ---
 

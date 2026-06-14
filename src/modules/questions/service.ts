@@ -1,12 +1,13 @@
-import { NotificationType, Prisma, QuestionStatus, Role, type User } from "@prisma/client";
+import { NotificationType, Prisma, QuestionBankStatus, QuestionStatus, Role, type User } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
-import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { AppError, ForbiddenError, NotFoundError, ConflictError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
 import { canEditQuestion, canModerateQuestion, canViewQuestion } from "@/modules/questions/permissions";
 import { QuestionRepository } from "@/modules/questions/repository";
 import { buildQuestionSlotTemplate } from "@/modules/questions/slot-template";
+import { ENTITY_TYPES } from "@/lib/constants";
 import type { QuestionInput } from "@/modules/questions/validation";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
@@ -120,7 +121,7 @@ export class QuestionService {
     await logAudit({
       actorId: actor.id,
       action: "QUESTION_CREATED",
-      entityType: "QUESTION",
+      entityType: ENTITY_TYPES.QUESTION,
       entityId: question.id,
       metadata: { slotId: slot.id, moduleNumber: slot.moduleNumber, marks: slot.marks, slotNumber: slot.slotNumber },
     });
@@ -134,24 +135,35 @@ export class QuestionService {
     this.ensureQuestionBankMutable(question.questionBank.status);
     if (!canEditQuestion(actor, question)) throw new ForbiddenError("You cannot edit this question");
 
-    const updated = await this.repository.updateQuestion(id, {
-      ...normalizeQuestionUpdate(input),
-      ...(actor.role === Role.CONTRIBUTOR
-        ? {
-            status: question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_REQUESTED : QuestionStatus.DRAFT,
-          }
-        : {}),
-    });
+    try {
+      const updated = await this.repository.updateQuestion(
+        id,
+        {
+          ...normalizeQuestionUpdate(input),
+          ...(actor.role === Role.CONTRIBUTOR
+            ? {
+                status: question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_REQUESTED : QuestionStatus.DRAFT,
+              }
+            : {}),
+        },
+        question.version,
+      );
 
-    await logAudit({
-      actorId: actor.id,
-      action: "QUESTION_EDITED",
-      entityType: "QUESTION",
-      entityId: updated.id,
-      metadata: { fields: Object.keys(input) },
-    });
+      await logAudit({
+        actorId: actor.id,
+        action: "QUESTION_EDITED",
+        entityType: ENTITY_TYPES.QUESTION,
+        entityId: updated.id,
+        metadata: { fields: Object.keys(input) },
+      });
 
-    return updated;
+      return updated;
+    } catch (err: unknown) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError("Question was modified by another request. Refresh and try again.");
+      }
+      throw err;
+    }
   }
 
   async submitQuestion(id: string, actor: Actor) {
@@ -167,16 +179,21 @@ export class QuestionService {
     const nextStatus =
       question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_SUBMITTED : QuestionStatus.PENDING;
 
-    const updated = await prisma.$transaction(async (tx) => {
+    const currentVersion = question.version;
+
+    let updated: Awaited<ReturnType<typeof this.repository.findById>>;
+    try {
+      updated = await prisma.$transaction(async (tx) => {
       const revisionCount = await tx.questionRevision.count({
         where: { questionId: id },
       });
 
       const result = await tx.question.update({
-        where: { id },
+        where: { id, version: currentVersion },
         data: {
           status: nextStatus,
           submittedAt: new Date(),
+          version: { increment: 1 },
         },
         include: {
           contributor: true,
@@ -209,6 +226,12 @@ export class QuestionService {
 
       return result;
     });
+    } catch (err: unknown) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError("Question was modified by another request. Refresh and try again.");
+      }
+      throw err;
+    }
 
     const moderatorAssignments = await prisma.moderatorBankAssignment.findMany({
       where: {
@@ -267,11 +290,23 @@ export class QuestionService {
           ? QuestionStatus.REJECTED
           : QuestionStatus.REVISION_REQUESTED;
 
-    const updated = await this.repository.updateQuestion(id, {
-      status: targetStatus,
-      reviewedAt: new Date(),
-      moderatorRemark: remark ?? null,
-    });
+    let updated: Awaited<ReturnType<typeof this.repository.findById>>;
+    try {
+      updated = await this.repository.updateQuestion(
+        id,
+        {
+          status: targetStatus,
+          reviewedAt: new Date(),
+          moderatorRemark: remark ?? null,
+        },
+        question.version,
+      );
+    } catch (err: unknown) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError("Question was modified by another request. Refresh and try again.");
+      }
+      throw err;
+    }
 
     const titleByAction = {
       APPROVE: "Question approved",
@@ -320,7 +355,7 @@ export class QuestionService {
     await logAudit({
       actorId: actor.id,
       action: action === "APPROVE" ? "QUESTION_APPROVED" : action === "REJECT" ? "QUESTION_REJECTED" : "QUESTION_REVISION_REQUESTED",
-      entityType: "QUESTION",
+      entityType: ENTITY_TYPES.QUESTION,
       entityId: updated.id,
       metadata: { remark },
     });
@@ -396,13 +431,13 @@ export class QuestionService {
       mimeType,
       size,
       uploadedById: actor.id,
-      linkedEntityType: "QUESTION",
+      linkedEntityType: ENTITY_TYPES.QUESTION,
       linkedEntityId: questionId,
     });
   }
 
-  private ensureQuestionBankMutable(status: string) {
-    if (status === "LOCKED") {
+  private ensureQuestionBankMutable(status: QuestionBankStatus) {
+    if (status === QuestionBankStatus.LOCKED) {
       throw new AppError("Locked question bank cannot be modified", 409);
     }
   }

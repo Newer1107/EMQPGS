@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# test artifacts (Playwright runs, screenshots, JSON results, debug scripts)
+/test-artifacts/
+/test-artifacts/**/*.png
+/test-artifacts/**/*.json
+/test-artifacts/**/*.ts
+

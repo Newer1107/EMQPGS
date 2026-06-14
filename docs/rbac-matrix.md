@@ -9,8 +9,12 @@
 | Manage exam cycles | Yes | No | No | No | No |
 | Manage subjects | No | Yes | No | No | No |
 | Manage question banks | Read | Manage | Review | Own work only | Read |
-| Assign teachers | No | Yes | No | No | No |
+| Assign contributors to bank | No | Yes | No | No | No |
+| Assign moderator to bank | No | Yes | No | No | No |
+| Update question bank status | Yes | Yes | Yes | No | No |
+| Lock question bank (canonical) | No | Yes | No | No | No |
 | Moderate questions | No | Read | Yes | No | No |
+| Override question slots | No | No | Yes (assigned banks only) | No | No |
 | Upload signed HOD report | No | No | Yes | No | No |
 | Coordinator approval | No | Yes | No | No | No |
 | Generate AI reports | Yes | Yes | Yes | No | No |

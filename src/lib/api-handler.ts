@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Role } from "@prisma/client";
+import { ZodError } from "zod";
 import { AppError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
 import { getCurrentUserFromCookies, getRequestMeta } from "@/lib/api-context";
 import { logAudit } from "@/lib/audit";
@@ -14,6 +15,7 @@ type RouteOptions = {
     action: string;
     entityType: string;
     getEntityId?: (result: unknown) => string | null | undefined;
+    getMetadata?: (request: NextRequest, result: unknown) => Record<string, unknown> | undefined;
   };
 };
 
@@ -44,7 +46,7 @@ export function withApiHandler<T>(
           action: options.audit.action,
           entityType: options.audit.entityType,
           entityId: options.audit.getEntityId?.(result) ?? null,
-          metadata: request.method === "GET" ? undefined : await safeReadBody(request),
+          metadata: options.audit.getMetadata?.(request, result),
           ...meta,
         });
       }
@@ -69,15 +71,19 @@ async function getOptionalUser() {
   }
 }
 
-async function safeReadBody(request: NextRequest) {
-  try {
-    return await request.clone().json();
-  } catch {
-    return undefined;
-  }
-}
-
 function handleApiError(error: unknown, request: NextRequest) {
+  if (error instanceof ZodError) {
+    logger.warn("Validation error", {
+      method: request.method,
+      path: request.nextUrl.pathname,
+      issues: error.issues.length,
+    });
+    return NextResponse.json(
+      { success: false, error: { code: "VALIDATION_ERROR", message: "Validation failed", details: error.issues } },
+      { status: 400 },
+    );
+  }
+
   if (error instanceof AppError) {
     logger.warn("API request failed", {
       method: request.method,

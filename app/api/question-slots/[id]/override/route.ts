@@ -1,8 +1,9 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { AppError } from "@/lib/errors";
+import { AppError, ForbiddenError } from "@/lib/errors";
 import { QuestionService } from "@/modules/questions/service";
+import { prisma } from "@/lib/db";
 import { z } from "zod";
 
 const service = new QuestionService();
@@ -14,6 +15,19 @@ export const POST = withApiHandler(
   async (request, context) => {
     const slotId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = overrideSchema.parse(await parseJson(request));
+
+    if (context.user!.role === Role.MODERATOR) {
+      const assignment = await prisma.moderatorBankAssignment.findFirst({
+        where: {
+          moderatorId: context.user!.id,
+          questionBankId: payload.questionBankId,
+        },
+      });
+      if (!assignment) {
+        throw new ForbiddenError("You cannot override slots in this bank");
+      }
+    }
+
     const slots = await service.listSlots(payload.questionBankId);
     const slot = slots.find((item) => item.id === slotId);
     if (!slot) {

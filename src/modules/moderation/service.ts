@@ -48,35 +48,49 @@ export class ModeratorService {
     const bankIds = await this.getAssignedBankIds(actor);
     await this.ensureModeratorNotifications(actor, bankIds);
 
-    const [questions, banks, events, notifications] = await Promise.all([
-      prisma.question.findMany({
+    const [questionCounts, revisionRequests, banks, events, notifications] = await Promise.all([
+      prisma.question.groupBy({
+        by: ["status"],
         where: { questionBankId: { in: bankIds } },
-        include: {
-          contributor: true,
-          questionBank: {
-            include: {
-              subject: true,
-              examCycle: true,
-            },
-          },
+        _count: { _all: true },
+      }),
+      prisma.question.findMany({
+        where: { questionBankId: { in: bankIds }, status: QuestionStatus.REVISION_REQUESTED },
+        select: {
+          id: true,
+          moduleNumber: true,
+          marks: true,
+          reviewedAt: true,
+          updatedAt: true,
+          contributor: { select: { name: true } },
+          questionBank: { select: { subject: { select: { subjectName: true } } } },
         },
+        orderBy: { reviewedAt: { sort: "asc", nulls: "last" } },
       }),
       prisma.questionBank.findMany({
         where: { id: { in: bankIds } },
-        include: {
-          subject: true,
-          examCycle: true,
-          questions: true,
+        select: {
+          id: true,
+          subject: { select: { subjectName: true } },
+          examCycle: { select: { academicYear: true, semester: true, examType: true } },
+          questions: {
+            where: { status: { in: [QuestionStatus.PENDING, QuestionStatus.REVISION_SUBMITTED] } },
+            select: { id: true, status: true },
+          },
         },
       }),
       prisma.moderationEvent.findMany({
         where: { moderatorId: actor.id },
         orderBy: { createdAt: "desc" },
         take: 20,
-        include: {
+        select: {
+          id: true,
+          questionId: true,
+          action: true,
+          createdAt: true,
           question: {
-            include: {
-              questionBank: { include: { subject: true } },
+            select: {
+              questionBank: { select: { subject: { select: { subjectName: true } } } },
             },
           },
         },
@@ -84,11 +98,10 @@ export class ModeratorService {
       this.notifications.listForUser(actor.id, 50),
     ]);
 
-    const pending = questions.filter((question) => question.status === QuestionStatus.PENDING).length;
-    const approved = questions.filter((question) => question.status === QuestionStatus.APPROVED).length;
-    const rejected = questions.filter((question) => question.status === QuestionStatus.REJECTED).length;
-    const revisionRequested = questions.filter((question) => question.status === QuestionStatus.REVISION_REQUESTED).length;
-    const awaitingRevisionResubmission = questions.filter((question) => question.status === QuestionStatus.REVISION_REQUESTED).length;
+    const pending = questionCounts.find((item) => item.status === QuestionStatus.PENDING)?._count._all ?? 0;
+    const approved = questionCounts.find((item) => item.status === QuestionStatus.APPROVED)?._count._all ?? 0;
+    const rejected = questionCounts.find((item) => item.status === QuestionStatus.REJECTED)?._count._all ?? 0;
+    const revisionRequested = questionCounts.find((item) => item.status === QuestionStatus.REVISION_REQUESTED)?._count._all ?? 0;
 
     return {
       summary: {
@@ -96,19 +109,16 @@ export class ModeratorService {
         approved,
         rejected,
         revisionRequested,
-        awaitingRevisionResubmission,
+        awaitingRevisionResubmission: revisionRequested,
       },
-      awaitingRevisionResubmission: questions
-        .filter((question) => question.status === QuestionStatus.REVISION_REQUESTED)
-        .sort((left, right) => (left.reviewedAt ?? left.updatedAt).getTime() - (right.reviewedAt ?? right.updatedAt).getTime())
-        .map((question) => ({
-          id: question.id,
-          subjectName: question.questionBank.subject.subjectName,
-          moduleNumber: question.moduleNumber,
-          markType: question.marks,
-          contributorName: question.contributor.name,
-          revisionRequestedAt: (question.reviewedAt ?? question.updatedAt).toISOString(),
-        })),
+      awaitingRevisionResubmission: revisionRequests.map((question) => ({
+        id: question.id,
+        subjectName: question.questionBank.subject.subjectName,
+        moduleNumber: question.moduleNumber,
+        markType: question.marks,
+        contributorName: question.contributor.name,
+        revisionRequestedAt: (question.reviewedAt ?? question.updatedAt).toISOString(),
+      })),
       recentModerationActivity: events.map((event) => ({
         id: event.id,
         questionId: event.questionId,
@@ -118,8 +128,8 @@ export class ModeratorService {
       })),
       quickAccessBanks: banks
         .map((bank) => {
-          const pendingCount = bank.questions.filter((question) => question.status === QuestionStatus.PENDING).length;
-          const revisionSubmittedCount = bank.questions.filter((question) => question.status === QuestionStatus.REVISION_SUBMITTED).length;
+          const pendingCount = bank.questions.filter((q) => q.status === QuestionStatus.PENDING).length;
+          const revisionSubmittedCount = bank.questions.filter((q) => q.status === QuestionStatus.REVISION_SUBMITTED).length;
           return {
             id: bank.id,
             subjectName: bank.subject.subjectName,
@@ -177,12 +187,25 @@ export class ModeratorService {
           : {}),
       },
       orderBy,
-      include: {
-        contributor: true,
+      select: {
+        id: true,
+        questionText: true,
+        moduleNumber: true,
+        marks: true,
+        slotNumber: true,
+        status: true,
+        submittedAt: true,
+        createdAt: true,
+        updatedAt: true,
+        rbtLevel: true,
+        coMapping: true,
+        contributor: { select: { id: true, name: true, email: true } },
         questionBank: {
-          include: {
-            subject: true,
-            examCycle: true,
+          select: {
+            id: true,
+            status: true,
+            subject: { select: { id: true, subjectName: true, subjectCode: true } },
+            examCycle: { select: { id: true, academicYear: true, semester: true, examType: true } },
           },
         },
       },

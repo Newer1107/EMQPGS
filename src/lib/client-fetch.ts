@@ -12,7 +12,7 @@ function readCookie(name: string) {
 
 async function ensureCsrfToken(): Promise<string | null> {
   try {
-    let token = readCookie(CSRF_COOKIE);
+    const token = readCookie(CSRF_COOKIE);
     if (token) return token;
 
     const response = await fetch("/api/auth/csrf", { method: "GET", credentials: "same-origin" });

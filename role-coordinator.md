@@ -69,7 +69,9 @@ A question bank is the container that holds all questions for a specific subject
 - **View AI analysis reports** — read the generated reports including module coverage, CO coverage, RBT distribution, Bloom's balance, duplicate detection, and Ollama summary
 - **Trigger paper generation** — initiate the generation of `PAPER_A`, `PAPER_B`, `PAPER_C` for a question bank that meets generation criteria
 - **View generated papers** — review all three generated papers and their scores before they proceed to Dean review
-- **Lock a bank manually** — in coordination with the exam cycle lifecycle, mark a bank as locked when contribution is complete
+- **Lock a bank manually** — `PATCH /api/question-banks/[id]/lock` — **canonical lock path**. The only way to reach `LOCKED` status. Validates exam cycle is `ACTIVE` and has an end date.
+- **Approve coordinator decision** — `POST /api/question-banks/[id]/coordinator-decision` APPROVED sets status to `APPROVED` (not `LOCKED`); the bank must be explicitly locked in a separate step.
+- **Assign moderator** — `POST /api/question-banks/[id]/assignments/moderator` — assigns a `MODERATOR` role user to the bank. Validates role and prevents duplicate assignments.
 
 #### Constraints:
 
@@ -77,6 +79,7 @@ A question bank is the container that holds all questions for a specific subject
 - Cannot modify question content
 - Cannot perform the paper selection (Dean's responsibility)
 - A bank can only be locked if the exam cycle is moving toward closure; locking is irreversible
+- Coordinator decision APPROVED does NOT lock the bank (must lock separately)
 
 ---
 
@@ -89,6 +92,7 @@ The Coordinator manages which `CONTRIBUTOR` users are assigned to which question
 #### What the Coordinator can do:
 
 - **Assign contributors to a bank** — specify which contributor(s) are responsible for which modules within a question bank
+- **Assign moderator to a bank** — via `POST /api/question-banks/[id]/assignments/moderator` — assigns a `MODERATOR` role user to oversee the entire bank. Validates role and prevents duplicate assignments.
 - **Reassign contributors** — change module ownership before contribution begins
 - **Remove assignments** — revoke a contributor's access to a module (they lose the ability to contribute to that module's slots)
 - **View assignment matrix** — see a grid of bank modules vs. assigned contributors
@@ -96,7 +100,7 @@ The Coordinator manages which `CONTRIBUTOR` users are assigned to which question
 
 #### Constraints:
 
-- Only `CONTRIBUTOR` role users can be assigned
+- Only `CONTRIBUTOR` role users can be assigned as contributors; only `MODERATOR` role users can be assigned as moderators
 - Assignment changes after a contributor has already submitted questions do not delete those questions; they only affect future access
 - Contributors can only be assigned to modules within banks in the Coordinator's departments
 
@@ -140,6 +144,11 @@ This view gives the Coordinator comprehensive read-only visibility into all ques
 | `GET` | `/api/question-banks/[id]/papers` | View generated papers |
 | `POST` | `/api/question-banks/[id]/papers` | Trigger paper generation |
 | `GET` | `/api/question-banks/[id]/dean-review` | View dean review status |
+| `PATCH` | `/api/question-banks/[id]/status` | Update question bank status |
+| `PATCH` | `/api/question-banks/[id]/lock` | Lock question bank (canonical lock path) |
+| `POST` | `/api/question-banks/[id]/assignments/moderator` | Assign moderator to bank |
+| `POST` | `/api/question-banks/[id]/coordinator-decision` | Approve or reject bank for dean review |
+| `POST` | `/api/question-banks/[id]/signed-report` | Record signed HOD report upload |
 
 ---
 

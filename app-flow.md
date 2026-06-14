@@ -82,11 +82,16 @@ Security:
 
 - Coordinators initialize question banks for a subject + cycle combination
 - The application materializes the 126-slot template on demand through question-slot services
+- Each bank follows a 10-state lifecycle enforced by the state transition table:
+  `DRAFT → IN_PROGRESS → UNDER_MODERATION → MODERATED → REPORT_GENERATED → AWAITING_HOD_SIGN → SIGNED_REPORT_UPLOADED → AWAITING_COORDINATOR_APPROVAL → APPROVED → LOCKED`
+- All statuses can fast-lock to `LOCKED`; no exits from `LOCKED`
 
 ### Assignments
 
-- Coordinators assign moderators and contributors to question banks
-- Assignment changes trigger in-app notifications
+- Coordinators assign contributors to specific modules via `POST /api/question-banks/[id]/assignments`
+- Coordinators assign moderators to banks via `POST /api/question-banks/[id]/assignments/moderator`
+- The moderator assignment endpoint validates `MODERATOR` role and prevents duplicate assignments
+- All assignment changes trigger in-app notifications
 
 ## Phase 3: Contributor Workflow
 
@@ -115,6 +120,13 @@ Security:
 
 - Coordinator triggers `POST /api/question-banks/[id]/papers`
 - Report service selects approved questions, enforces balance and uniqueness constraints, stores generated papers, and updates usage history
+
+## Phase 5a: Coordinator Lock
+
+- After reviewing AI reports and generated papers, Coordinator approves the bank via `POST /api/question-banks/[id]/coordinator-decision`
+- APPROVAL sets status to `APPROVED` (not `LOCKED`)
+- Coordinator then explicitly locks the bank via `PATCH /api/question-banks/[id]/lock`
+- Locked banks are immutable: no edits, no new questions, no moderation actions, no slot overrides
 
 ## Phase 6: Dean Review
 
@@ -145,7 +157,7 @@ Security:
 ## Phase 8: Cycle Closure
 
 - COE transitions an exam cycle to closed
-- Related banks become locked
+- Related banks are already locked (see Phase 5a)
 - Locked banks reject further edits, moderation changes, and content mutation
 
 ## Storage Flow

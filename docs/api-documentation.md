@@ -29,7 +29,7 @@
 ## Question Contribution
 
 - `GET/POST /api/question-slots`
-- `POST /api/question-slots/[id]/override`
+- `POST /api/question-slots/[id]/override` (moderator only, gated by `ModeratorBankAssignment`)
 - `GET/POST /api/questions`
 - `GET/PATCH /api/questions/[id]`
 - `POST /api/questions/[id]/submit`
@@ -38,6 +38,10 @@
 - `POST /api/questions/[id]/attachments/presign`
 - `PATCH/DELETE /api/question-attachments/[id]`
 - `GET /api/question-attachments/[id]/download`
+
+## Assignments
+
+- `POST /api/question-banks/[id]/assignments/moderator` — assign moderator to bank (validates MODERATOR role, prevents duplicates)
 
 ## Reports and Papers
 
@@ -58,7 +62,13 @@
 
 ## Security Defaults
 
-- All mutating routes require CSRF token
-- Rate limiting is enforced in the shared API handler
+- All mutating routes require CSRF token (HMAC-SHA256, cookie + header, timing-safe)
+- CSRF origin check uses `AUTH_URL` (not `host` header)
+- Rate limiting is enforced in the shared API handler (120 req/60s default)
 - Export and backup routes are COE-only
 - Signed URLs expire using `SIGNED_URL_EXPIRY_SECONDS`
+- Zod validation errors return 400 (not 500, no stack trace leak)
+- Free-text fields validated with charset regex (stored XSS prevention)
+- All ID fields validated with `.min(1)` (non-empty guard)
+- Audit logs do not auto-capture request bodies
+- Question bank state transitions enforced via transition table (10 states, forward-only DAG)

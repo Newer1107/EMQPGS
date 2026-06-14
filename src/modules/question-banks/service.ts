@@ -1,8 +1,10 @@
 import { QuestionBankStatus } from "@prisma/client";
 import { AppError, NotFoundError } from "@/lib/errors";
+import { withOptimisticLock, buildOptimisticUpdate, buildOptimisticWhere } from "@/lib/optimistic-lock";
 import { QuestionBankRepository } from "@/modules/question-banks/repository";
 import { QuestionService } from "@/modules/questions/service";
 import { QuestionBankInput } from "@/modules/question-banks/validation";
+import { isValidTransition } from "@/modules/question-banks/transitions";
 
 export class QuestionBankService {
   constructor(
@@ -23,12 +25,19 @@ export class QuestionBankService {
   async updateStatus(id: string, status: QuestionBankStatus) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Question bank not found");
-    if (entity.status === QuestionBankStatus.LOCKED && status !== QuestionBankStatus.LOCKED) {
-      throw new AppError("Locked question banks are immutable", 409);
+    if (!isValidTransition(entity.status, status)) {
+      throw new AppError(`Cannot transition from ${entity.status} to ${status}`, 409);
     }
-    return this.repository.update(id, {
-      status,
-      lockedAt: status === QuestionBankStatus.LOCKED ? new Date() : null,
-    });
+    return withOptimisticLock(
+      () =>
+        this.repository.update(
+          buildOptimisticWhere(id, entity.version),
+          buildOptimisticUpdate({
+            status,
+            lockedAt: status === QuestionBankStatus.LOCKED ? new Date() : undefined,
+          }),
+        ),
+      "Question bank",
+    );
   }
 }

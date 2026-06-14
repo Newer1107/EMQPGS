@@ -26,3 +26,9 @@ export class NotFoundError extends AppError {
     super(message, 404, "NOT_FOUND");
   }
 }
+
+export class ConflictError extends AppError {
+  constructor(message = "Conflict") {
+    super(message, 409, "CONFLICT");
+  }
+}

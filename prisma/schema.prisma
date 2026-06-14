@@ -185,6 +185,9 @@ model User {
   deanReviews      DeanReview[]        @relation("deanReviewSelector")
   exportArtifacts  ExportArtifact[]    @relation("exportArtifactGenerator")
   backupsTriggered SystemBackup[]      @relation("backupTrigger")
+
+  @@index([role])
+  @@index([departmentId])
 }
 
 model ExamCycle {
@@ -193,6 +196,7 @@ model ExamCycle {
   semester              Int
   examType              ExamType
   status                ExamCycleStatus   @default(DRAFT)
+  version               Int               @default(0)
   startDate             DateTime?
   endDate               DateTime?
   departmentId          String?
@@ -209,6 +213,8 @@ model ExamCycle {
   questionBanks         QuestionBank[]
 
   @@unique([academicYear, semester, examType])
+  @@index([status, departmentId])
+  @@index([departmentId])
 }
 
 model Subject {
@@ -228,6 +234,8 @@ model Subject {
   questionBanks       QuestionBank[]
 
   @@unique([subjectCode, departmentId])
+  @@index([departmentId])
+  @@index([semester])
 }
 
 model QuestionBank {
@@ -235,6 +243,7 @@ model QuestionBank {
   subjectId    String
   examCycleId  String
   status       QuestionBankStatus  @default(DRAFT)
+  version      Int                 @default(0)
   createdById  String
   lockedAt     DateTime?
   createdAt    DateTime            @default(now())
@@ -258,6 +267,8 @@ model QuestionBank {
   exportArtifacts ExportArtifact[]
 
   @@unique([subjectId, examCycleId])
+  @@index([status])
+  @@index([subjectId])
 }
 
 model TeacherAssignment {
@@ -274,6 +285,7 @@ model TeacherAssignment {
   assignedBy     User           @relation("assignedBy", fields: [assignedById], references: [id])
 
   @@unique([questionBankId, teacherId, assignmentRole, moduleNumber])
+  @@index([teacherId])
 }
 
 model CoordinatorDepartmentAssignment {
@@ -309,6 +321,8 @@ model Notification {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   recipient   User             @relation(fields: [recipientId], references: [id])
+
+  @@index([recipientId, isRead, createdAt])
 }
 
 model AuditLog {
@@ -324,6 +338,9 @@ model AuditLog {
   integrityHash String?
   createdAt   DateTime @default(now())
   actor       User?    @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId, createdAt])
+  @@index([actorId])
 }
 
 model FileAsset {
@@ -353,6 +370,7 @@ model QuestionSlot {
   moduleNumber    Int
   marks           Int
   slotNumber      Int
+  version         Int          @default(0)
   reservedById    String?
   reservedAt      DateTime?
   isLocked        Boolean      @default(false)
@@ -369,6 +387,7 @@ model Question {
   id              String           @id @default(cuid())
   questionBankId  String
   slotId          String?          @unique
+  version         Int              @default(0)
   questionText    String
   moduleNumber    Int
   marks           Int
@@ -399,6 +418,7 @@ model Question {
 
   @@index([questionBankId, moduleNumber, marks, slotNumber])
   @@index([contributorId, status])
+  @@index([status])
 }
 
 model QuestionAttachment {

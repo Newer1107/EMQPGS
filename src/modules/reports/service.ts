@@ -13,6 +13,7 @@ import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
+import { ENTITY_TYPES } from "@/lib/constants";
 import { OllamaService } from "@/modules/ai/ollama-service";
 import { AnalysisEngine } from "@/modules/reports/analysis-engine";
 import { PaperGenerator } from "@/modules/reports/paper-generator";
@@ -59,7 +60,7 @@ export class ReportService {
       body: jsonBuffer,
       size: jsonBuffer.byteLength,
       uploadedById: actor.id,
-      linkedEntityType: "AI_REPORT",
+      linkedEntityType: ENTITY_TYPES.AI_REPORT,
       linkedEntityId: reportRecord.id,
     });
 
@@ -75,7 +76,7 @@ export class ReportService {
       body: Buffer.from(pdfBytes),
       size: pdfBytes.byteLength,
       uploadedById: actor.id,
-      linkedEntityType: "AI_REPORT",
+      linkedEntityType: ENTITY_TYPES.AI_REPORT,
       linkedEntityId: reportRecord.id,
     });
 
@@ -120,7 +121,7 @@ export class ReportService {
     await logAudit({
       actorId: actor.id,
       action: "AI_REPORT_GENERATED",
-      entityType: "AI_REPORT",
+      entityType: ENTITY_TYPES.AI_REPORT,
       entityId: completed.id,
       metadata: { questionBankId },
     });
@@ -186,7 +187,7 @@ export class ReportService {
 
     const status =
       decision === CoordinatorDecision.APPROVED
-        ? QuestionBankStatus.LOCKED
+        ? QuestionBankStatus.APPROVED
         : QuestionBankStatus.AWAITING_HOD_SIGN;
 
     const updated = await prisma.questionBank.update({
@@ -196,14 +197,14 @@ export class ReportService {
         coordinatorReviewedAt: new Date(),
         coordinatorReviewRemark: remark ?? null,
         status,
-        lockedAt: decision === CoordinatorDecision.APPROVED ? new Date() : null,
+        lockedAt: null,
       },
     });
 
     await logAudit({
       actorId: actor.id,
       action: decision === CoordinatorDecision.APPROVED ? "QUESTION_BANK_APPROVED" : "QUESTION_BANK_REJECTED",
-      entityType: "QUESTION_BANK",
+      entityType: ENTITY_TYPES.QUESTION_BANK,
       entityId: questionBankId,
       metadata: { remark },
     });
@@ -241,7 +242,7 @@ export class ReportService {
         body: Buffer.from(pdfBytes),
         size: pdfBytes.byteLength,
         uploadedById: actor.id,
-        linkedEntityType: "GENERATED_PAPER",
+        linkedEntityType: ENTITY_TYPES.GENERATED_PAPER,
         linkedEntityId: questionBankId,
       });
 
@@ -314,7 +315,7 @@ export class ReportService {
     await logAudit({
       actorId: actor.id,
       action: "QUESTION_PAPERS_GENERATED",
-      entityType: "GENERATED_PAPER",
+      entityType: ENTITY_TYPES.GENERATED_PAPER,
       entityId: questionBankId,
       metadata: { variants },
     });
@@ -361,7 +362,7 @@ export class ReportService {
       mimeType,
       size,
       uploadedById: actor.id,
-      linkedEntityType: "QUESTION_BANK_SIGNED_REPORT",
+      linkedEntityType: ENTITY_TYPES.QUESTION_BANK_SIGNED_REPORT,
       linkedEntityId: questionBankId,
     });
   }

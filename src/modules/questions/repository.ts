@@ -89,11 +89,12 @@ export class QuestionRepository extends BaseRepository {
       }
 
       const updated = await tx.questionSlot.update({
-        where: { id: slot.id },
+        where: { id: slot.id, version: slot.version },
         data: {
           reservedById: userId,
           reservedAt: new Date(),
           isLocked: true,
+          version: { increment: 1 },
         },
       });
 
@@ -108,10 +109,10 @@ export class QuestionRepository extends BaseRepository {
     });
   }
 
-  async updateQuestion(id: string, data: Prisma.QuestionUpdateInput) {
+  async updateQuestion(id: string, data: Prisma.QuestionUpdateInput, version?: number) {
     return this.prisma.question.update({
-      where: { id },
-      data,
+      where: version ? { id, version } : { id },
+      data: version ? { ...data, version: { increment: 1 } } : data,
       include: questionInclude,
     });
   }

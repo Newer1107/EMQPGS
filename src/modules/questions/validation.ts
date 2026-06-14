@@ -1,11 +1,12 @@
 import { CourseOutcome, DifficultyLevel, QuestionStatus, RbtLevel } from "@prisma/client";
 import { z } from "zod";
+import { QUESTION_MODULE_COUNT, QUESTION_SLOT_COUNT, QUESTION_MARKS } from "@/modules/questions/slot-template";
 
 export const reserveSlotSchema = z.object({
   questionBankId: z.string().min(1),
-  moduleNumber: z.coerce.number().int().min(1).max(6),
-  marks: z.union([z.literal(2), z.literal(5), z.literal(10)]),
-  slotNumber: z.coerce.number().int().min(1).max(7),
+  moduleNumber: z.coerce.number().int().min(1).max(QUESTION_MODULE_COUNT),
+  marks: z.union(QUESTION_MARKS.map((m) => z.literal(m)) as [z.ZodLiteral<2>, z.ZodLiteral<5>, z.ZodLiteral<10>]),
+  slotNumber: z.coerce.number().int().min(1).max(QUESTION_SLOT_COUNT),
 });
 
 export const questionSchema = z.object({

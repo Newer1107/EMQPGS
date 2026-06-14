@@ -1,0 +1,48 @@
+import { Prisma } from "@prisma/client";
+import { ConflictError } from "@/lib/errors";
+
+const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
+  Department_code_key: "A department with this code already exists.",
+  User_email_key: "A user with this email already exists.",
+  Subject_subjectCode_departmentId_key: "This subject code already exists in this department.",
+  ExamCycle_academicYear_semester_examType_key:
+    "An exam cycle with this academic year, semester, and exam type already exists.",
+  QuestionBank_subjectId_examCycleId_key:
+    "A question bank already exists for this subject and exam cycle.",
+  ModeratorBankAssignment_moderatorId_questionBankId_key:
+    "This moderator is already assigned to this question bank.",
+  CoordinatorDepartmentAssignment_coordinatorId_departmentId_key:
+    "This coordinator is already assigned to this department.",
+  SubjectExamCycleLink_subjectId_examCycleId_key:
+    "This subject is already linked to this exam cycle.",
+  Question_slotId_key: "A question already exists for this slot.",
+  TeacherAssignment_questionBankId_teacherId_assignmentRole_moduleNumber_key:
+    "This assignment already exists.",
+};
+
+export function handleUniqueConstraint(
+  err: unknown,
+  constraintName?: string,
+): never {
+  if (
+    err instanceof Prisma.PrismaClientKnownRequestError &&
+    err.code === "P2002"
+  ) {
+    const fields = (err.meta as { target?: string[] } | undefined)?.target;
+    const key = constraintName ?? fields?.join("_") ?? "";
+    const message = UNIQUE_CONSTRAINT_MESSAGES[key] ?? "This record already exists.";
+    throw new ConflictError(message);
+  }
+  throw err;
+}
+
+export async function withUniqueCheck<T>(
+  action: () => Promise<T>,
+  constraintName?: string,
+): Promise<T> {
+  try {
+    return await action();
+  } catch (err) {
+    return handleUniqueConstraint(err, constraintName);
+  }
+}

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { CoordinatorService } from "@/modules/coordinator/service";
 import { DashboardService } from "@/modules/dashboard/service";
 import { ProductionService } from "@/modules/production/service";
+import { paginatedResponse, type CursorPaginationInput } from "@/lib/pagination";
 
 export async function getDashboardSeed(role: Role) {
   const user = await getCurrentUserFromCookies();
@@ -11,17 +12,30 @@ export async function getDashboardSeed(role: Role) {
   return new DashboardService().getRoleDashboard(role, user.id);
 }
 
-export async function getAdminData() {
-  const [departments, users, examCycles, subjects, questionBanks, assignments, auditLogs] = await Promise.all([
+export async function getAdminData(input: CursorPaginationInput = {}) {
+  const take = Math.min(Math.max(input.take ?? 25, 1), 200);
+  const [departments, users, examCycles, subjects, questionBanks, assignments, auditLogs, departmentCount, userCount, questionBankCount] = await Promise.all([
     prisma.department.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.user.findMany({ orderBy: { createdAt: "desc" }, include: { department: true } }),
-    prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, include: { department: true } }),
-    prisma.subject.findMany({ orderBy: { createdAt: "desc" }, include: { department: true } }),
-    prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, include: { subject: true, examCycle: true } }),
-    prisma.teacherAssignment.findMany({ orderBy: { createdAt: "desc" }, include: { teacher: true, questionBank: { include: { subject: true } } } }),
+    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
+    prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
+    prisma.subject.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
+    prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, examCycle: true } }),
+    prisma.teacherAssignment.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { teacher: true, questionBank: { include: { subject: true } } } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, include: { actor: true }, take: 25 }),
+    prisma.department.count(),
+    prisma.user.count(),
+    prisma.questionBank.count(),
   ]);
-  return { departments, users, examCycles, subjects, questionBanks, assignments, auditLogs };
+  return {
+    departments,
+    users: paginatedResponse(users, { take }).data,
+    examCycles: paginatedResponse(examCycles, { take }).data,
+    subjects: paginatedResponse(subjects, { take }).data,
+    questionBanks: paginatedResponse(questionBanks, { take }).data,
+    assignments: paginatedResponse(assignments, { take }).data,
+    auditLogs,
+    counts: { departments: departmentCount, users: userCount, questionBanks: questionBankCount },
+  };
 }
 
 export async function getQuestionContributionWorkspace(role: Role) {
