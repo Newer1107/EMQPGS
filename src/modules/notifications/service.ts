@@ -1,5 +1,6 @@
 import { NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { logger } from "@/lib/logger";
 import { EmailService } from "@/modules/notifications/email-service";
 
 export class NotificationService {
@@ -69,6 +70,15 @@ export class NotificationService {
     type: NotificationType = NotificationType.INFO,
   ) {
     await this.create(recipient.id, title, message, actionUrl, type);
-    await this.emailService.sendNotificationEmail(recipient.email, title, `${recipient.name}, ${message}`);
+    try {
+      await this.emailService.sendNotificationEmail(recipient.email, title, `${recipient.name}, ${message}`);
+    } catch (err) {
+      logger.error("Failed to send notification email", {
+        recipientEmail: recipient.email,
+        recipientId: recipient.id,
+        title,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
   }
 }
