@@ -18,8 +18,8 @@
 - Login, logout, forgot password, reset password
 - Question contribution and moderation
 - AI report generation
-- Signed HOD report upload
-- Coordinator approval and locking
+- Coordinator approval (advances phase to COMPLETE)
+- Phase advancement and locking
 - Paper generation A/B/C
 - Dean selection submission
 - COE PDF, DOCX, and ZIP export
@@ -36,6 +36,6 @@
 - Audit log entries are created for security-critical actions (request body NOT auto-captured)
 - Zod validation errors return `400` (not `500`)
 - Free-text fields reject HTML tags (charset regex validation)
-- Question bank status transitions enforce state machine (invalid transitions return `409`)
-- Coordinator decision APPROVED sets status to `APPROVED` (not `LOCKED`); lock must be explicit
+- Question bank phase transitions enforce state machine (invalid transitions return `409`)
+- Coordinator decision APPROVED sets phase to `COMPLETE` (not `LOCKED`); lock must be explicit
 - Moderator slot override gated by `ModeratorBankAssignment`

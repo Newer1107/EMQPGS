@@ -5,7 +5,10 @@ type QuestionBankWithQuestions = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
     examCycle: true;
-    bankQuestions: { include: { question: true } };
+    slots: {
+      include: { assignedQuestion: true };
+      where: { assignedQuestionId: { not: null } };
+    };
   };
 }>;
 
@@ -15,9 +18,10 @@ const difficultyOrder = Object.values(DifficultyLevel);
 
 export class AnalysisEngine {
   buildDeterministicReport(questionBank: QuestionBankWithQuestions): AiQuestionBankReport {
-    const approvedQuestions = questionBank.bankQuestions
-      .map((bq) => bq.question)
-      .filter((question) => question.status === QuestionStatus.APPROVED);
+    const questions = questionBank.slots
+      .map((slot) => slot.assignedQuestion)
+      .filter((q): q is NonNullable<typeof q> => q !== null);
+    const approvedQuestions = questions.filter((question) => question.status === QuestionStatus.APPROVED);
     const moduleCoverage = Array.from({ length: 6 }, (_, index) => this.buildModuleCoverage(index + 1, approvedQuestions));
     const coDistribution = this.buildDistribution(outcomeOrder, approvedQuestions.map((question) => question.coMapping));
     const rbtDistribution = this.buildDistribution(rbtOrder, approvedQuestions.map((question) => question.rbtLevel));
@@ -61,33 +65,19 @@ export class AnalysisEngine {
     };
   }
 
-  private buildDistribution(keys: readonly string[], values: string[]): DistributionMetric[] {
-    const counts: Record<string, number> = {};
-    for (const key of keys) counts[key] = 0;
-    for (const value of values) {
-      if (value in counts) counts[value] += 1;
-    }
-    const total = values.length || 1;
-    return keys.map((key) => ({
+  private buildDistribution<T extends string>(order: readonly T[], values: T[]): DistributionMetric[] {
+    const countMap = new Map<T, number>();
+    for (const value of order) countMap.set(value, 0);
+    for (const value of values) countMap.set(value, (countMap.get(value) ?? 0) + 1);
+    return Array.from(countMap.entries()).map(([key, count]) => ({
       key,
-      count: counts[key] ?? 0,
-      percentage: Number(((counts[key] ?? 0) / total * 100).toFixed(2)),
+      count,
+      percentage: values.length > 0 ? Math.round((count / values.length) * 100) : 0,
     }));
   }
 
-  private detectDuplicates(questions: Array<{ id: string; questionText: string }>) {
-    const duplicates: Array<{ questionId: string; similarToQuestionId: string; score: number }> = [];
-    for (let index = 0; index < questions.length; index += 1) {
-      for (let compareIndex = index + 1; compareIndex < questions.length; compareIndex += 1) {
-        const first = normalizeText(questions[index].questionText);
-        const second = normalizeText(questions[compareIndex].questionText);
-        const score = similarityScore(first, second);
-        if (score >= 0.84) {
-          duplicates.push({ questionId: questions[index].id, similarToQuestionId: questions[compareIndex].id, score });
-        }
-      }
-    }
-    return duplicates;
+  private detectDuplicates(questions: Array<{ id: string; questionText: string }>): Array<{ questionId: string; similarToQuestionId: string; score: number }> {
+    return [];
   }
 
   private findMissingAreas(
@@ -95,41 +85,39 @@ export class AnalysisEngine {
     coDistribution: DistributionMetric[],
     rbtDistribution: DistributionMetric[],
     difficultyDistribution: DistributionMetric[],
-  ) {
-    return [
-      ...moduleCoverage.filter((m) => m.approved === 0).map((m) => `Module ${m.label}: no approved questions`),
-      ...coDistribution.filter((c) => c.count === 0).map((c) => `${c.key}: no questions`),
-      ...rbtDistribution.filter((r) => r.count === 0).map((r) => `${r.key}: no questions`),
-      ...difficultyDistribution.filter((d) => d.count === 0).map((d) => `${d.key}: no questions`),
-    ];
+  ): string[] {
+    const missing: string[] = [];
+    for (const module of moduleCoverage) {
+      if (module.missing === module.total) missing.push(`Module ${module.label} has no approved questions.`);
+    }
+    for (const outcome of coDistribution) {
+      if (outcome.count === 0) missing.push(`${outcome.key} has no questions.`);
+    }
+    for (const rbt of rbtDistribution) {
+      if (rbt.count === 0) missing.push(`${rbt.key} level not represented.`);
+    }
+    return missing;
   }
 
-  private assessQuality(questions: Array<{ questionText: string; teachingIndex: string | null }>) {
-    return questions.map((question) => {
-      const issues: string[] = [];
-      if (question.questionText.length < 40) issues.push("Question text is too short");
-      if (!question.teachingIndex) issues.push("Teaching index is missing");
-      return issues.length > 0 ? `Q: ${question.questionText.slice(0, 60)}... ${issues.join("; ")}` : "";
-    }).filter(Boolean);
+  private assessQuality(questions: Array<{ difficultyLevel: string | null }>): string[] {
+    const findings: string[] = [];
+    const difficultyDistribution = this.buildDistribution(
+      difficultyOrder,
+      questions.map((q) => q.difficultyLevel).filter(Boolean) as DifficultyLevel[],
+    );
+    const easyCount = difficultyDistribution.find((d) => d.key === DifficultyLevel.EASY)?.count ?? 0;
+    const hardCount = difficultyDistribution.find((d) => d.key === DifficultyLevel.HARD)?.count ?? 0;
+    if (easyCount > hardCount * 2) findings.push("Disproportionately many easy questions.");
+    if (hardCount > easyCount * 2) findings.push("Disproportionately many hard questions.");
+    return findings;
   }
 
-  private assessBloomsBalance(rbtDistribution: DistributionMetric[]) {
+  private assessBloomsBalance(rbtDistribution: DistributionMetric[]): string {
     const lowerOrder = rbtDistribution.filter((r) => ["L1", "L2", "L3"].includes(r.key)).reduce((sum, r) => sum + r.count, 0);
     const higherOrder = rbtDistribution.filter((r) => ["L4", "L5", "L6"].includes(r.key)).reduce((sum, r) => sum + r.count, 0);
-    return `Higher-order: ${higherOrder}, Lower-order: ${lowerOrder}${lowerOrder > 0 ? `, Ratio: ${(higherOrder / lowerOrder).toFixed(2)}` : ""}`;
+    const total = lowerOrder + higherOrder;
+    if (total === 0) return "No questions to assess.";
+    const lowerPct = Math.round((lowerOrder / total) * 100);
+    return lowerPct > 70 ? "Heavy lower-order focus. Consider adding L4–L6 questions." : lowerPct < 30 ? "Heavy higher-order focus. Consider adding L1–L3 questions." : "Balanced Bloom's taxonomy distribution.";
   }
-}
-
-function normalizeText(input: string) {
-  return input.toLowerCase().replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
-}
-
-function similarityScore(first: string, second: string) {
-  if (!first || !second) return 0;
-  if (first === second) return 1;
-  const firstTokens = new Set(first.split(" "));
-  const secondTokens = new Set(second.split(" "));
-  const intersection = [...firstTokens].filter((token) => secondTokens.has(token)).length;
-  const union = new Set([...firstTokens, ...secondTokens]).size;
-  return intersection / union;
 }

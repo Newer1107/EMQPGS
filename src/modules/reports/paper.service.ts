@@ -3,7 +3,8 @@ import {
   NotificationType,
   PaperGenerationStatus,
   PaperVariant,
-  QuestionBankStatus,
+  QuestionBankPhase,
+  RecordStatus,
   type Prisma,
   type User,
 } from "@prisma/client";
@@ -31,8 +32,8 @@ export class PaperGenerationService {
   async generatePapers(questionBankId: string, actor: Actor, variants: PaperVariant[]) {
     const questionBank = await this.getQuestionBankForPaperGeneration(questionBankId);
     if (!questionBank) throw new NotFoundError("Question bank not found");
-    if (questionBank.status !== QuestionBankStatus.LOCKED && questionBank.status !== QuestionBankStatus.REPORT_GENERATED) {
-      throw new AppError("Question bank must have a completed AI report before generating papers", 409);
+    if (questionBank.phase !== QuestionBankPhase.APPROVAL && questionBank.phase !== QuestionBankPhase.COMPLETE) {
+      throw new AppError("Question bank must be in APPROVAL or COMPLETE phase before generating papers", 409);
     }
 
     const generatedPayloads = this.paperGenerator.generate(questionBank, variants);
@@ -58,8 +59,6 @@ export class PaperGenerationService {
         body: Buffer.from(pdfBytes),
         size: pdfBytes.byteLength,
         uploadedById: actor.id,
-        linkedEntityType: ENTITY_TYPES.GENERATED_PAPER,
-        linkedEntityId: questionBankId,
       });
 
       const record = await prisma.generatedPaper.upsert({
@@ -110,17 +109,29 @@ export class PaperGenerationService {
         },
       });
 
-      const itemByQuestionId = new Map(record.items.map((item) => [item.questionId, item.id]));
       await Promise.all(
         payload.selectedQuestions.map((question) =>
-          this.usageService.recordUsage(
-            question.id,
-            questionBank.examCycle.id,
-            record.id,
-            itemByQuestionId.get(question.id)!,
-          ),
+          this.usageService.recordUsage(question.id, questionBank.examCycle.id, "GENERATED_PAPER", record.id),
         ),
       );
+
+      await prisma.paperSnapshot.upsert({
+        where: { questionBankId_variant: { questionBankId, variant: payload.variant } },
+        update: {
+          paperJson: record.paperJson as Prisma.InputJsonValue,
+          coverageScore: record.coverageScore,
+          difficultyScore: record.difficultyScore,
+          qualityScore: record.qualityScore,
+        },
+        create: {
+          questionBankId,
+          variant: payload.variant,
+          paperJson: (record.paperJson ?? {}) as Prisma.InputJsonValue,
+          coverageScore: record.coverageScore,
+          difficultyScore: record.difficultyScore,
+          qualityScore: record.qualityScore,
+        },
+      });
 
       outputs.push(record);
     }
@@ -174,10 +185,9 @@ export class PaperGenerationService {
         aiReports: {
           where: { status: AiReportStatus.COMPLETED },
         },
-        bankQuestions: {
-          include: {
-            question: true,
-          },
+        slots: {
+          include: { assignedQuestion: true },
+          where: { assignedQuestionId: { not: null } },
         },
         generatedPapers: {
           include: {

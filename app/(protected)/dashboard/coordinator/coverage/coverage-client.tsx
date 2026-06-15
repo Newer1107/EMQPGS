@@ -11,7 +11,7 @@ type AcademicYear = { id: string; code: string };
 type Semester = { id: string; number: number; name: string; academicYearId: string };
 type Subject = { id: string; subjectCode: string; subjectName: string; semesterId: string };
 type SubjectVersion = { id: string; versionNumber: number; title: string; subjectId: string; effectiveFromAcademicYearId: string };
-type QuestionBank = { id: string; subjectId: string; examCycleId: string; status: string };
+type QuestionBank = { id: string; subjectId: string; examCycleId: string; phase: string; recordStatus: string };
 
 type Coverage = {
   moduleCoverage: { moduleNumber: number; count: number; status: "adequate" | "partial" | "missing" }[];
@@ -145,7 +145,7 @@ export function CoverageDashboardClient({
               <Select value={selectedQuestionBank} onChange={(e) => setSelectedQuestionBank(e.target.value)}>
                 <option value="">All Banks</option>
                 {filteredBanks.map((b) => (
-                  <option key={b.id} value={b.id}>{b.status}</option>
+                  <option key={b.id} value={b.id}>{b.phase}</option>
                 ))}
               </Select>
             </div>

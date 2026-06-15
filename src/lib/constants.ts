@@ -3,9 +3,11 @@ import {
   DifficultyLevel,
   ExamCycleStatus,
   ExamType,
-  QuestionBankStatus,
+  QuestionBankPhase,
   QuestionStatus,
   RbtLevel,
+  RecordStatus,
+  ReviewStatus,
   Role,
   UserStatus,
 } from "@prisma/client";
@@ -37,17 +39,23 @@ export const examCycleStatusLabels: Record<ExamCycleStatus, string> = {
   CLOSED: "Closed",
 };
 
-export const questionBankStatusLabels: Record<QuestionBankStatus, string> = {
-  DRAFT: "Draft",
-  IN_PROGRESS: "In Progress",
-  UNDER_MODERATION: "Under Moderation",
-  MODERATED: "Moderated",
-  REPORT_GENERATED: "Report Generated",
-  AWAITING_HOD_SIGN: "Awaiting HOD Sign",
-  SIGNED_REPORT_UPLOADED: "Signed Report Uploaded",
-  AWAITING_COORDINATOR_APPROVAL: "Awaiting Coordinator Approval",
-  APPROVED: "Approved",
+export const questionBankPhaseLabels: Record<QuestionBankPhase, string> = {
+  DRAFTING: "Drafting",
+  MODERATION: "Moderation",
+  APPROVAL: "Approval",
+  COMPLETE: "Complete",
+};
+
+export const recordStatusLabels: Record<RecordStatus, string> = {
+  ACTIVE: "Active",
   LOCKED: "Locked",
+  ARCHIVED: "Archived",
+};
+
+export const reviewStatusLabels: Record<ReviewStatus, string> = {
+  PENDING: "Pending",
+  SUBMITTED: "Submitted",
+  CONFIRMED: "Confirmed",
 };
 
 export const userStatusLabels: Record<UserStatus, string> = {
@@ -92,7 +100,6 @@ export const ENTITY_TYPES = {
   QUESTION: "QUESTION",
   AI_REPORT: "AI_REPORT",
   GENERATED_PAPER: "GENERATED_PAPER",
-  QUESTION_BANK_SIGNED_REPORT: "QUESTION_BANK_SIGNED_REPORT",
   EXPORT_ARTIFACT: "EXPORT_ARTIFACT",
   SYSTEM_BACKUP: "SYSTEM_BACKUP",
   QUESTION_BANK: "QUESTION_BANK",

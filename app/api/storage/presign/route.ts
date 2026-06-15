@@ -6,12 +6,11 @@ import { StorageService } from "@/lib/storage/storage-service";
 import { z } from "zod";
 
 const schema = z.object({
-  bucket: z.enum(["question-bank-attachments", "signed-reports", "generated-papers", "exports", "audit-files", "system-backups"]),
+  bucket: z.enum(["question-bank-attachments", "generated-papers", "exports", "audit-files", "system-backups"]),
   fileName: z.string().min(1),
   mimeType: z.string().min(1),
   size: z.number().int().positive(),
-  linkedEntityType: z.string().optional(),
-  linkedEntityId: z.string().optional(),
+
 });
 
 export const POST = withApiHandler(

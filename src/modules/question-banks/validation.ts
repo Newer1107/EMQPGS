@@ -1,14 +1,14 @@
-import { QuestionBankStatus } from "@prisma/client";
+import { QuestionBankPhase } from "@prisma/client";
 import { z } from "zod";
 
-export const questionBankSchema = z.object({
+export const questionBankInputSchema = z.object({
   subjectId: z.string().min(1),
   examCycleId: z.string().min(1),
-  status: z.nativeEnum(QuestionBankStatus).optional(),
 });
 
-export const questionBankStatusSchema = z.object({
-  status: z.nativeEnum(QuestionBankStatus),
+export const advancePhaseSchema = z.object({
+  targetPhase: z.nativeEnum(QuestionBankPhase),
 });
 
-export type QuestionBankInput = z.infer<typeof questionBankSchema>;
+export type QuestionBankInput = z.infer<typeof questionBankInputSchema>;
+export type AdvancePhaseInput = z.infer<typeof advancePhaseSchema>;

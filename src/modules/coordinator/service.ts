@@ -1,7 +1,7 @@
 import {
   ExamCycleStatus,
-  QuestionBankStatus,
   QuestionStatus,
+  RecordStatus,
   SubjectStatus,
   type User,
 } from "@prisma/client";
@@ -59,7 +59,7 @@ export class CoordinatorService {
         where: { subject: { departmentId: { in: departmentIds } } },
         select: {
           id: true,
-          status: true,
+          recordStatus: true,
           subject: {
             select: {
               id: true,
@@ -98,7 +98,7 @@ export class CoordinatorService {
         id: department.id,
         name: department.name,
         activeSubjects: department.subjects.length,
-        activeQuestionBanks: questionBanks.filter((bank) => bank.subject.departmentId === department.id && bank.status !== QuestionBankStatus.LOCKED).length,
+        activeQuestionBanks: questionBanks.filter((bank) => bank.subject.departmentId === department.id && bank.recordStatus !== RecordStatus.LOCKED).length,
       })),
       activeExamCycles: activeCycles.map((cycle) => ({
         id: cycle.id,

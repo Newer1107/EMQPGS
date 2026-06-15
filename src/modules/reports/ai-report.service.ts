@@ -1,4 +1,4 @@
-import { AiReportStatus, NotificationType, QuestionBankStatus, type Prisma, type User } from "@prisma/client";
+import { AiReportStatus, NotificationType, QuestionBankPhase, type Prisma, type User } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
@@ -10,6 +10,15 @@ import { AnalysisEngine } from "@/modules/reports/analysis-engine";
 import { PdfService } from "@/modules/reports/pdf-service";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
+
+const analysisInclude = {
+  subject: true,
+  examCycle: { include: { academicYear: true, semester: true } },
+  slots: {
+    include: { assignedQuestion: true },
+    where: { assignedQuestionId: { not: null } },
+  },
+} satisfies Prisma.QuestionBankInclude;
 
 export class AiReportService {
   constructor(
@@ -49,8 +58,6 @@ export class AiReportService {
       body: jsonBuffer,
       size: jsonBuffer.byteLength,
       uploadedById: actor.id,
-      linkedEntityType: ENTITY_TYPES.AI_REPORT,
-      linkedEntityId: reportRecord.id,
     });
 
     const pdfBytes = await this.pdfService.createAiReportPdf({
@@ -65,8 +72,6 @@ export class AiReportService {
       body: Buffer.from(pdfBytes),
       size: pdfBytes.byteLength,
       uploadedById: actor.id,
-      linkedEntityType: ENTITY_TYPES.AI_REPORT,
-      linkedEntityId: reportRecord.id,
     });
 
     const completed = await prisma.aiReport.update({
@@ -88,7 +93,7 @@ export class AiReportService {
 
     await prisma.questionBank.update({
       where: { id: questionBankId },
-      data: { status: QuestionBankStatus.REPORT_GENERATED },
+      data: { phase: QuestionBankPhase.APPROVAL },
     });
 
     const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
@@ -132,11 +137,7 @@ export class AiReportService {
   private getQuestionBankForAnalysis(questionBankId: string) {
     return prisma.questionBank.findUnique({
       where: { id: questionBankId },
-      include: {
-        subject: true,
-        examCycle: { include: { academicYear: true, semester: true } },
-        bankQuestions: { include: { question: true } },
-      },
+      include: analysisInclude,
     });
   }
 

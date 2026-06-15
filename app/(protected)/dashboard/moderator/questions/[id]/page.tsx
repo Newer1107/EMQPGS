@@ -19,7 +19,7 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
       },
       creator: { select: { id: true, name: true, email: true } },
       owner: { select: { id: true, name: true, email: true } },
-      bankLinks: {
+      slotAssignments: {
         include: { questionBank: { include: { examCycle: { include: { academicYear: true, semester: true } } } } },
       },
       moderationEvents: {
@@ -70,14 +70,14 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
             </CardContent>
           </Card>
 
-          {question.bankLinks.length > 0 && (
+          {question.slotAssignments.length > 0 && (
             <Card>
               <CardHeader><CardTitle>Linked Question Banks</CardTitle></CardHeader>
               <CardContent>
                 <ul className="space-y-1 text-sm">
-                  {question.bankLinks.map((link) => (
-                    <li key={link.id}>
-                      {link.questionBank.examCycle.examType} · {link.questionBank.examCycle.semester.name} ({link.questionBank.examCycle.academicYear.code})
+                  {question.slotAssignments.map((s) => (
+                    <li key={s.id}>
+                      {s.questionBank.examCycle.examType} · {s.questionBank.examCycle.semester.name} ({s.questionBank.examCycle.academicYear.code})
                     </li>
                   ))}
                 </ul>

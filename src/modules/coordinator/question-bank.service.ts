@@ -1,9 +1,10 @@
 import {
-  AiReportStatus,
   ExamCycleStatus,
-  QuestionBankStatus,
+  ExamType,
+  QuestionBankPhase,
+  RecordStatus,
+  SnapshotType,
   SubjectStatus,
-  type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, NotFoundError } from "@/lib/errors";
@@ -33,11 +34,14 @@ export class QuestionBankWorkflowService {
           departmentId: filters.departmentId ?? { in: departmentIds },
         },
         ...(filters.examCycleId ? { examCycleId: filters.examCycleId } : {}),
-        ...(filters.status ? { status: filters.status === QuestionBankStatus.LOCKED ? QuestionBankStatus.LOCKED : { not: QuestionBankStatus.LOCKED } } : {}),
+        ...(filters.status
+          ? { recordStatus: filters.status === "LOCKED" ? RecordStatus.LOCKED : { not: RecordStatus.LOCKED } }
+          : {}),
       },
       select: {
         id: true,
-        status: true,
+        phase: true,
+        recordStatus: true,
         createdAt: true,
         updatedAt: true,
         subject: {
@@ -52,14 +56,14 @@ export class QuestionBankWorkflowService {
         examCycle: {
           select: { id: true, examType: true, academicYear: { select: { id: true, code: true } }, semester: { select: { id: true, number: true, name: true } } },
         },
-        _count: { select: { bankQuestions: true } },
+        _count: { select: { slots: true } },
       },
       orderBy: { updatedAt: "desc" },
     });
 
     return banks.map((bank) => ({
       ...bank,
-      bankStatus: bank.status === QuestionBankStatus.LOCKED ? "LOCKED" : "ACTIVE",
+      bankStatus: bank.recordStatus === RecordStatus.LOCKED ? "LOCKED" : "ACTIVE",
     }));
   }
 
@@ -69,16 +73,18 @@ export class QuestionBankWorkflowService {
       include: {
         subject: { include: { department: true } },
         examCycle: { include: { academicYear: true, semester: true } },
-        bankQuestions: {
+        slots: {
           include: {
-            question: {
+            assignedQuestion: {
               include: {
                 creator: { select: { id: true, name: true } },
                 subjectVersion: { include: { subject: true } },
               },
             },
           },
+          orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
         },
+        pattern: true,
         aiReports: { orderBy: { createdAt: "desc" }, take: 1 },
         generatedPapers: {
           orderBy: { variant: "asc" },
@@ -94,7 +100,7 @@ export class QuestionBankWorkflowService {
 
     return {
       ...bank,
-      bankStatus: bank.status === QuestionBankStatus.LOCKED ? "LOCKED" : "ACTIVE",
+      bankStatus: bank.recordStatus === RecordStatus.LOCKED ? "LOCKED" : "ACTIVE",
     };
   }
 
@@ -112,14 +118,23 @@ export class QuestionBankWorkflowService {
       throw new AppError("Subject must be linked to the exam cycle before initializing a bank.", 400);
     }
 
+    const examCycle = await prisma.examCycle.findUnique({ where: { id: examCycleId } });
+    if (!examCycle) throw new NotFoundError("Exam cycle not found");
+
+    const pattern = DEFAULT_PATTERNS[examCycle.examType];
+    const slotData = buildSlotsFromPattern(pattern);
+
     const bank = await prisma.questionBank.create({
       data: {
         subjectId,
         examCycleId,
+        phase: QuestionBankPhase.DRAFTING,
+        recordStatus: RecordStatus.ACTIVE,
         createdById: actor.id,
-        status: QuestionBankStatus.IN_PROGRESS,
+        pattern: { create: pattern },
+        slots: { createMany: { data: slotData } },
       },
-      include: { subject: true, examCycle: true },
+      include: { subject: true, examCycle: true, pattern: true, slots: true },
     });
 
     return bank;
@@ -132,7 +147,7 @@ export class QuestionBankWorkflowService {
     });
     if (!bank) throw new NotFoundError("Question bank not found");
     await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
-    if (bank.status === QuestionBankStatus.LOCKED) {
+    if (bank.recordStatus === RecordStatus.LOCKED) {
       throw new AppError("Question bank is already locked.", 409);
     }
     if (bank.examCycle.status !== ExamCycleStatus.ACTIVE) {
@@ -142,16 +157,54 @@ export class QuestionBankWorkflowService {
       throw new AppError("Exam cycle must have an end date before the bank can be locked.", 409);
     }
 
+    const slots = await prisma.questionSlot.findMany({
+      where: { questionBankId },
+      select: { id: true, moduleNumber: true, marks: true, slotNumber: true, assignedQuestionId: true, isLocked: true },
+    });
+
     return withOptimisticLock(
       () =>
-        prisma.questionBank.update({
-          where: buildOptimisticWhere(questionBankId, bank.version),
-          data: buildOptimisticUpdate({
-            status: QuestionBankStatus.LOCKED,
-            lockedAt: new Date(),
-          }),
+        prisma.$transaction(async (tx) => {
+          const updated = await tx.questionBank.update({
+            where: buildOptimisticWhere(questionBankId, bank.version),
+            data: buildOptimisticUpdate({
+              recordStatus: RecordStatus.LOCKED,
+              lockedAt: new Date(),
+            }),
+          });
+          await tx.questionBankSnapshot.create({
+            data: {
+              questionBankId,
+              snapshotType: SnapshotType.LOCKED,
+              phase: updated.phase,
+              status: RecordStatus.LOCKED,
+              slotAssignments: slots,
+              version: updated.version,
+            },
+          });
+          return updated;
         }),
       "Question bank",
     );
   }
+}
+
+const DEFAULT_PATTERNS: Record<ExamType, { examType: ExamType; totalModules: number; marksPattern: number[]; slotsPerModule: number; totalSlots: number }> = {
+  [ExamType.ISE_1]: { examType: ExamType.ISE_1, totalModules: 3, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 63 },
+  [ExamType.ISE_2]: { examType: ExamType.ISE_2, totalModules: 3, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 63 },
+  [ExamType.ENDSEM]: { examType: ExamType.ENDSEM, totalModules: 6, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 126 },
+  [ExamType.SUPPLEMENTARY]: { examType: ExamType.SUPPLEMENTARY, totalModules: 6, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 126 },
+  [ExamType.KT]: { examType: ExamType.KT, totalModules: 6, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 126 },
+};
+
+function buildSlotsFromPattern(pattern: { totalModules: number; marksPattern: number[]; slotsPerModule: number }): Array<{ moduleNumber: number; marks: number; slotNumber: number }> {
+  const slots: Array<{ moduleNumber: number; marks: number; slotNumber: number }> = [];
+  for (let moduleNumber = 1; moduleNumber <= pattern.totalModules; moduleNumber += 1) {
+    for (const marks of pattern.marksPattern) {
+      for (let slotNumber = 1; slotNumber <= pattern.slotsPerModule; slotNumber += 1) {
+        slots.push({ moduleNumber, marks, slotNumber });
+      }
+    }
+  }
+  return slots;
 }

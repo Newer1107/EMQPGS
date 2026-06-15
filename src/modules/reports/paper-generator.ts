@@ -6,7 +6,10 @@ type QuestionBankForPaper = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
     examCycle: { include: { academicYear: true, semester: true } };
-    bankQuestions: { include: { question: true } };
+    slots: {
+      include: { assignedQuestion: true };
+      where: { assignedQuestionId: { not: null } };
+    };
     generatedPapers: {
       include: {
         items: {
@@ -28,7 +31,10 @@ const marksPattern = [2, 5, 10] as const;
 
 export class PaperGenerator {
   generate(questionBank: QuestionBankForPaper, variants: PaperVariant[]) {
-    const approvedQuestions = questionBank.bankQuestions.map((bq) => bq.question).filter((question) => question.status === QuestionStatus.APPROVED);
+    const assignedQuestions = questionBank.slots
+      .map((slot) => slot.assignedQuestion)
+      .filter((q): q is QuestionLibraryItem => q !== null);
+    const approvedQuestions = assignedQuestions.filter((question) => question.status === QuestionStatus.APPROVED);
     if (!approvedQuestions.length) throw new AppError("No approved inventory available for paper generation", 409);
 
     const historicalExclusion = new Set(

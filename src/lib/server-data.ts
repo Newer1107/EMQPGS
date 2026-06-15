@@ -57,9 +57,9 @@ export async function getQuestionContributionWorkspace(role: Role) {
     include: {
       subject: true,
       examCycle: { include: { academicYear: true, semester: true } },
-      bankQuestions: {
+      slots: {
         include: {
-          question: {
+          assignedQuestion: {
             include: {
               creator: { select: { id: true, name: true } },
               subjectVersion: { include: { subject: true } },

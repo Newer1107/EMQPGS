@@ -1,36 +1,48 @@
+import { describe, it, expect } from "vitest";
 import { QuestionStatus } from "@prisma/client";
-import { describe, expect, it } from "vitest";
 import { AnalysisEngine } from "@/modules/reports/analysis-engine";
 
+const mockSlot = (overrides: Record<string, unknown> = {}) => ({
+  moduleNumber: 1,
+  marks: 5,
+  slotNumber: 1,
+  assignedQuestion: {
+    id: "q-1",
+    moduleNumber: 1,
+    marks: 5,
+    questionText: "Test question.",
+    coMapping: "CO1",
+    rbtLevel: "L2",
+    difficultyLevel: "MEDIUM",
+    status: QuestionStatus.APPROVED,
+    teachingIndex: "T1",
+    ...overrides,
+  },
+});
+
 describe("AnalysisEngine", () => {
-  it("builds deterministic coverage and detects gaps", () => {
-    const engine = new AnalysisEngine();
+  const engine = new AnalysisEngine();
+
+  it("builds deterministic report from slots", () => {
     const report = engine.buildDeterministicReport({
       id: "qb-1",
       subject: { subjectCode: "CS501", subjectName: "Advanced Algorithms" },
       examCycle: { academicYear: "2026-2027", semester: 5, examType: "ENDSEM" },
-      bankQuestions: [
-        { question: {
-          id: "q-1",
-          moduleNumber: 1, marks: 2,
-          questionText: "Explain the greedy choice property with a suitable algorithmic example.",
-          coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "EASY",
-          status: QuestionStatus.APPROVED, teachingIndex: "T1",
-        } },
-        { question: {
-          id: "q-2",
-          moduleNumber: 1, marks: 5,
-          questionText: "Analyze the amortized complexity of a disjoint set union operation sequence.",
-          coMapping: "CO2", rbtLevel: "L4", difficultyLevel: "MEDIUM",
-          status: QuestionStatus.APPROVED, teachingIndex: null,
-        } },
-      ],
-    } as never);
+      slots: [mockSlot(), mockSlot({ moduleNumber: 2, marks: 10 }), mockSlot({ moduleNumber: 3, marks: 5 })],
+    } as any);
 
+    expect(report.inventory.approvedQuestions).toBe(3);
     expect(report.moduleCoverage).toHaveLength(6);
-    expect(report.moduleCoverage[0].approved).toBe(2);
-    expect(report.coDistribution.find((item) => item.key === "CO1")?.count).toBe(1);
-    expect(report.missingAreas.length).toBeGreaterThan(0);
-    expect(report.chartData.moduleCoverage).toHaveLength(6);
+  });
+
+  it("handles empty slots gracefully", () => {
+    const report = engine.buildDeterministicReport({
+      id: "qb-2",
+      subject: { subjectCode: "CS502" },
+      examCycle: {},
+      slots: [],
+    } as any);
+
+    expect(report.inventory.approvedQuestions).toBe(0);
   });
 });

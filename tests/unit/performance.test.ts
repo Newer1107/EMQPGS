@@ -10,7 +10,7 @@ vi.mock("@/lib/db", () => {
     user: { findMany: vi.fn(), count: vi.fn() },
     department: { count: vi.fn() },
     examCycle: { count: vi.fn() },
-    questionBankQuestion: { findMany: vi.fn() },
+    questionSlot: { findMany: vi.fn() },
     $queryRaw: vi.fn().mockResolvedValue([{ "1": 1 }]),
   };
   return { prisma: mockDb };

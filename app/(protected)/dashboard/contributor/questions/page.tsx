@@ -18,7 +18,7 @@ export default async function ContributorQuestionsPage() {
       subjectVersion: {
         include: { subject: true, effectiveFromAcademicYear: true },
       },
-      bankLinks: {
+      slotAssignments: {
         include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } },
       },
     },
@@ -52,7 +52,7 @@ export default async function ContributorQuestionsPage() {
                 <TD>{question.moduleNumber}</TD>
                 <TD>{question.marks}</TD>
                 <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
-                <TD>{question.bankLinks.map((link) => link.questionBank.examCycle.examType).join(", ") || "None"}</TD>
+                <TD>{question.slotAssignments.map((s) => s.questionBank.examCycle.examType).join(", ") || "None"}</TD>
                 <TD>
                   <div className="flex gap-2">
                     <Link href={`/dashboard/contributor/questions/${question.id}/edit`}>

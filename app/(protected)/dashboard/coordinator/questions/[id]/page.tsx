@@ -19,7 +19,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
       subjectVersion: { include: { subject: { include: { department: true } }, effectiveFromAcademicYear: true } },
       creator: { select: { id: true, name: true, email: true } },
       owner: { select: { id: true, name: true, email: true } },
-      bankLinks: { include: { questionBank: { include: { examCycle: { include: { academicYear: true, semester: true } } } } } },
+      slotAssignments: { include: { questionBank: { include: { examCycle: { include: { academicYear: true, semester: true } } } } } },
     },
   });
   if (!question) notFound();
@@ -133,7 +133,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
                     {usageHistory.map((u) => (
                       <li key={u.id}>
                         Used on {new Date(u.usedAt).toLocaleDateString()}
-                        {u.examType ? ` · ${u.examType}` : ""}
+                        · {u.sourceType}
                       </li>
                     ))}
                   </ul>

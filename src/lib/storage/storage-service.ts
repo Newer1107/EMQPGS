@@ -4,7 +4,6 @@ import { AppError } from "@/lib/errors";
 
 const allowedBuckets = [
   "question-bank-attachments",
-  "signed-reports",
   "generated-papers",
   "exports",
   "audit-files",
@@ -20,8 +19,6 @@ export class StorageService {
     mimeType: string;
     size: number;
     uploadedById?: string | null;
-    linkedEntityType?: string;
-    linkedEntityId?: string;
   }) {
     if (!allowedBuckets.includes(input.bucket)) {
       throw new AppError("Invalid storage bucket", 400);
@@ -38,8 +35,6 @@ export class StorageService {
         mimeType: input.mimeType,
         size: input.size,
         uploadedById: input.uploadedById ?? null,
-        linkedEntityType: input.linkedEntityType,
-        linkedEntityId: input.linkedEntityId,
       },
     });
 
@@ -65,8 +60,6 @@ export class StorageService {
     body: Uint8Array | Buffer | string;
     size: number;
     uploadedById?: string | null;
-    linkedEntityType?: string;
-    linkedEntityId?: string;
   }) {
     if (!allowedBuckets.includes(input.bucket)) {
       throw new AppError("Invalid storage bucket", 400);
@@ -83,8 +76,6 @@ export class StorageService {
         mimeType: input.mimeType,
         size: input.size,
         uploadedById: input.uploadedById ?? null,
-        linkedEntityType: input.linkedEntityType,
-        linkedEntityId: input.linkedEntityId,
       },
     });
   }

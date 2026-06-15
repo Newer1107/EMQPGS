@@ -11,11 +11,12 @@ Examination Management & Question Paper Generation System. Next.js 16 App Router
 ## Start here
 
 - `README.md` — full feature/API/env reference (current).
-- `docs/architecture/system-overview.md` — domain model, service boundaries, data flow, auth model, audit model.
-- `docs/domains/` — per-domain deep dives (academic, question, exam, production).
-- `docs/api/reference.md` — current API route table with roles, schemas, and services.
+- `docs/architecture.md` — domain model, entity relationships, workflow, readiness, paper generation, snapshots, approval, invariants.
+- `docs/database.md` — every table, purpose, relationships, invariants.
+- `docs/api.md` — active API routes with request/response shapes and permissions.
+- `docs/workflow.md` — phase transitions, ReadinessEngine rules, locking, approval, paper lifecycle.
+- `docs/onboarding.md` — 30-minute developer orientation.
 - `docs/rbac-matrix.md` — role capability matrix.
-- `docs/developer/onboarding.md` — 30-minute orientation.
 
 ## Commands
 
@@ -68,11 +69,12 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 
 ## Domain invariants (do not break)
 
-- **126-slot template.** The paper generator uses a 126-entry template (6 modules × 3 marks × 7 slots) as a computational pattern. `buildQuestionSlotTemplate()` in `src/modules/questions/slot-template.ts` generates it. The template is NOT a persisted grid of pre-allocated slots — questions are linked to banks via the `QuestionBankQuestion` join table. `tests/unit/slot-template.test.ts` locks the shape in.
-- Question bank status transitions are enforced by a transition table in `src/modules/question-banks/transitions.ts`. `QuestionBankService.updateStatus()` validates via `isValidTransition()`. The coordinator's `lockQuestionBank()` in `src/modules/coordinator/service.ts` is the **canonical lock path** — it requires `examCycle.status === ACTIVE` and `examCycle.endDate`. Coordinator APPROVED decisions set status to `APPROVED`, not `LOCKED`.
-- **Moderator assignment** is now a first-class API: `POST /api/question-banks/[id]/assignments/moderator` (COORDINATOR-only). Validates MODERATOR role and prevents duplicates. Sends `ACTION_REQUIRED` notification.
-- **Module/marks invariants.** Question `marks` is one of `2 | 5 | 10`. Question `module` is `1..6`. `rbtLevel` is `L1..L6`. `courseOutcome` is `CO1..CO6`. All are Prisma enums — TypeScript will catch a bad value at compile time.
-- **MinIO buckets.** Exactly six: `question-bank-attachments`, `signed-reports`, `generated-papers`, `exports`, `audit-files`, `system-backups`. Created by the `minio-init` service in `docker-compose.yml` (idempotent — uses `mc mb -p ... || true`). Don't add new buckets without updating that init step.
+- **126-slot template.** The paper generator uses a 126-entry template (6 modules × 3 marks × 7 slots) as a computational pattern. `buildQuestionSlotTemplate()` in `src/modules/questions/slot-template.ts` generates it. Slots are persisted in the `QuestionSlot` table (created at bank initialization via `PaperPattern`). `tests/unit/slot-template.test.ts` locks the shape in.
+- **Two-axis bank state.** `QuestionBankPhase` (DRAFTING, MODERATION, APPROVAL, COMPLETE) is orthogonal to `RecordStatus` (ACTIVE, LOCKED, ARCHIVED). Phase transitions validated via `transitions.ts`. Locking is reversible (unlock API exists). Coordinator APPROVED decision sets phase to COMPLETE.
+- **QuestionSlot is the sole linkage.** No `QuestionBankQuestion` join table exists. A `QuestionSlot` has an `assignedQuestionId` FK to `QuestionLibraryItem`. A question can occupy at most one slot per bank but can be in multiple banks simultaneously.
+- **Moderator assignment** is a first-class API: `POST /api/question-banks/[id]/assignments/moderator` (COORDINATOR-only). Validates MODERATOR role and prevents duplicates.
+- **Module/marks invariants.** Question `marks` is one of `2 | 5 | 10`. Question `module` is `1..6`. `rbtLevel` is `L1..L6`. `courseOutcome` is `CO1..CO6`. All are Prisma enums.
+- **MinIO buckets.** Exactly five: `question-bank-attachments`, `generated-papers`, `exports`, `audit-files`, `system-backups`. No `signed-reports` bucket. Created by the `minio-init` service in `docker-compose.yml`. Don't add new buckets without updating that init step.
 - **No background workers / no BullMQ / no Redis.** The `workers/` directory exists but is empty (reserved). AI reports, paper generation, exports, backups, and cleanup all run synchronously inside the request that triggers them or via service calls. Don't introduce a queue.
 
 ## Auth, cookies, CSRF
@@ -109,18 +111,19 @@ Plus 2 departments (CSE, ECE), 1 active exam cycle, 1 subject, 1 question bank w
 - Tests live under `tests/{unit,integration,permission}/`. Mock Prisma, MinIO, and Ollama per file when needed.
 - Path alias: `@/` → `src/`. Both `tsconfig.json` and `vitest.config.ts` set it up.
 
-## README drift — trust the schema
+## Schema is the source of truth
 
-The README is now authoritative. When in doubt, read `prisma/schema.prisma`. Alignments verified:
+When in doubt, read `prisma/schema.prisma`. Key facts:
 
-| Topic | README says | Schema says |
-|---|---|---|
-| `ExamType` values | `ISE_1`, `ISE_2`, `ENDSEM`, `SUPPLEMENTARY`, `KT` | Same — aligned |
-| `QuestionBankStatus` values | Full 10-state flow documented | `DRAFT`, `IN_PROGRESS`, `UNDER_MODERATION`, `MODERATED`, `REPORT_GENERATED`, `AWAITING_HOD_SIGN`, `SIGNED_REPORT_UPLOADED`, `AWAITING_COORDINATOR_APPROVAL`, `APPROVED`, `LOCKED` |
-| `QuestionStatus` values | `DRAFT`, `PENDING`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`, `REVISION_SUBMITTED` | Same — aligned |
-| RBAC table | 5 roles, full capability matrix | accurate, see `docs/rbac-matrix.md` for the canonical version |
-| API endpoint count | "~95 operations across 63 route files" | verified |
-| `.env.example` | does not exist in repo | does not exist — use `.env` directly |
+| Topic | Current state |
+|---|---|
+| `ExamType` | `ISE_1`, `ISE_2`, `ENDSEM`, `SUPPLEMENTARY`, `KT` |
+| `QuestionBankPhase` | `DRAFTING`, `MODERATION`, `APPROVAL`, `COMPLETE` |
+| `RecordStatus` | `ACTIVE`, `LOCKED`, `ARCHIVED` |
+| `QuestionStatus` | `DRAFT`, `PENDING`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`, `REVISION_SUBMITTED` |
+| Bank linkage | `QuestionSlot` (NOT `QuestionBankQuestion`) |
+| Signed report | Does not exist in schema |
+| API route count | ~85 endpoints across 59 route files |
 
 ## Workflow fixes completed (June 2026)
 
@@ -129,10 +132,9 @@ The README is now authoritative. When in doubt, read `prisma/schema.prisma`. Ali
 | **Coordinator-department assignment UI** | Full CRUD | New page `/dashboard/coe/coordinator-assignments`, new API `POST/DELETE /api/coordinator-departments/:id`, new module `src/modules/coordinator-departments/` |
 | **User edit/disable/re-enable** | Frontend buttons | Edit modal + disable/re-enable buttons on `/dashboard/coe/users` using existing `PATCH/DELETE /api/users/:id` |
 | **Department edit/delete** | Frontend buttons | Edit modal + delete button with confirmation on `/dashboard/coe/departments` using existing `PATCH/DELETE /api/departments/:id` |
-| **Question Coverage Dashboard** | New frontend page | `/dashboard/coordinator/coverage` with filters (academic year, semester, subject, version, bank) + module/CO/RBT/difficulty coverage + gap detection. Uses existing `GET /api/question-library/coverage` |
+| **Question Coverage Dashboard** | New frontend page | `/dashboard/coordinator/coverage` with filters + module/CO/RBT/difficulty coverage + gap detection. Uses existing `GET /api/question-library/coverage` |
 | **Moderator dashboard hardcoded arrays** | Replaced with real queries | `ModeratorDashboardService.getDashboard()` now queries DB for awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks |
-| **Signed report auto-advance** | Fixed | `uploadSignedReport()` sets status to `AWAITING_COORDINATOR_APPROVAL` (not `SIGNED_REPORT_UPLOADED`). `coordinatorDecision()` validates bank is in that status. |
-| **Question-bank-questions hardening** | Service + validation + repo | New module `src/modules/question-bank-questions/` with `questionBankQuestionSchema` Zod validation. Route uses `QuestionBankQuestionService.create()`. |
+| **Architecture redesign (June 2026)** | QuestionBankPhase + RecordStatus | Replaced 10-state enum with 4-phase + 3-record-status orthogonal model. Removed SignedReport workflow. Removed QuestionBankQuestion. QuestionSlot is now sole linkage. |
 | **Moderator assignment service layer** | Refactored | New module `src/modules/moderator-assignments/` with `ModeratorAssignmentService`. Route delegates to `service.assignModerator()`. |
 
 ## New API routes
@@ -154,7 +156,6 @@ The README is now authoritative. When in doubt, read `prisma/schema.prisma`. Ali
 | Module | Files |
 |---|---|
 | `src/modules/coordinator-departments/` | service.ts, repository.ts, validation.ts |
-| `src/modules/question-bank-questions/` | service.ts, repository.ts, validation.ts |
 | `src/modules/moderator-assignments/` | service.ts, repository.ts, validation.ts |
 
 ## Style and conventions

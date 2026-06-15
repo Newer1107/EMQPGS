@@ -42,11 +42,12 @@
 
 ## Question Bank Integrity
 
-- State transitions enforced via a code-level transition table (`src/modules/question-banks/transitions.ts`)
-- 10 states, forward-only DAG; all statuses can fast-lock to `LOCKED`; no exits from `LOCKED`
-- Locked question banks are immutable: no edits, no new questions, no moderation, no overrides, no attachment changes
-- Canonical lock path: `PATCH /api/question-banks/[id]/lock` (the only way to reach `LOCKED` status)
-- Coordinator decision APPROVED sets status to `APPROVED` (not `LOCKED`), requiring an explicit lock step
+- Phase transitions enforced via a code-level transition table (`src/modules/question-banks/transitions.ts`)
+- 4 phases (DRAFTING → MODERATION → APPROVAL → COMPLETE) with rejection loopback from APPROVAL to MODERATION
+- RecordStatus (ACTIVE/LOCKED/ARCHIVED) is orthogonal to phase
+- Locked question banks are immutable: no edits, no new questions, no moderation, no overrides
+- Canonical lock path: `PATCH /api/question-banks/[id]/lock`; unlock API exists for recovery
+- Coordinator decision APPROVED sets phase to `COMPLETE` (not `LOCKED`), requiring an explicit lock step
 
 ## Audit Trail
 

@@ -7,7 +7,6 @@ type NextStep = {
   label: string;
   description: string;
   href?: string;
-  action?: string;
 };
 
 const GUIDANCE_MAP: Record<string, NextStep[]> = {
@@ -16,64 +15,71 @@ const GUIDANCE_MAP: Record<string, NextStep[]> = {
   ],
   bank_created: [
     { label: "Assign Contributors", description: "Add contributors to start filling the question bank.", href: "/dashboard/coordinator/assignments" },
-    { label: "Create Questions", description: "Add questions to the bank to fill module slots." },
-  ],
-  bank_submitted: [
-    { label: "Wait for Moderation", description: "Moderators will review submitted questions. Track progress on the bank detail page." },
-  ],
-  moderation_complete: [
-    { label: "Generate AI Report", description: "Run an AI analysis to check question quality and coverage." },
-  ],
-  report_generated: [
-    { label: "Upload Signed Report", description: "HOD must upload a signed report to proceed." },
-  ],
-  bank_approved: [
-    { label: "Lock Question Bank", description: "Lock the bank to proceed with paper generation and dean review." },
-  ],
-  bank_locked: [
-    { label: "Dean Review", description: "Dean will review generated papers and make a selection." },
-  ],
-  dean_reviewed: [
-    { label: "Export Papers", description: "Export the final selected papers for printing and distribution.", href: "/dashboard/coe/production" },
   ],
   question_created: [
     { label: "Submit for Moderation", description: "Submit your question so a moderator can review it.", href: "/dashboard/contributor/questions" },
   ],
   question_submitted: [
-    { label: "Awaiting Review", description: "A moderator will review your question. Check back for status updates.", href: "/dashboard/contributor/questions" },
+    { label: "Wait for Moderation", description: "A moderator will review your question. Check back for feedback." },
+  ],
+};
+
+const PHASE_GUIDANCE: Record<string, NextStep[]> = {
+  DRAFTING: [
+    { label: "Assign Contributors", description: "Add contributors to start filling the question bank.", href: "/dashboard/coordinator/assignments" },
+    { label: "Fill Slots", description: "Assign questions to all 126 slots across modules and marks." },
+  ],
+  MODERATION: [
+    { label: "Moderator Review", description: "Moderators are reviewing submitted questions. Track progress on the bank detail page." },
+  ],
+  APPROVAL: [
+    { label: "Generate AI Report", description: "Run an AI analysis to check question quality and coverage." },
+    { label: "Review and Decide", description: "Review the AI report and approve or reject the bank." },
+  ],
+  COMPLETE: [
+    { label: "Generate Papers", description: "Generate paper variants A, B, C." },
+    { label: "Dean Review", description: "Assign papers to exam slots via dean review." },
+    { label: "Lock Bank", description: "Lock the bank to preserve the final state." },
   ],
 };
 
 type NextStepGuidanceProps = {
-  context: string;
-  title?: string;
+  phase?: string;
+  recordStatus?: string;
+  context?: string;
 };
 
-export function NextStepGuidance({ context, title = "What happens next?" }: NextStepGuidanceProps) {
-  const steps = GUIDANCE_MAP[context];
-  if (!steps || steps.length === 0) return null;
+export function NextStepGuidance({ phase, recordStatus, context }: NextStepGuidanceProps) {
+  const steps = context ? GUIDANCE_MAP[context] ?? [] : PHASE_GUIDANCE[phase ?? ""] ?? [];
+
+  if (recordStatus === "LOCKED") {
+    return (
+      <Card>
+        <CardContent className="p-4">
+          <p className="text-sm text-[var(--muted-foreground)]">Bank is locked. Proceed to dean review and export.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (steps.length === 0) return null;
 
   return (
-    <Card className="border-amber-200 bg-amber-50">
-      <CardContent className="p-4">
-        <h3 className="text-sm font-semibold text-amber-800 mb-2">{title}</h3>
-        <ul className="space-y-2">
-          {steps.map((step, i) => (
-            <li key={i} className="flex items-start gap-2 text-sm text-amber-700">
-              <span className="mt-0.5 text-amber-500">→</span>
-              <div>
-                {step.href ? (
-                  <Link href={step.href} className="font-medium underline underline-offset-2 hover:text-amber-900">
-                    {step.label}
-                  </Link>
-                ) : (
-                  <span className="font-medium">{step.label}</span>
-                )}
-                <p className="text-xs text-amber-600">{step.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <p className="text-sm font-medium text-[var(--foreground)]">Next Steps</p>
+        {steps.map((step) => (
+          <div key={step.label} className="text-sm">
+            {step.href ? (
+              <Link href={step.href} className="font-medium text-blue-600 hover:underline">
+                {step.label}
+              </Link>
+            ) : (
+              <span className="font-medium">{step.label}</span>
+            )}
+            <p className="text-[var(--muted-foreground)] mt-0.5">{step.description}</p>
+          </div>
+        ))}
       </CardContent>
     </Card>
   );

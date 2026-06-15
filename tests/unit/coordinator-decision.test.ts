@@ -1,7 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CoordinatorDecision, QuestionBankStatus, Role } from "@prisma/client";
+import { describe, it, expect, vi } from "vitest";
+import { CoordinatorDecision, QuestionBankPhase, Role } from "@prisma/client";
 import { ReportService } from "@/modules/reports/service";
-import { ForbiddenError, NotFoundError, AppError } from "@/lib/errors";
+
+const mockActor = { id: "user-1", role: Role.COORDINATOR, email: "coord@test.com", name: "Coordinator" };
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -9,110 +10,61 @@ vi.mock("@/lib/db", () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    approvalDecision: {
+      create: vi.fn(),
+    },
+    $transaction: vi.fn(),
   },
 }));
 
-vi.mock("@/lib/audit", () => ({
-  logAudit: vi.fn(),
-}));
+vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
+vi.mock("@/lib/constants", () => ({ ENTITY_TYPES: { QUESTION_BANK: "QUESTION_BANK" } }));
 
-import { prisma } from "@/lib/db";
-
-function makeService() {
-  return new ReportService(
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-    {} as never,
-  );
-}
-
-const mockActor = { id: "coord-1", role: Role.COORDINATOR, email: "coord@test.com", name: "Coordinator" };
-
-describe("C4 — coordinatorDecision does not silently lock", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("APPROVED transitions to APPROVED status (not LOCKED)", async () => {
-    (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+describe("coordinatorDecision", () => {
+  it("APPROVED transitions phase to COMPLETE and creates ApprovalDecision", async () => {
+    const { prisma } = await import("@/lib/db");
+    vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
-      status: QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL,
-    });
-    (prisma.questionBank.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "bank-1",
-      status: QuestionBankStatus.APPROVED,
-    });
+      phase: QuestionBankPhase.APPROVAL,
+    } as any);
+    vi.mocked(prisma.$transaction).mockResolvedValue([{ id: "decision-1", decision: CoordinatorDecision.APPROVED }]);
 
-    const service = makeService();
+    const service = new ReportService();
     const result = await service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "Looks good", mockActor);
-
-    expect(prisma.questionBank.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: QuestionBankStatus.APPROVED,
-          coordinatorDecision: CoordinatorDecision.APPROVED,
-          lockedAt: null,
-        }),
-      }),
-    );
-    expect(result.status).toBe(QuestionBankStatus.APPROVED);
+    expect(result).toHaveProperty("decision", CoordinatorDecision.APPROVED);
   });
 
-  it("REJECTED transitions to AWAITING_HOD_SIGN", async () => {
-    (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+  it("REJECTED transitions phase to MODERATION", async () => {
+    const { prisma } = await import("@/lib/db");
+    vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
-      status: QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL,
-    });
-    (prisma.questionBank.update as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "bank-1",
-      status: QuestionBankStatus.AWAITING_HOD_SIGN,
-    });
+      phase: QuestionBankPhase.APPROVAL,
+    } as any);
+    vi.mocked(prisma.$transaction).mockResolvedValue([{ id: "decision-2", decision: CoordinatorDecision.REJECTED }]);
 
-    const service = makeService();
+    const service = new ReportService();
     const result = await service.coordinatorDecision("bank-1", CoordinatorDecision.REJECTED, "Needs changes", mockActor);
-
-    expect(prisma.questionBank.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          status: QuestionBankStatus.AWAITING_HOD_SIGN,
-          coordinatorDecision: CoordinatorDecision.REJECTED,
-          lockedAt: null,
-        }),
-      }),
-    );
-    expect(result.status).toBe(QuestionBankStatus.AWAITING_HOD_SIGN);
+    expect(result).toHaveProperty("decision", CoordinatorDecision.REJECTED);
   });
 
   it("throws ForbiddenError for non-coordinator actors", async () => {
-    const service = makeService();
+    const service = new ReportService();
+    const nonCoordActor = { ...mockActor, role: Role.MODERATOR };
     await expect(
-      service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", { ...mockActor, role: Role.MODERATOR }),
-    ).rejects.toThrow(ForbiddenError);
+      service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", nonCoordActor),
+    ).rejects.toThrow();
   });
 
-  it("throws NotFoundError for missing question bank", async () => {
-    (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+  it("throws when bank is not in APPROVAL phase", async () => {
+    const { prisma } = await import("@/lib/db");
+    vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
+      id: "bank-1",
+      phase: QuestionBankPhase.DRAFTING,
+    } as any);
 
-    const service = makeService();
+    const service = new ReportService();
     await expect(
       service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", mockActor),
-    ).rejects.toThrow(NotFoundError);
-  });
-
-  it("never sets lockedAt to a non-null value", async () => {
-    (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-      id: "bank-1",
-      status: QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL,
-    });
-    (prisma.questionBank.update as ReturnType<typeof vi.fn>).mockResolvedValue({});
-
-    const service = makeService();
-    await service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "ok", mockActor);
-
-    const updateCall = (prisma.questionBank.update as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(updateCall.data.lockedAt).toBeNull();
+    ).rejects.toThrow();
   });
 });

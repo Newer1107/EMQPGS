@@ -2,7 +2,7 @@ import {
   NotificationType,
   PaperGenerationStatus,
   PaperVariant,
-  QuestionBankStatus,
+  RecordStatus,
   Role,
   type Prisma,
   type User,
@@ -286,7 +286,7 @@ export class DeanReviewService {
   private async listDeanQuestionBanks(actor: Actor) {
     return prisma.questionBank.findMany({
       where: {
-        status: QuestionBankStatus.LOCKED,
+        recordStatus: RecordStatus.LOCKED,
         subject: { departmentId: actor.departmentId! },
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
@@ -301,7 +301,7 @@ export class DeanReviewService {
     const questionBank = await prisma.questionBank.findFirst({
       where: {
         id: questionBankId,
-        status: QuestionBankStatus.LOCKED,
+        recordStatus: RecordStatus.LOCKED,
         subject: { departmentId: actor.departmentId! },
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },

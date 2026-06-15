@@ -35,7 +35,7 @@ const navItems: NavItem[] = [
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
   { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/signed-reports", label: "Signed Reports", roles: ["MODERATOR"] },
+  // Signed Reports page removed — signed report workflow no longer exists
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", roles: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/my-subjects", label: "My Subjects", roles: ["CONTRIBUTOR"] },

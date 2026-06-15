@@ -33,13 +33,13 @@ export class ModeratorService {
     const bankIds = await this.getAssignedBankIds(actor);
     return prisma.questionLibraryItem.findMany({
       where: {
-        bankLinks: { some: { questionBankId: { in: bankIds } } },
+        slotAssignments: { some: { questionBankId: { in: bankIds } } },
       },
       orderBy: { createdAt: "desc" },
       include: {
         subjectVersion: { include: { subject: true } },
         creator: { select: { id: true, name: true, email: true } },
-        bankLinks: { include: { questionBank: { select: { id: true } } } },
+        slotAssignments: { include: { questionBank: { select: { id: true } } } },
       },
     });
   }

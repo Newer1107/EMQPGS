@@ -11,7 +11,7 @@ export const GET = withApiHandler(
       include: {
         creator: { select: { id: true, name: true, email: true } },
         subjectVersion: { include: { subject: true, effectiveFromAcademicYear: true } },
-        bankLinks: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
+        slotAssignments: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
         moderationEvents: {
           orderBy: { createdAt: "asc" },
           include: { moderator: { select: { id: true, name: true } } },

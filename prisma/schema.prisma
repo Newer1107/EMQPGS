@@ -39,17 +39,29 @@ enum ExamCycleStatus {
   CLOSED
 }
 
-enum QuestionBankStatus {
-  DRAFT
-  IN_PROGRESS
-  UNDER_MODERATION
-  MODERATED
-  REPORT_GENERATED
-  AWAITING_HOD_SIGN
-  SIGNED_REPORT_UPLOADED
-  AWAITING_COORDINATOR_APPROVAL
-  APPROVED
+enum QuestionBankPhase {
+  DRAFTING
+  MODERATION
+  APPROVAL
+  COMPLETE
+}
+
+enum RecordStatus {
+  ACTIVE
   LOCKED
+  ARCHIVED
+}
+
+enum ReviewStatus {
+  PENDING
+  SUBMITTED
+  CONFIRMED
+}
+
+enum SnapshotType {
+  LOCKED
+  APPROVED
+  EXPORTED
 }
 
 enum AiReportStatus {
@@ -234,6 +246,8 @@ model User {
   ownershipFromUser QuestionOwnershipHistory[] @relation("ownershipFromUser")
   ownershipTransferredBy QuestionOwnershipHistory[] @relation("ownershipTransferredBy")
   deanReviews      DeanReview[]        @relation("deanReviewSelector")
+  slotReservations QuestionSlot[]
+  approvalDecisionsCreated ApprovalDecision[]
   exportArtifacts  ExportArtifact[]    @relation("exportArtifactGenerator")
   backupsTriggered SystemBackup[]      @relation("backupTrigger")
 
@@ -299,31 +313,33 @@ model QuestionBank {
   id           String              @id @default(cuid())
   subjectId    String
   examCycleId  String
-  status       QuestionBankStatus  @default(DRAFT)
+  phase        QuestionBankPhase   @default(DRAFTING)
+  recordStatus RecordStatus        @default(ACTIVE)
   version      Int                 @default(0)
   createdById  String
   lockedAt     DateTime?
+  lockedReason String?
   createdAt    DateTime            @default(now())
   updatedAt    DateTime            @updatedAt
+
   subject      Subject             @relation(fields: [subjectId], references: [id])
   examCycle    ExamCycle           @relation(fields: [examCycleId], references: [id])
   createdBy    User                @relation("questionBankCreator", fields: [createdById], references: [id])
   moderatorAssignments ModeratorBankAssignment[]
-  bankQuestions QuestionBankQuestion[]
   aiReports    AiReport[]
   generatedPapers GeneratedPaper[]
   deanReview   DeanReview?
-  signedReportAssetId String?
-  signedReportUploadedAt DateTime?
-  coordinatorDecision CoordinatorDecision?
-  coordinatorReviewedAt DateTime?
-  coordinatorReviewRemark String?
-  signedReportAsset FileAsset? @relation("questionBankSignedReport", fields: [signedReportAssetId], references: [id])
   exportArtifacts ExportArtifact[]
 
+  slots         QuestionSlot[]
+  pattern       PaperPattern?
+  snapshots     QuestionBankSnapshot[]
+  paperSnapshots PaperSnapshot[]
+  approvalDecisions ApprovalDecision[]
+
   @@unique([subjectId, examCycleId])
-  @@index([status])
   @@index([subjectId])
+  @@index([phase, recordStatus])
 }
 
 model QuestionLibraryItem {
@@ -348,9 +364,9 @@ model QuestionLibraryItem {
   creator         User            @relation("questionCreator", fields: [createdById], references: [id])
   owner           User            @relation("questionOwner", fields: [ownerId], references: [id])
   moderationEvents ModerationEvent[]
-  bankLinks       QuestionBankQuestion[]
   generatedPaperItems GeneratedPaperItem[]
   revisionHistory QuestionRevision[]
+  slotAssignments QuestionSlot[]
   ownershipHistory QuestionOwnershipHistory[]
   usageHistory    QuestionUsageHistory[]
 
@@ -400,33 +416,99 @@ model QuestionRevision {
 model QuestionUsageHistory {
   id                   String             @id @default(cuid())
   questionId           String
+  sourceType           String             // "GENERATED_PAPER" | "MANUAL" | "EXPORT"
+  sourceId             String
   examCycleId          String?
-  generatedPaperId     String?
-  generatedPaperItemId String?
-  academicYearId       String?
-  semesterId           String?
-  examType             ExamType?
   usedAt               DateTime           @default(now())
   question             QuestionLibraryItem @relation(fields: [questionId], references: [id])
   examCycle            ExamCycle?         @relation("usageHistoryExamCycle", fields: [examCycleId], references: [id])
-  generatedPaper       GeneratedPaper?    @relation("usageHistoryGeneratedPaper", fields: [generatedPaperId], references: [id])
-  generatedPaperItem   GeneratedPaperItem? @relation("usageHistoryGeneratedPaperItem", fields: [generatedPaperItemId], references: [id])
 
   @@index([questionId, usedAt])
-  @@index([academicYearId])
+  @@index([sourceType, sourceId])
 }
 
-model QuestionBankQuestion {
-  id              String        @id @default(cuid())
-  questionBankId  String
-  questionId      String
-  linkedAt        DateTime      @default(now())
-  questionBank    QuestionBank  @relation(fields: [questionBankId], references: [id])
-  question        QuestionLibraryItem @relation(fields: [questionId], references: [id])
+// A QuestionSlot links a QuestionLibraryItem to a specific position within a QuestionBank.
+// A QuestionLibraryItem MAY be assigned to slots in multiple different banks simultaneously,
+// but within a single bank it can only occupy ONE slot (enforced at the application layer).
+// The slot's composite unique key (bank + module + marks + slotNumber) defines the position.
+model QuestionSlot {
+  id                 String               @id @default(cuid())
+  questionBankId     String
+  moduleNumber       Int
+  marks              Int
+  slotNumber         Int
+  assignedQuestionId String?
+  reservedById       String?
+  reservedAt         DateTime?
+  isLocked           Boolean              @default(false)
 
-  @@unique([questionBankId, questionId])
+  questionBank       QuestionBank         @relation(fields: [questionBankId], references: [id])
+  assignedQuestion   QuestionLibraryItem? @relation(fields: [assignedQuestionId], references: [id])
+  reservedBy         User?                @relation(fields: [reservedById], references: [id])
+
+  @@unique([questionBankId, moduleNumber, marks, slotNumber])
+  @@index([questionBankId, assignedQuestionId])
+  @@index([assignedQuestionId])
+}
+
+model PaperPattern {
+  id              String       @id @default(cuid())
+  questionBankId  String       @unique
+  examType        ExamType
+  totalModules    Int
+  marksPattern    Json
+  slotsPerModule  Int
+  totalSlots      Int
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
+}
+
+model ApprovalDecision {
+  id              String              @id @default(cuid())
+  questionBankId  String
+  decision        CoordinatorDecision
+  remark          String?
+  decidedById     String
+  decidedAt       DateTime            @default(now())
+
+  questionBank    QuestionBank        @relation(fields: [questionBankId], references: [id])
+  decidedBy       User                @relation(fields: [decidedById], references: [id])
+
   @@index([questionBankId])
-  @@index([questionId])
+}
+
+model QuestionBankSnapshot {
+  id              String             @id @default(cuid())
+  questionBankId  String
+  snapshotType    SnapshotType
+  phase           QuestionBankPhase
+  status          RecordStatus
+  slotAssignments Json
+  paperAssignments Json?
+  metadata        Json?
+  version         Int
+  createdAt       DateTime           @default(now())
+
+  questionBank    QuestionBank       @relation(fields: [questionBankId], references: [id])
+
+  @@index([questionBankId, snapshotType, createdAt])
+}
+
+model PaperSnapshot {
+  id              String       @id @default(cuid())
+  questionBankId  String
+  variant         PaperVariant
+  paperJson       Json
+  coverageScore   Float?
+  difficultyScore Float?
+  qualityScore    Float?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+
+  questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
+
+  @@unique([questionBankId, variant])
 }
 
 model CoordinatorDepartmentAssignment {
@@ -492,14 +574,11 @@ model FileAsset {
   mimeType         String
   size             Int
   uploadedById     String?
-  linkedEntityType String?
-  linkedEntityId   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   aiReportsJson    AiReport[]      @relation("aiReportJsonAsset")
   aiReportsPdf     AiReport[]      @relation("aiReportPdfAsset")
   generatedPaperFiles GeneratedPaper[] @relation("generatedPaperFileAsset")
-  signedQuestionBanks QuestionBank[] @relation("questionBankSignedReport")
   exportArtifacts ExportArtifact[] @relation("exportArtifactFileAsset")
   systemBackups   SystemBackup[]   @relation("systemBackupFileAsset")
 }
@@ -571,7 +650,6 @@ model GeneratedPaper {
   questionBank      QuestionBank           @relation(fields: [questionBankId], references: [id])
   paperFileAsset    FileAsset?             @relation("generatedPaperFileAsset", fields: [paperFileAssetId], references: [id])
   items             GeneratedPaperItem[]
-  usageHistoryRecords QuestionUsageHistory[] @relation("usageHistoryGeneratedPaper")
 
   @@unique([questionBankId, variant])
 }
@@ -583,7 +661,6 @@ model GeneratedPaperItem {
   createdAt         DateTime       @default(now())
   generatedPaper      GeneratedPaper @relation(fields: [generatedPaperId], references: [id])
   question            QuestionLibraryItem @relation(fields: [questionId], references: [id])
-  usageHistoryRecords QuestionUsageHistory[] @relation("usageHistoryGeneratedPaperItem")
 
   @@unique([generatedPaperId, questionId])
 }
@@ -591,12 +668,13 @@ model GeneratedPaperItem {
 model DeanReview {
   id                 String       @id @default(cuid())
   questionBankId     String       @unique
-  regularPaper       PaperVariant @map("regularPaperId")
-  supplementaryPaper PaperVariant @map("supplementaryPaperId")
-  ktPaper            PaperVariant @map("ktPaperId")
-  reviewedById       String       @map("selectedById")
+  regularPaper       PaperVariant
+  supplementaryPaper PaperVariant
+  ktPaper            PaperVariant
+  reviewedById       String
   notes              String?
-  reviewedAt         DateTime     @default(now()) @map("selectedAt")
+  reviewedAt         DateTime     @default(now())
+  status             ReviewStatus @default(PENDING)
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
   questionBank       QuestionBank @relation(fields: [questionBankId], references: [id])

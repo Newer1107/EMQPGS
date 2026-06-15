@@ -5,8 +5,10 @@ import {
   ExamCycleStatus,
   ExamType,
   NotificationType,
+  QuestionBankPhase,
   QuestionStatus,
   RbtLevel,
+  RecordStatus,
   Role,
   SubjectStatus,
   SubjectVersionStatus,
@@ -78,8 +80,36 @@ async function main() {
 
   const questionBank = await prisma.questionBank.upsert({
     where: { subjectId_examCycleId: { subjectId: subject.id, examCycleId: examCycle.id } }, update: {},
-    create: { subjectId: subject.id, examCycleId: examCycle.id, status: "IN_PROGRESS", createdById: users[1].id },
+    create: {
+      subjectId: subject.id,
+      examCycleId: examCycle.id,
+      phase: QuestionBankPhase.DRAFTING,
+      recordStatus: RecordStatus.ACTIVE,
+      createdById: users[1].id,
+    },
   });
+
+  await prisma.paperPattern.upsert({
+    where: { questionBankId: questionBank.id }, update: {},
+    create: {
+      questionBankId: questionBank.id,
+      examType: ExamType.ENDSEM,
+      totalModules: 6,
+      marksPattern: [2, 5, 10],
+      slotsPerModule: 7,
+      totalSlots: 126,
+    },
+  });
+
+  const slotData = [];
+  for (let moduleNumber = 1; moduleNumber <= 6; moduleNumber += 1) {
+    for (const marks of [2, 5, 10]) {
+      for (let slotNumber = 1; slotNumber <= 7; slotNumber += 1) {
+        slotData.push({ questionBankId: questionBank.id, moduleNumber, marks, slotNumber });
+      }
+    }
+  }
+  await prisma.questionSlot.createMany({ data: slotData, skipDuplicates: true });
 
   await prisma.moderatorBankAssignment.upsert({
     where: { moderatorId_questionBankId: { moderatorId: users[2].id, questionBankId: questionBank.id } }, update: {},
@@ -93,7 +123,7 @@ async function main() {
   const question = await prisma.questionLibraryItem.create({
     data: {
       subjectVersionId: sv.id, moduleNumber: 1, marks: 5,
-      questionText: "Analyze the time complexity of Dijkstra\'s algorithm with a binary heap.",
+      questionText: "Analyze the time complexity of Dijkstra's algorithm with a binary heap.",
       coMapping: CourseOutcome.CO2, rbtLevel: RbtLevel.L4, difficultyLevel: DifficultyLevel.MEDIUM,
       teachingIndex: "TI-ALG-01", status: QuestionStatus.PENDING,
       createdById: users[3].id, ownerId: users[3].id, submittedAt: new Date(),
@@ -111,9 +141,15 @@ async function main() {
     },
   });
 
-  await prisma.questionBankQuestion.create({
-    data: { questionBankId: questionBank.id, questionId: question.id },
+  const targetSlot = await prisma.questionSlot.findFirst({
+    where: { questionBankId: questionBank.id, moduleNumber: 1, marks: 5 },
   });
+  if (targetSlot) {
+    await prisma.questionSlot.update({
+      where: { id: targetSlot.id },
+      data: { assignedQuestionId: question.id },
+    });
+  }
 }
 
 main().then(async () => prisma.$disconnect()).catch(async (e) => { console.error(e); await prisma.$disconnect(); process.exit(1); });

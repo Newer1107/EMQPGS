@@ -68,7 +68,6 @@ services:
       /bin/sh -c "
       /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin &&
       /usr/bin/mc mb -p local/question-bank-attachments || true &&
-      /usr/bin/mc mb -p local/signed-reports || true &&
       /usr/bin/mc mb -p local/generated-papers || true &&
       /usr/bin/mc mb -p local/exports || true &&
       /usr/bin/mc mb -p local/audit-files || true &&

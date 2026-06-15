@@ -91,7 +91,8 @@ export class SubjectManagementService {
         questionBanks: {
           select: {
             id: true,
-            status: true,
+            phase: true,
+            recordStatus: true,
             examCycle: { select: { id: true, examType: true } },
           },
         },

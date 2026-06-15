@@ -145,8 +145,6 @@ export class ExportService {
         body: buffer,
         size: buffer.byteLength,
         uploadedById: actor.id,
-        linkedEntityType: ENTITY_TYPES.EXPORT_ARTIFACT,
-        linkedEntityId: artifact.id,
       });
 
       return prisma.exportArtifact.update({

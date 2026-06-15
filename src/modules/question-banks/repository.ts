@@ -18,16 +18,19 @@ export class QuestionBankRepository extends BaseRepository {
     });
   }
 
-  create(data: QuestionBankInput & { createdById: string }) {
+  create(data: QuestionBankInput & { createdById: string; phase?: import("@prisma/client").QuestionBankPhase; recordStatus?: import("@prisma/client").RecordStatus }) {
     return this.prisma.questionBank.create({ data });
   }
 
   update(
     where: WhereInput,
-    data: Partial<QuestionBankInput> & {
-      lockedAt?: Date | null;
-      version?: { increment: number };
-    },
+    data: Partial<{
+      phase: import("@prisma/client").QuestionBankPhase;
+      recordStatus: import("@prisma/client").RecordStatus;
+      lockedAt: Date | null;
+      lockedReason: string | null;
+      version: { increment: number };
+    }>,
   ) {
     return this.prisma.questionBank.update({ where, data });
   }

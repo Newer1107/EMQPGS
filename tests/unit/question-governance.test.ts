@@ -20,7 +20,7 @@ vi.mock("@/lib/db", () => {
     questionOwnershipHistory: { create: vi.fn(), findMany: vi.fn() },
     questionUsageHistory: { create: vi.fn(), findMany: vi.fn() },
     moderationEvent: { findMany: vi.fn() },
-    questionBankQuestion: { create: vi.fn() },
+    questionSlot: { findFirst: vi.fn(), update: vi.fn() },
     examCycle: { findUnique: vi.fn() },
     $transaction: vi.fn((cb: (tx: typeof mockTx) => unknown) => cb(mockTx)),
   };
@@ -179,40 +179,28 @@ describe("Question Governance Hardening", () => {
 
   describe("3. Usage recording via QuestionUsageService", () => {
     it("creates QuestionUsageHistory through recordUsage", async () => {
-      (prisma.examCycle.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        id: "ec-1", examType: "ENDSEM",
-        academicYearId: "ay-1", semesterId: "sem-1",
-        academicYear: { id: "ay-1" }, semester: { id: "sem-1" },
-      });
       (prisma.questionUsageHistory.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "uh-1" });
       const service = new QuestionUsageService();
-      const result = await service.recordUsage("q-1", "ec-1", "gp-1", "gpi-1");
+      const result = await service.recordUsage("q-1", "ec-1", "GENERATED_PAPER", "gp-1");
       expect(prisma.questionUsageHistory.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             questionId: "q-1",
             examCycleId: "ec-1",
-            generatedPaperId: "gp-1",
-            generatedPaperItemId: "gpi-1",
-            academicYearId: "ay-1",
-            semesterId: "sem-1",
-            examType: "ENDSEM",
+            sourceType: "GENERATED_PAPER",
+            sourceId: "gp-1",
           }),
         }),
       );
       expect(result).toBeDefined();
     });
 
-    it("populates generatedPaperItemId", async () => {
-      (prisma.examCycle.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        id: "ec-1", examType: "ISE_1",
-        academicYearId: "ay-1", semesterId: "sem-1",
-        academicYear: { id: "ay-1" }, semester: { id: "sem-1" },
-      });
+    it("populates sourceType and sourceId", async () => {
       const service = new QuestionUsageService();
-      await service.recordUsage("q-1", "ec-1", "gp-1", "gpi-1");
+      await service.recordUsage("q-1", "ec-1", "MANUAL", "manual-entry-1");
       const call = (prisma.questionUsageHistory.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(call.data.generatedPaperItemId).toBe("gpi-1");
+      expect(call.data.sourceType).toBe("MANUAL");
+      expect(call.data.sourceId).toBe("manual-entry-1");
     });
   });
 

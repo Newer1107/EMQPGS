@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
-import { questionBankStatusLabels } from "@/lib/constants";
+import { questionBankPhaseLabels, recordStatusLabels } from "@/lib/constants";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
@@ -42,11 +42,11 @@ export default async function QuestionBanksManagementPage() {
           <Table>
             <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH><TH>Actions</TH></TR></THead>
             <TBody>
-              {(questionBanks as unknown as Array<{ id: string; status: import("@prisma/client").QuestionBankStatus; subject: { subjectCode: string }; examCycle: { semester: { name: string }; academicYear: { code: string } } }>).map((bank) => (
+              {(questionBanks as unknown as Array<{ id: string; phase: string; recordStatus: string; subject: { subjectCode: string }; examCycle: { semester: { name: string }; academicYear: { code: string } } }>).map((bank) => (
                 <TR key={bank.id}>
                   <TD className="font-medium">{bank.subject.subjectCode}</TD>
                   <TD>{bank.examCycle.semester.name} · {bank.examCycle.academicYear.code}</TD>
-                  <TD><Badge>{questionBankStatusLabels[bank.status as import("@prisma/client").QuestionBankStatus] ?? bank.status}</Badge></TD>
+                  <TD><Badge>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge></TD>
                   <TD>
                     <Link href={`/dashboard/coordinator/question-banks/${bank.id}`}>
                       <Button variant="outline" size="sm">Manage</Button>

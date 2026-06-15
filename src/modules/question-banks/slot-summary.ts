@@ -1,26 +1,24 @@
 import { QuestionStatus } from "@prisma/client";
-import { QUESTION_MODULE_COUNT, QUESTION_SLOT_COUNT, QUESTION_MARKS } from "@/modules/questions/slot-template";
 
 export function summarizeBankSlots(
   slots: Array<{
-    reservedById?: string | null;
-    question: {
+    assignedQuestion?: {
       status: QuestionStatus;
     } | null;
   }>,
 ) {
-  const totalSlots = QUESTION_MODULE_COUNT * QUESTION_MARKS.length * QUESTION_SLOT_COUNT;
+  const totalSlots = slots.length;
   let filledCount = 0;
   let pendingModerationCount = 0;
   let approvedCount = 0;
   let rejectedCount = 0;
 
   for (const slot of slots) {
-    if (slot.question) {
+    if (slot.assignedQuestion) {
       filledCount += 1;
-      if (slot.question.status === QuestionStatus.PENDING || slot.question.status === QuestionStatus.REVISION_SUBMITTED) pendingModerationCount += 1;
-      if (slot.question.status === QuestionStatus.APPROVED) approvedCount += 1;
-      if (slot.question.status === QuestionStatus.REJECTED || slot.question.status === QuestionStatus.REVISION_REQUESTED) rejectedCount += 1;
+      if (slot.assignedQuestion.status === QuestionStatus.PENDING || slot.assignedQuestion.status === QuestionStatus.REVISION_SUBMITTED) pendingModerationCount += 1;
+      if (slot.assignedQuestion.status === QuestionStatus.APPROVED) approvedCount += 1;
+      if (slot.assignedQuestion.status === QuestionStatus.REJECTED || slot.assignedQuestion.status === QuestionStatus.REVISION_REQUESTED) rejectedCount += 1;
     }
   }
 
@@ -30,6 +28,6 @@ export function summarizeBankSlots(
     pendingModerationCount,
     approvedCount,
     rejectedCount,
-    fillPercentage: Number(((filledCount / totalSlots) * 100).toFixed(2)),
+    fillPercentage: totalSlots > 0 ? Number(((filledCount / totalSlots) * 100).toFixed(2)) : 0,
   };
 }

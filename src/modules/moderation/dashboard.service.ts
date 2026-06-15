@@ -16,7 +16,7 @@ export class ModeratorDashboardService {
 
     const questionCounts = await prisma.questionLibraryItem.groupBy({
       by: ["status"],
-      where: { bankLinks: { some: { questionBankId: { in: bankIds } } } },
+      where: { slotAssignments: { some: { questionBankId: { in: bankIds } } } },
       _count: { _all: true },
     });
 
@@ -54,7 +54,7 @@ export class ModeratorDashboardService {
     const questions = await prisma.questionLibraryItem.findMany({
       where: {
         status: QuestionStatus.REVISION_REQUESTED,
-        bankLinks: { some: { questionBankId: { in: bankIds } } },
+        slotAssignments: { some: { questionBankId: { in: bankIds } } },
       },
       include: {
         creator: { select: { id: true, name: true } },
@@ -100,17 +100,18 @@ export class ModeratorDashboardService {
       include: {
         subject: { select: { subjectName: true } },
         examCycle: { select: { examType: true } },
-        bankQuestions: {
+        slots: {
           include: {
-            question: { select: { status: true } },
+            assignedQuestion: { select: { status: true } },
           },
+          where: { assignedQuestionId: { not: null } },
         },
       },
     });
 
     return banks.map((b) => {
-      const pendingCount = b.bankQuestions.filter((bq) => bq.question.status === QuestionStatus.PENDING).length;
-      const revisionSubmittedCount = b.bankQuestions.filter((bq) => bq.question.status === QuestionStatus.REVISION_SUBMITTED).length;
+      const pendingCount = b.slots.filter((s) => s.assignedQuestion?.status === QuestionStatus.PENDING).length;
+      const revisionSubmittedCount = b.slots.filter((s) => s.assignedQuestion?.status === QuestionStatus.REVISION_SUBMITTED).length;
       return {
         id: b.id,
         subjectName: b.subject.subjectName,

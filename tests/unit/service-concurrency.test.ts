@@ -32,7 +32,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
 
     vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
-      status: "IN_PROGRESS",
+      phase: "DRAFTING",
       version: 1,
     });
 
@@ -46,7 +46,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     const service = new QuestionBankService();
     let thrown: unknown;
     try {
-      await service.updateStatus("bank-1", "UNDER_MODERATION" as never);
+      await service.advancePhase("bank-1", "MODERATION" as never);
     } catch (e) {
       thrown = e;
     }

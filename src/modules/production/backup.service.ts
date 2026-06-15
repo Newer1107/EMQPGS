@@ -47,8 +47,6 @@ export class BackupService {
         body: buffer,
         size: buffer.byteLength,
         uploadedById: actor?.id ?? null,
-        linkedEntityType: ENTITY_TYPES.SYSTEM_BACKUP,
-        linkedEntityId: backup.id,
       });
 
       return prisma.systemBackup.update({

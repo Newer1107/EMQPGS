@@ -6,7 +6,7 @@ const listInclude = {
   subjectVersion: { include: { subject: true, effectiveFromAcademicYear: true } },
   creator: { select: { id: true, name: true, email: true } },
   owner: { select: { id: true, name: true, email: true } },
-  bankLinks: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
+  slotAssignments: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
 } as const;
 
 export class QuestionLibraryRepository extends BaseRepository {
@@ -34,7 +34,7 @@ export class QuestionLibraryRepository extends BaseRepository {
 
   findByBank(questionBankId: string) {
     return this.prisma.questionLibraryItem.findMany({
-      where: { bankLinks: { some: { questionBankId } } },
+      where: { slotAssignments: { some: { questionBankId } } },
       orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { createdAt: "desc" }],
       include: listInclude,
     });

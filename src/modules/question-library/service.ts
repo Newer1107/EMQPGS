@@ -8,21 +8,9 @@ import type { QuestionLibraryItemInput } from "@/modules/question-library/valida
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 export class QuestionUsageService {
-  async recordUsage(questionId: string, examCycleId: string, generatedPaperId: string, generatedPaperItemId: string) {
-    const examCycle = await prisma.examCycle.findUnique({
-      where: { id: examCycleId },
-      include: { academicYear: true, semester: true },
-    });
+  async recordUsage(questionId: string, examCycleId: string, sourceType: string, sourceId: string) {
     return prisma.questionUsageHistory.create({
-      data: {
-        questionId,
-        examCycleId,
-        generatedPaperId,
-        generatedPaperItemId,
-        academicYearId: examCycle?.academicYearId,
-        semesterId: examCycle?.semesterId,
-        examType: examCycle?.examType,
-      },
+      data: { questionId, examCycleId, sourceType, sourceId },
     });
   }
 }
@@ -104,9 +92,22 @@ export class QuestionLibraryService {
   async createForBank(input: QuestionLibraryItemInput & { questionBankId: string }, actor: Actor) {
     const question = await this.create(input, actor);
 
-    await prisma.questionBankQuestion.create({
-      data: { questionBankId: input.questionBankId, questionId: question.id },
+    const emptySlot = await prisma.questionSlot.findFirst({
+      where: {
+        questionBankId: input.questionBankId,
+        moduleNumber: question.moduleNumber,
+        marks: question.marks,
+        assignedQuestionId: null,
+      },
+      orderBy: { slotNumber: "asc" },
     });
+
+    if (emptySlot) {
+      await prisma.questionSlot.update({
+        where: { id: emptySlot.id },
+        data: { assignedQuestionId: question.id },
+      });
+    }
 
     return question;
   }
@@ -212,18 +213,18 @@ export class QuestionLibraryService {
   }
 
   async getUsageStats(questionId: string) {
-    const [totalUsage, firstUsed, latestUsed, examTypes] = await Promise.all([
+    const [totalUsage, firstUsed, latestUsed, sourceTypes] = await Promise.all([
       prisma.questionUsageHistory.count({ where: { questionId } }),
       prisma.questionUsageHistory.findFirst({ where: { questionId }, orderBy: { usedAt: "asc" }, select: { usedAt: true } }),
       prisma.questionUsageHistory.findFirst({ where: { questionId }, orderBy: { usedAt: "desc" }, select: { usedAt: true } }),
-      prisma.questionUsageHistory.findMany({ where: { questionId }, distinct: ["examType"], select: { examType: true } }),
+      prisma.questionUsageHistory.findMany({ where: { questionId }, distinct: ["sourceType"], select: { sourceType: true } }),
     ]);
 
     return {
       totalUsage,
       firstUsed: firstUsed?.usedAt ?? null,
       latestUsed: latestUsed?.usedAt ?? null,
-      examTypes: examTypes.map((e) => e.examType).filter(Boolean),
+      sourceTypes: sourceTypes.map((e) => e.sourceType).filter(Boolean),
     };
   }
 

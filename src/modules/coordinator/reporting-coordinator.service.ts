@@ -15,11 +15,14 @@ export class ReportingCoordinatorService {
   async triggerAiAnalysis(actor: Actor, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
-      include: { subject: true, _count: { select: { bankQuestions: true } } },
+      include: { subject: true },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
     await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
-    if (bank._count.bankQuestions < 3) {
+    const filledSlotCount = await prisma.questionSlot.count({
+      where: { questionBankId, assignedQuestionId: { not: null } },
+    });
+    if (filledSlotCount < 3) {
       throw new AppError("Question bank does not meet the minimum question threshold for AI analysis.", 409);
     }
 
