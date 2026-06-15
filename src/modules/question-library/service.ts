@@ -1,10 +1,31 @@
-import { QuestionStatus, type User } from "@prisma/client";
-import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { Prisma, QuestionStatus, type User } from "@prisma/client";
+import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
+import { withOptimisticLock } from "@/lib/optimistic-lock";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
+
+export class QuestionUsageService {
+  async recordUsage(questionId: string, examCycleId: string, generatedPaperId: string, generatedPaperItemId: string) {
+    const examCycle = await prisma.examCycle.findUnique({
+      where: { id: examCycleId },
+      include: { academicYear: true, semester: true },
+    });
+    return prisma.questionUsageHistory.create({
+      data: {
+        questionId,
+        examCycleId,
+        generatedPaperId,
+        generatedPaperItemId,
+        academicYearId: examCycle?.academicYearId,
+        semesterId: examCycle?.semesterId,
+        examType: examCycle?.examType,
+      },
+    });
+  }
+}
 
 export class QuestionLibraryService {
   constructor(private readonly repository = new QuestionLibraryRepository()) {}
@@ -51,32 +72,20 @@ export class QuestionLibraryService {
       status: approved.filter((q) => q.difficultyLevel === d).length >= 1 ? "covered" as const : "missing" as const,
     }));
 
-    return {
-      totalQuestions: questions.length, approvedQuestions: approved.length,
-      moduleCoverage, markCoverage: [], coCoverage, rbtCoverage, difficultyCoverage: diffCoverage,
-      warnings: [
-        ...moduleCoverage.filter((m) => m.status === "missing").map((m) => `Module ${m.moduleNumber}: no approved questions`),
-        ...coCoverage.filter((c) => c.status === "missing").map((c) => `${c.co}: no questions`),
-        ...diffCoverage.filter((d) => d.status === "missing").map((d) => `${d.difficulty}: no questions`),
-      ],
-    };
+    return { moduleCoverage, coCoverage, rbtCoverage, diffCoverage, approvedCount: approved.length, totalCount: questions.length };
   }
 
   async create(input: QuestionLibraryItemInput, actor: Actor) {
-    const subjectVersion = await prisma.subjectVersion.findUnique({ where: { id: input.subjectVersionId } });
-    if (!subjectVersion) throw new NotFoundError("Subject version not found");
-
     const question = await this.repository.create({
       ...input,
       createdById: actor.id,
       ownerId: actor.id,
     });
 
-    const lastNumber = await prisma.questionRevision.count({ where: { questionId: question.id } });
     await prisma.questionRevision.create({
       data: {
         questionId: question.id,
-        revisionNumber: lastNumber + 1,
+        revisionNumber: 1,
         snapshotQuestionText: question.questionText,
         snapshotModule: question.moduleNumber,
         snapshotMarks: question.marks,
@@ -94,7 +103,11 @@ export class QuestionLibraryService {
 
   async createForBank(input: QuestionLibraryItemInput & { questionBankId: string }, actor: Actor) {
     const question = await this.create(input, actor);
-    await prisma.questionBankQuestion.create({ data: { questionBankId: input.questionBankId, questionId: question.id } });
+
+    await prisma.questionBankQuestion.create({
+      data: { questionBankId: input.questionBankId, questionId: question.id },
+    });
+
     return question;
   }
 
@@ -105,7 +118,14 @@ export class QuestionLibraryService {
       throw new ForbiddenError("You cannot edit this question");
     }
 
-    const updated = await this.repository.update(id, input);
+    const updated = await this.repository.update(id, input).catch((err: unknown) => {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError(
+          "This question was modified by another user. Please refresh and try again.",
+        );
+      }
+      throw err;
+    });
 
     if (input.questionText !== undefined || input.moduleNumber !== undefined || input.marks !== undefined || input.coMapping !== undefined || input.rbtLevel !== undefined || input.difficultyLevel !== undefined || input.teachingIndex !== undefined) {
       const lastNumber = await prisma.questionRevision.count({ where: { questionId: id } });
@@ -145,16 +165,23 @@ export class QuestionLibraryService {
     if (!question) throw new NotFoundError("Question not found");
     if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can transfer ownership");
 
-    const updated = await this.repository.updateOwner(questionId, toUserId);
+    const [updated] = await prisma.$transaction(async (tx) => {
+      const updatedQuestion = await tx.questionLibraryItem.update({
+        where: { id: questionId },
+        data: { ownerId: toUserId },
+      });
 
-    await prisma.questionOwnershipHistory.create({
-      data: {
-        questionId,
-        fromUserId: question.ownerId,
-        toUserId,
-        transferredById: actor.id,
-        reason: reason ?? null,
-      },
+      await tx.questionOwnershipHistory.create({
+        data: {
+          questionId,
+          fromUserId: question.ownerId,
+          toUserId,
+          transferredById: actor.id,
+          reason: reason ?? null,
+        },
+      });
+
+      return [updatedQuestion];
     });
 
     return updated;
@@ -180,60 +207,27 @@ export class QuestionLibraryService {
     return prisma.questionUsageHistory.findMany({
       where: { questionId },
       orderBy: { usedAt: "desc" },
+      take: 100,
     });
   }
 
   async getUsageStats(questionId: string) {
-    const records = await prisma.questionUsageHistory.findMany({
-      where: { questionId },
-      orderBy: { usedAt: "desc" },
-    });
+    const [totalUsage, firstUsed, latestUsed, examTypes] = await Promise.all([
+      prisma.questionUsageHistory.count({ where: { questionId } }),
+      prisma.questionUsageHistory.findFirst({ where: { questionId }, orderBy: { usedAt: "asc" }, select: { usedAt: true } }),
+      prisma.questionUsageHistory.findFirst({ where: { questionId }, orderBy: { usedAt: "desc" }, select: { usedAt: true } }),
+      prisma.questionUsageHistory.findMany({ where: { questionId }, distinct: ["examType"], select: { examType: true } }),
+    ]);
+
     return {
-      usageCount: records.length,
-      lastUsed: records[0] ?? null,
-      yearsUsed: [...new Set(records.map((r) => r.academicYearId).filter(Boolean))],
-      timeline: records,
+      totalUsage,
+      firstUsed: firstUsed?.usedAt ?? null,
+      latestUsed: latestUsed?.usedAt ?? null,
+      examTypes: examTypes.map((e) => e.examType).filter(Boolean),
     };
   }
 
   async getFullDetail(questionId: string) {
-    const [question, ownership, revisions, usage, moderation] = await Promise.all([
-      this.repository.findById(questionId),
-      this.getOwnershipHistory(questionId),
-      this.getRevisionHistory(questionId),
-      this.getUsageHistory(questionId),
-      prisma.moderationEvent.findMany({ where: { questionId }, orderBy: { createdAt: "asc" }, include: { moderator: { select: { id: true, name: true } } } }),
-    ]);
-    if (!question) throw new NotFoundError("Question not found");
-
-    return {
-      question,
-      ownershipHistory: ownership,
-      revisionHistory: revisions,
-      usageHistory: usage,
-      moderationHistory: moderation,
-      bankLinks: question.bankLinks,
-      generatedPapers: question.generatedPaperItems,
-    };
-  }
-}
-
-export class QuestionUsageService {
-  async recordUsage(questionId: string, examCycleId: string, generatedPaperId: string, generatedPaperItemId: string) {
-    const examCycle = await prisma.examCycle.findUnique({
-      where: { id: examCycleId },
-      include: { academicYear: true, semester: true },
-    });
-    return prisma.questionUsageHistory.create({
-      data: {
-        questionId,
-        examCycleId,
-        generatedPaperId,
-        generatedPaperItemId,
-        academicYearId: examCycle?.academicYearId,
-        semesterId: examCycle?.semesterId,
-        examType: examCycle?.examType,
-      },
-    });
+    return this.repository.findById(questionId);
   }
 }

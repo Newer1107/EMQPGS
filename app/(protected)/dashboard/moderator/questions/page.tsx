@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ModeratorService } from "@/modules/moderation/service";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
 
@@ -18,7 +20,7 @@ export default async function ModerationQuestionsPage() {
       </div>
       <DataTableCard title="Questions Awaiting Review">
         <Table>
-          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH></TR></THead>
+          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Actions</TH></TR></THead>
           <TBody>
             {questions.map((question) => (
               <TR key={question.id}>
@@ -27,6 +29,11 @@ export default async function ModerationQuestionsPage() {
                 <TD>{question.marks}</TD>
                 <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
+                <TD>
+                  <Link href={`/dashboard/moderator/questions/${question.id}`}>
+                    <Button variant="outline" size="sm">Review</Button>
+                  </Link>
+                </TD>
               </TR>
             ))}
           </TBody>

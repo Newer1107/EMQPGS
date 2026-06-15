@@ -10,10 +10,12 @@ Examination Management & Question Paper Generation System. Next.js 16 App Router
 
 ## Start here
 
-- `README.md` — full feature/API/env reference (some enums are stale, see "README drift" below).
-- `app-flow.md` — workflow narrative, including the fact that there are no background workers / no BullMQ / no Redis.
-- `docs/architecture.md`, `docs/api-documentation.md`, `docs/rbac-matrix.md` — deeper detail when you need it.
-- `role-coe.md` / `role-coordinator.md` / `role-contributor.md` / `role-moderator.md` / `role-dean.md` — per-role user guides.
+- `README.md` — full feature/API/env reference (current).
+- `docs/architecture/system-overview.md` — domain model, service boundaries, data flow, auth model, audit model.
+- `docs/domains/` — per-domain deep dives (academic, question, exam, production).
+- `docs/api/reference.md` — current API route table with roles, schemas, and services.
+- `docs/rbac-matrix.md` — role capability matrix.
+- `docs/developer/onboarding.md` — 30-minute orientation.
 
 ## Commands
 
@@ -44,6 +46,7 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 - App Router is under `app/`. Pages: `app/(protected)/dashboard/<role>/...`, public: `app/login`, `app/forgot-password`, `app/reset-password`. Root page redirects `/` → `/login`.
 - API routes: `app/api/**/route.ts` — 63 files, ~95 endpoints. Always wrap handlers with `withApiHandler` from `@/lib/api-handler`. Do not call services directly from `route.ts` without the wrapper (it owns RBAC, CSRF, rate limit, audit logging, error formatting).
 - Security headers (CSP, X-Frame-Options, etc.) are set globally in `next.config.ts`. Don't duplicate them in route handlers.
+  - CSP `script-src` adds `'unsafe-eval'` in development (`NODE_ENV=development`) for webpack HMR / React dev tools. This is stripped in production — do not weaken the production path.
 
 ## Prisma client gotchas
 
@@ -61,11 +64,11 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 - Repositories extend `BaseRepository` (`src/modules/shared/base-repository.ts`) and own raw Prisma calls + transactions. Services own business logic and call repositories.
 - Every API boundary is validated with Zod (see `src/modules/*/validation.ts`). Route handlers call `<schema>.parse(await parseJson(request))` inside `withApiHandler`.
 - All request metadata (IP, user agent) flows through `getRequestMeta()` in `src/lib/api-context.ts`. `withApiHandler` feeds it into `logAudit` automatically when you pass the `audit:` option.
-- RBAC is two-layer: `proxy.ts` does route-level role gating for `/dashboard/<role>` and `/api/**`; `withApiHandler({ roles: [...] })` does operation-level gating. Object-level checks (e.g. "moderator can only see their assigned banks") live in services — see `src/modules/questions/permissions.ts`.
+- RBAC is two-layer: `proxy.ts` does route-level role gating for `/dashboard/<role>` and `/api/**`; `withApiHandler({ roles: [...] })` does operation-level gating. Object-level checks (e.g. "moderator can only see their assigned banks") live in services.
 
 ## Domain invariants (do not break)
 
-- **126-slot grid.** Each question bank has exactly 6 modules × 3 mark categories (2, 5, 10) × 7 slots = 126 slots. Generator: `buildQuestionSlotTemplate()` in `src/modules/questions/slot-template.ts`. The first slot is `{ moduleNumber: 1, marks: 2, slotNumber: 1 }`; the last is `{ moduleNumber: 6, marks: 10, slotNumber: 7 }`. Tests in `tests/unit/slot-template.test.ts` lock this in.
+- **126-slot template.** The paper generator uses a 126-entry template (6 modules × 3 marks × 7 slots) as a computational pattern. `buildQuestionSlotTemplate()` in `src/modules/questions/slot-template.ts` generates it. The template is NOT a persisted grid of pre-allocated slots — questions are linked to banks via the `QuestionBankQuestion` join table. `tests/unit/slot-template.test.ts` locks the shape in.
 - Question bank status transitions are enforced by a transition table in `src/modules/question-banks/transitions.ts`. `QuestionBankService.updateStatus()` validates via `isValidTransition()`. The coordinator's `lockQuestionBank()` in `src/modules/coordinator/service.ts` is the **canonical lock path** — it requires `examCycle.status === ACTIVE` and `examCycle.endDate`. Coordinator APPROVED decisions set status to `APPROVED`, not `LOCKED`.
 - **Moderator assignment** is now a first-class API: `POST /api/question-banks/[id]/assignments/moderator` (COORDINATOR-only). Validates MODERATOR role and prevents duplicates. Sends `ACTION_REQUIRED` notification.
 - **Module/marks invariants.** Question `marks` is one of `2 | 5 | 10`. Question `module` is `1..6`. `rbtLevel` is `L1..L6`. `courseOutcome` is `CO1..CO6`. All are Prisma enums — TypeScript will catch a bad value at compile time.
@@ -108,7 +111,7 @@ Plus 2 departments (CSE, ECE), 1 active exam cycle, 1 subject, 1 question bank w
 
 ## README drift — trust the schema
 
-The README has been updated to match the current schema. When in doubt, read `prisma/schema.prisma`. Known alignments:
+The README is now authoritative. When in doubt, read `prisma/schema.prisma`. Alignments verified:
 
 | Topic | README says | Schema says |
 |---|---|---|

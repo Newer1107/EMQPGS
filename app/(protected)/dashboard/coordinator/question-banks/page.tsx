@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { ExamCycleStatus } from "@prisma/client";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
@@ -38,13 +40,18 @@ export default async function QuestionBanksManagementPage() {
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Question Banks">
           <Table>
-            <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH></TR></THead>
+            <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH><TH>Actions</TH></TR></THead>
             <TBody>
               {(questionBanks as unknown as Array<{ id: string; status: import("@prisma/client").QuestionBankStatus; subject: { subjectCode: string }; examCycle: { semester: { name: string }; academicYear: { code: string } } }>).map((bank) => (
                 <TR key={bank.id}>
                   <TD className="font-medium">{bank.subject.subjectCode}</TD>
                   <TD>{bank.examCycle.semester.name} · {bank.examCycle.academicYear.code}</TD>
                   <TD><Badge>{questionBankStatusLabels[bank.status as import("@prisma/client").QuestionBankStatus] ?? bank.status}</Badge></TD>
+                  <TD>
+                    <Link href={`/dashboard/coordinator/question-banks/${bank.id}`}>
+                      <Button variant="outline" size="sm">Manage</Button>
+                    </Link>
+                  </TD>
                 </TR>
               ))}
             </TBody>

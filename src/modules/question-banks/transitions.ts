@@ -10,7 +10,7 @@ const QUESTION_BANK_TRANSITIONS: Record<QuestionBankStatus, QuestionBankStatus[]
   [QuestionBankStatus.SIGNED_REPORT_UPLOADED]: [QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL, QuestionBankStatus.LOCKED],
   [QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL]: [QuestionBankStatus.APPROVED, QuestionBankStatus.LOCKED, QuestionBankStatus.AWAITING_HOD_SIGN],
   [QuestionBankStatus.APPROVED]: [QuestionBankStatus.LOCKED],
-  [QuestionBankStatus.LOCKED]: [],
+  [QuestionBankStatus.LOCKED]: [QuestionBankStatus.DRAFT, QuestionBankStatus.IN_PROGRESS],
 };
 
 export function isValidTransition(current: QuestionBankStatus, next: QuestionBankStatus): boolean {

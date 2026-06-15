@@ -57,7 +57,8 @@
 
 ## Security Headers
 
-- Content-Security-Policy: tightened to include explicit `script-src 'self'` (no `unsafe-eval`), restricted `connect-src`, and `frame-ancestors 'none'`
+- Content-Security-Policy: tightened to include explicit `script-src 'self'` (no `unsafe-eval` in production), restricted `connect-src`, and `frame-ancestors 'none'`
+  - **Development exception**: `'unsafe-eval'` is added to `script-src` when `NODE_ENV=development` for Next.js webpack HMR and React dev tools. This is stripped in production builds.
 - `X-Frame-Options: DENY`
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`

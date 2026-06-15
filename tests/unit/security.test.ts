@@ -62,11 +62,28 @@ describe("H4 — XSS charset validation on free-text fields", () => {
 
 // ---- N13: CSP hardening ----
 describe("N13 — CSP hardened", () => {
-  it("removes unsafe-eval from script-src", () => {
-    const configPath = path.resolve("next.config.ts");
-    const source = fs.readFileSync(configPath, "utf-8");
-    expect(source).toContain('"script-src');
-    expect(source).not.toContain("unsafe-eval");
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("includes unsafe-eval in development for HMR support", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const { default: nextConfig } = await import("../../next.config");
+    const headers = await nextConfig.headers!();
+    const csp = headers[0].headers.find(
+      (h) => h.key === "Content-Security-Policy",
+    )!.value;
+    expect(csp).toContain("unsafe-eval");
+  });
+
+  it("omits unsafe-eval in production to maintain hardening", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const { default: nextConfig } = await import("../../next.config");
+    const headers = await nextConfig.headers!();
+    const csp = headers[0].headers.find(
+      (h) => h.key === "Content-Security-Policy",
+    )!.value;
+    expect(csp).not.toContain("unsafe-eval");
   });
 
   it("tightens connect-src to self only", () => {

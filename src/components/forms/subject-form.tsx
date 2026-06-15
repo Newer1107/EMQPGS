@@ -1,0 +1,123 @@
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { apiFetch } from "@/lib/client-fetch";
+import { useRouter } from "next/navigation";
+
+type SubjectFormProps = {
+  departments: Array<{ id: string; name: string; code: string }>;
+  semesters: Array<{ id: string; number: number; name: string; academicYear: { code: string } }>;
+  initialValues?: {
+    name?: string;
+    code?: string;
+    departmentId?: string;
+    semesterId?: string;
+    credits?: number;
+  };
+  endpoint: string;
+  title: string;
+};
+
+export function SubjectForm({ departments, semesters, initialValues, endpoint, title }: SubjectFormProps) {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({
+    name: initialValues?.name ?? "",
+    code: initialValues?.code ?? "",
+    departmentId: initialValues?.departmentId ?? "",
+    semesterId: initialValues?.semesterId ?? "",
+    credits: String(initialValues?.credits ?? ""),
+  });
+
+  function setField(name: string, value: string) {
+    setValues((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function onSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    setLoading(true);
+
+    const body = {
+      name: values.name,
+      code: values.code,
+      departmentId: values.departmentId,
+      semesterId: values.semesterId,
+      credits: Number(values.credits),
+    };
+
+    try {
+      const response = await apiFetch(endpoint, {
+        method: initialValues ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toast.success(title);
+        router.push("/dashboard/coordinator/subjects");
+        router.refresh();
+      } else {
+        toast.error(result.error?.message ?? "Failed to save subject");
+      }
+    } catch {
+      toast.error("Network request failed. Please check your connection.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="name">Subject Name</Label>
+              <Input id="name" value={values.name} onChange={(e) => setField("name", e.target.value)} required placeholder="e.g. Data Structures" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="code">Subject Code</Label>
+              <Input id="code" value={values.code} onChange={(e) => setField("code", e.target.value)} required placeholder="e.g. CS201" maxLength={20} />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="departmentId">Department</Label>
+              <Select id="departmentId" value={values.departmentId} onChange={(e) => setField("departmentId", e.target.value)} required>
+                <option value="">Select</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                ))}
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="semesterId">Semester</Label>
+              <Select id="semesterId" value={values.semesterId} onChange={(e) => setField("semesterId", e.target.value)} required>
+                <option value="">Select</option>
+                {semesters.map((s) => (
+                  <option key={s.id} value={s.id}>Sem {s.number} - {s.name} ({s.academicYear.code})</option>
+                ))}
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="credits">Credit Load</Label>
+            <Input id="credits" type="number" min={1} max={10} value={values.credits} onChange={(e) => setField("credits", e.target.value)} required placeholder="e.g. 4" />
+          </div>
+          <Button type="submit" disabled={loading} className="w-full">
+            {loading ? "Saving..." : initialValues ? "Update Subject" : "Create Subject"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

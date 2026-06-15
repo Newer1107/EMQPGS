@@ -68,10 +68,11 @@ describe("QuestionBankStateTransitions (C3)", () => {
 
   // ----- Invalid transitions -----
 
-  it("LOCKED cannot transition to any other status", () => {
+  it("LOCKED can only transition to DRAFT or IN_PROGRESS (unlock)", () => {
     for (const status of Object.values(QuestionBankStatus)) {
       if (status === QuestionBankStatus.LOCKED) continue;
-      expect(isValidTransition(QuestionBankStatus.LOCKED, status)).toBe(false);
+      const expected = status === QuestionBankStatus.DRAFT || status === QuestionBankStatus.IN_PROGRESS;
+      expect(isValidTransition(QuestionBankStatus.LOCKED, status)).toBe(expected);
     }
   });
 
@@ -99,8 +100,12 @@ describe("QuestionBankStateTransitions (C3)", () => {
     expect(isValidTransition(QuestionBankStatus.APPROVED, QuestionBankStatus.AWAITING_HOD_SIGN)).toBe(false);
   });
 
-  it("LOCKED → DRAFT is invalid (immutable)", () => {
-    expect(isValidTransition(QuestionBankStatus.LOCKED, QuestionBankStatus.DRAFT)).toBe(false);
+  it("LOCKED → IN_PROGRESS is valid (unlock)", () => {
+    expect(isValidTransition(QuestionBankStatus.LOCKED, QuestionBankStatus.IN_PROGRESS)).toBe(true);
+  });
+
+  it("LOCKED → DRAFT is valid (unlock to draft)", () => {
+    expect(isValidTransition(QuestionBankStatus.LOCKED, QuestionBankStatus.DRAFT)).toBe(true);
   });
 
   // ----- Service-level enforcement -----

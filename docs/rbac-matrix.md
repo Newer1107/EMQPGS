@@ -14,7 +14,7 @@
 | Update question bank status | Yes | Yes | Yes | No | No |
 | Lock question bank (canonical) | No | Yes | No | No | No |
 | Moderate questions | No | Read | Yes | No | No |
-| Override question slots | No | No | Yes (assigned banks only) | No | No |
+| Override moderation decisions | No | No | Yes (assigned banks only) | No | No |
 | Upload signed HOD report | No | No | Yes | No | No |
 | Coordinator approval | No | Yes | No | No | No |
 | Generate AI reports | Yes | Yes | Yes | No | No |

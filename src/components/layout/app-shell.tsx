@@ -19,6 +19,10 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/users", label: "Users", roles: ["COE"] },
   { href: "/dashboard/coe/departments", label: "Departments", roles: ["COE"] },
   { href: "/dashboard/coe/exam-cycles", label: "Exam Cycles", roles: ["COE"] },
+  { href: "/dashboard/coe/academic-years", label: "Academic Years", roles: ["COE"] },
+  { href: "/dashboard/coe/semesters", label: "Semesters", roles: ["COE"] },
+  { href: "/dashboard/coe/monitoring", label: "Monitoring", roles: ["COE"] },
+  { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },
   // Coordinator
   { href: "/dashboard/coordinator", label: "Coordinator Dashboard", roles: ["COORDINATOR"] },
@@ -29,8 +33,7 @@ const navItems: NavItem[] = [
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
   { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/approved", label: "Approved", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/rejected", label: "Rejected", roles: ["MODERATOR"] },
+  { href: "/dashboard/moderator/signed-reports", label: "Signed Reports", roles: ["MODERATOR"] },
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", roles: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/my-subjects", label: "My Subjects", roles: ["CONTRIBUTOR"] },

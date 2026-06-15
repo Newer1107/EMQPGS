@@ -4,11 +4,10 @@
 
 1. Copy `.env` and adjust values for your environment (no `.env.example` exists — the committed `.env` is the reference)
 2. Run `docker compose up -d mysql minio minio-init`
-3. Run `npm ci`
-4. Run `npx prisma generate`
-5. Run `npm run prisma:migrate`
-6. Run `npm run prisma:seed`
-7. Run `npm run dev`
+3. Run `npm ci` (postinstall runs Prisma generate + verify)
+4. Run `npm run prisma:migrate`
+5. Run `npm run prisma:seed`
+6. Run `npm run dev`
 
 ## Staging
 

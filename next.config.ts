@@ -2,6 +2,16 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async headers() {
+    const isDev = process.env.NODE_ENV === "development";
+
+    // Production: script-src 'self' 'unsafe-inline'
+    // Development: also adds 'unsafe-eval' for Next.js webpack HMR and React dev tools
+    const scriptSrc = [
+      "'self'",
+      "'unsafe-inline'",
+      ...(isDev ? ["'unsafe-eval'"] : []),
+    ].join(" ");
+
     return [
       {
         source: "/(.*)",
@@ -19,7 +29,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob:",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "script-src 'self' 'unsafe-inline'",
+              `script-src ${scriptSrc}`,
               "connect-src 'self'",
               "frame-ancestors 'none'",
               "base-uri 'self'",

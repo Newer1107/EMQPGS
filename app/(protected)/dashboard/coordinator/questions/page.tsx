@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
 
@@ -34,7 +36,7 @@ export default async function CoordinatorQuestionsPage() {
       </div>
       <DataTableCard title="Question Library">
         <Table>
-          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Linked Banks</TH></TR></THead>
+          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Linked Banks</TH><TH>Actions</TH></TR></THead>
           <TBody>
             {questions.map((question) => (
               <TR key={question.id}>
@@ -44,6 +46,11 @@ export default async function CoordinatorQuestionsPage() {
                 <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
                 <TD>{question.bankLinks.map((link) => link.questionBank.examCycle.examType).join(", ") || "None"}</TD>
+                <TD>
+                  <Link href={`/dashboard/coordinator/questions/${question.id}`}>
+                    <Button variant="outline" size="sm">View</Button>
+                  </Link>
+                </TD>
               </TR>
             ))}
           </TBody>

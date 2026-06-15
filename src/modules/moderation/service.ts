@@ -1,11 +1,12 @@
 import {
   NotificationType,
+  Prisma,
   QuestionStatus,
   Role,
   type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
@@ -67,10 +68,19 @@ export class ModeratorService {
       throw new AppError("Question is not in an actionable moderation status.", 409);
     }
 
+    const originalStatus = question.status;
+
     const updated = await prisma.questionLibraryItem.update({
-      where: { id: questionId },
+      where: { id: questionId, status: originalStatus },
       data: { status, reviewedAt: new Date(), moderatorRemark: note ?? null },
       include: { creator: true },
+    }).catch((err: unknown) => {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError(
+          "This question was modified by another moderator. Please refresh and try again.",
+        );
+      }
+      throw err;
     });
 
     await prisma.moderationEvent.create({
@@ -85,7 +95,7 @@ export class ModeratorService {
     await this.notifications.create(
       updated.ownerId,
       action === "QUESTION_APPROVED" ? "Question approved" : action === "QUESTION_REJECTED" ? "Question rejected" : "Revision requested",
-      `Your question in ${question.subjectVersion.subject.subjectName} has been ${action.toLowerCase().replace("_", " ")}.`,
+      `Your question in ${question.subjectVersion.subject.subjectName} has been ${action.toLowerCase().replace(/_/g, " ")}.`,
       "/dashboard/contributor/questions",
       action === "QUESTION_APPROVED" ? NotificationType.SUCCESS : NotificationType.ACTION_REQUIRED,
     );
