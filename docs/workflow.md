@@ -305,7 +305,7 @@ A question enters the system as `DRAFT`, is submitted as `PENDING`, and is then 
 flowchart TD
     subgraph Setup
         A1[COE: Create AcademicYear] --> A2[COE: Create Semester]
-        A2 --> A3[COE: Create ExamCycle]
+        A2 --> A3[COE: Create ExamCycle\n(department-scoped)]
         A3 --> A4[COE: Activate ExamCycle]
     end
 

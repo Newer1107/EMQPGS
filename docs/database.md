@@ -286,12 +286,13 @@ Invariant: Append-only. Records every time a question is included in a paper or 
 | version | Int | For optimistic locking |
 | startDate | DateTime? | |
 | endDate | DateTime? | Required before banks can be locked |
-| departmentId | String? | FK → Department |
+| departmentId | String | FK → Department (required) |
 | academicYearId | String | FK → AcademicYear |
 | semesterId | String | FK → Semester |
 | timetable* | various | Timetable data (JSON) |
 
-**Unique:** `@@unique([semesterId, examType])`
+**Unique:** `@@unique([semesterId, examType, departmentId])`
+* Each department gets its own cycle per (semester, examType). e.g. "Semester V ENDSEM CSE" and "Semester V ENDSEM IT" can coexist.
 
 Invariant: Only ACTIVE cycles can have question bank initialization or locking.
 

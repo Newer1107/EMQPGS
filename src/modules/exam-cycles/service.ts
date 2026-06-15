@@ -23,11 +23,11 @@ export class ExamCycleService {
     }
 
     if (data.status === ExamCycleStatus.ACTIVE) {
-      return this.activateInTransaction(ExamCycleStatus.ACTIVE, data.departmentId ?? null, undefined, data);
+      return this.activateInTransaction(ExamCycleStatus.ACTIVE, data.departmentId, undefined, data);
     }
     return withUniqueCheck(
       () => this.repository.create(data),
-      "ExamCycle_semesterId_examType_key",
+      "ExamCycle_semesterId_examType_departmentId_key",
     );
   }
 
@@ -55,7 +55,7 @@ export class ExamCycleService {
     }
 
     const mergedStatus = data.status ?? entity.status;
-    const mergedDept = data.departmentId ?? entity.departmentId;
+    const mergedDept = entity.departmentId;
 
     if (mergedStatus === ExamCycleStatus.ACTIVE) {
       return this.activateInTransaction(
@@ -71,7 +71,7 @@ export class ExamCycleService {
 
   private async activateInTransaction(
     status: ExamCycleStatus,
-    departmentId: string | null,
+    departmentId: string,
     excludeId?: string,
     updateData?: Partial<ExamCycleInput> | ExamCycleInput,
   ) {
@@ -81,7 +81,7 @@ export class ExamCycleService {
           where: {
             id: excludeId ? { not: excludeId } : undefined,
             status: ExamCycleStatus.ACTIVE,
-            departmentId: departmentId ?? null,
+            departmentId,
           },
         });
 

@@ -79,7 +79,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
 | GET | `/api/exam-cycles` | COE, COORDINATOR | List all |
-| POST | `/api/exam-cycles` | COE | Create |
+| POST | `/api/exam-cycles` | COE | Create (`departmentId` required) |
 | PATCH | `/api/exam-cycles/[id]` | COE | Update (activate/close) |
 
 ---

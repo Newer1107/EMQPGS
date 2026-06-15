@@ -12,7 +12,7 @@ export const examCycleSchema = z.object({
   semesterId: z.string().min(1),
   examType: z.nativeEnum(ExamType),
   status: z.nativeEnum(ExamCycleStatus).optional(),
-  departmentId: z.string().min(1).nullable().optional(),
+  departmentId: z.string().min(1),
   timetableDocumentRef: z.string().trim().min(1),
   timetableIssueDate: z.coerce.date(),
   timetableTitle: z.string().trim().min(1),

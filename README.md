@@ -276,7 +276,7 @@ Creates 2 departments (CSE, ECE), 5 users with password `Password@123`:
 - `contributor@emqpgs.local` (CONTRIBUTOR)
 - `dean@emqpgs.local` (DEAN)
 
-Plus 1 active exam cycle (ENDSEM, 2026-2027, Semester 5), 1 subject (CS501), 1 question bank, and coordinator-CSE department assignment.
+Plus 27 active exam cycles (ENDSEM, 2026-2027, 9 departments × 3 semesters III/V/VII), subjects per department, question banks, and coordinator-department assignments.
 
 ---
 

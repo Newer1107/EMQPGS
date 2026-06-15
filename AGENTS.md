@@ -103,7 +103,7 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 - `contributor@emqpgs.local` (CONTRIBUTOR)
 - `dean@emqpgs.local` (DEAN)
 
-Plus 2 departments (CSE, ECE), 1 active exam cycle, 1 subject, 1 question bank with all 126 slots, and a coordinator↔CSE assignment.
+Plus 9 departments (AIDS, AIML, COMP, CSEC, CIVL, ENCS, INFO, IOT, MME), 27 active exam cycles (9 depts × 3 semesters III/V/VII), subjects per department, question banks, and coordinator↔department assignments.
 
 ## Testing
 

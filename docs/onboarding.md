@@ -48,7 +48,7 @@ src/modules/<feature>/
 └── validation.ts     Zod schemas
 ```
 
-Modules that follow this pattern: `academic-years`, `semesters`, `subject-versions`, `exam-cycles`, `departments`, `users`, `question-library`, `question-banks`, `question-slots`, `coordinator-departments`, `moderator-assignments`.
+Modules that follow this pattern: `academic-years`, `semesters`, `subject-versions`, `exam-cycles` (department-scoped), `departments`, `users`, `question-library`, `question-banks`, `question-slots`, `coordinator-departments`, `moderator-assignments`.
 
 Modules that use direct Prisma calls (no repo layer): `coordinator/`, `reports/`, `readiness/`, `question-bank-metrics/`, `production/`, `moderation/`, `notifications/`, `dashboard/`, `ai/`.
 

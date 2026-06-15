@@ -127,7 +127,7 @@ describe("N14 — Zod .min(1) on ID fields", () => {
 
   it("exam-cycles validation requires non-empty departmentId", () => {
     const src = fs.readFileSync(path.resolve("src/modules/exam-cycles/validation.ts"), "utf-8");
-    expect(src).toContain("departmentId: z.string().min(1).nullable().optional()");
+    expect(src).toContain("departmentId: z.string().min(1),");
   });
 
   it("users validation requires non-empty departmentId", () => {

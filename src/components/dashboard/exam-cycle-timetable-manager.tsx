@@ -43,7 +43,8 @@ type StoredExamCycle = {
   semester: SemesterOption;
   examType: ExamType;
   status: ExamCycleStatus;
-  departmentId: string | null;
+  departmentId: string;
+  department?: { id: string; name: string } | null;
   timetableDocumentRef: string | null;
   timetableIssueDate: string | Date | null;
   timetableTitle: string | null;
@@ -125,7 +126,7 @@ function mapCycleToForm(cycle: StoredExamCycle): FormState {
     semesterId: cycle.semesterId,
     examType: cycle.examType,
     status: cycle.status,
-    departmentId: cycle.departmentId ?? "",
+    departmentId: cycle.departmentId,
     timetableDocumentRef: cycle.timetableDocumentRef ?? "TCET/EXAM/ ___ of 2026",
     timetableIssueDate: toDateInputValue(cycle.timetableIssueDate),
     timetableTitle: cycle.timetableTitle ?? "",
@@ -229,7 +230,7 @@ export function ExamCycleTimetableManager({
       semesterId: form.semesterId,
       examType: form.examType,
       status: form.status,
-      departmentId: form.departmentId || null,
+      departmentId: form.departmentId,
       timetableDocumentRef: form.timetableDocumentRef,
       timetableIssueDate: form.timetableIssueDate,
       timetableTitle: form.timetableTitle,
@@ -345,13 +346,13 @@ export function ExamCycleTimetableManager({
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="cycle-department" className="text-sm font-medium">Department (Optional)</label>
+            <label htmlFor="cycle-department" className="text-sm font-medium">Department</label>
             <Select
               id="cycle-department"
               value={form.departmentId}
               onChange={(event) => updateField("departmentId", event.target.value)}
             >
-              <option value="">No linked department</option>
+              <option value="">Select a department...</option>
               {departments.map((dept) => (
                 <option key={dept.id} value={dept.id}>{dept.name}</option>
               ))}
@@ -431,7 +432,7 @@ export function ExamCycleTimetableManager({
                     <td className="px-2 py-1">{cycle.semester.name}</td>
                     <td className="px-2 py-1">{cycle.examType}</td>
                     <td className="px-2 py-1">{cycle.status}</td>
-                    <td className="px-2 py-1">{/* department name not included */}</td>
+                    <td className="px-2 py-1">{cycle.department?.name ?? ""}</td>
                     <td className="px-2 py-1">
                       <Button type="button" variant="outline" size="sm" onClick={() => editCycle(cycle)}>
                         Edit Stored Cycle

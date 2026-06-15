@@ -262,7 +262,7 @@ model ExamCycle {
   version               Int               @default(0)
   startDate             DateTime?
   endDate               DateTime?
-  departmentId          String?
+  departmentId          String
   academicYearId        String
   semesterId            String
   timetableDocumentRef  String?
@@ -273,14 +273,14 @@ model ExamCycle {
   timetableSignature    String?
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
-  department            Department?       @relation(fields: [departmentId], references: [id])
+  department            Department        @relation(fields: [departmentId], references: [id])
   academicYear          AcademicYear      @relation(fields: [academicYearId], references: [id])
   semester              Semester          @relation(fields: [semesterId], references: [id])
   subjectLinks          SubjectExamCycleLink[]
   questionBanks         QuestionBank[]
   questionUsageHistory  QuestionUsageHistory[] @relation("usageHistoryExamCycle")
 
-  @@unique([semesterId, examType])
+  @@unique([semesterId, examType, departmentId])
   @@index([status, departmentId])
   @@index([departmentId])
   @@index([academicYearId])

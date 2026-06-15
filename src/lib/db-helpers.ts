@@ -5,8 +5,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   Department_code_key: "A department with this code already exists.",
   User_email_key: "A user with this email already exists.",
   Subject_subjectCode_departmentId_key: "This subject code already exists in this department.",
-  ExamCycle_semesterId_examType_key:
-    "An exam cycle with this semester and exam type already exists.",
+  ExamCycle_semesterId_examType_departmentId_key:
+    "An exam cycle with this semester, exam type, and department already exists.",
   QuestionBank_subjectId_examCycleId_key:
     "A question bank already exists for this subject and exam cycle.",
   ModeratorBankAssignment_moderatorId_questionBankId_key:

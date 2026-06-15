@@ -20,6 +20,7 @@ The workflow follows a 4-phase question bank progression: DRAFTING (questions ar
 **Key Entities:**
 - QuestionLibraryItem — standalone, reusable question entity scoped to a SubjectVersion
 - QuestionSlot — sole linkage between QuestionBank and QuestionLibraryItem; position defined by (moduleNumber, marks, slotNumber)
+- ExamCycle — department-scoped. Each department gets its own cycle per (semester, examType). Cross-department cycles are blocked.
 - QuestionBank — container per (Subject, ExamCycle) pair with orthogonal phase and record status
 - PaperPattern — slot grid template generated at bank initialization (126 slots for ENDSEM)
 - ReadinessEngine — advisory gate that evaluates readiness but does not auto-advance

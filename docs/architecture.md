@@ -17,6 +17,7 @@ erDiagram
     Department ||--o{ Subject : "offers"
     Department ||--o{ User : employs
     Department ||--o{ CoordinatorDepartmentAssignment : "assigns coordinator"
+    Department ||--o{ ExamCycle : "scopes cycles"
     User ||--o{ CoordinatorDepartmentAssignment : "assigned as"
     User ||--o{ ModeratorBankAssignment : "assigned as"
     Subject ||--o{ SubjectVersion : versioned
@@ -285,13 +286,14 @@ QuestionBankMetricsService → Direct Prisma calls
 
 ## 10. Invariants
 
-1. **One bank per (subject, exam cycle)** — `@@unique([subjectId, examCycleId])`
-2. **One slot position per bank** — `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
-3. **No duplicate questions per bank** — application-enforced, not schema-level
-4. **ApprovalDecision is write-once** — created in transaction, no update path
-5. **QuestionBankSnapshot is immutable** — created on lock, never modified
-6. **Phase transitions are validated** — via `isValidPhaseTransition()` in `transitions.ts`
-7. **LOCKED banks reject mutations** — via `ensureQuestionBankMutable()` guard
-8. **ReadinessEngine is advisory only** — does not block or auto-advance
-9. **Question status lifecycle** — DRAFT→PENDING→APPROVED|REJECTED|REVISION_REQUESTED→REVISION_SUBMITTED
-10. **QuestionLibraryItem is SubjectVersion-scoped** — cannot exist outside a subject version
+1. **ExamCycle is department-scoped** — `@@unique([semesterId, examType, departmentId])` allows each department to have its own cycle per (semester, examType). Cross-department cycles are prevented.
+2. **One bank per (subject, exam cycle)** — `@@unique([subjectId, examCycleId])`
+3. **One slot position per bank** — `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
+4. **No duplicate questions per bank** — application-enforced, not schema-level
+5. **ApprovalDecision is write-once** — created in transaction, no update path
+6. **QuestionBankSnapshot is immutable** — created on lock, never modified
+7. **Phase transitions are validated** — via `isValidPhaseTransition()` in `transitions.ts`
+8. **LOCKED banks reject mutations** — via `ensureQuestionBankMutable()` guard
+9. **ReadinessEngine is advisory only** — does not block or auto-advance
+10. **Question status lifecycle** — DRAFT→PENDING→APPROVED|REJECTED|REVISION_REQUESTED→REVISION_SUBMITTED
+11. **QuestionLibraryItem is SubjectVersion-scoped** — cannot exist outside a subject version

@@ -246,7 +246,7 @@ Validated: Unique per `(academicYearId, number)`.
 | Academic Year | string (select) | Yes | FK to AcademicYear | 2026-2027 |
 | Semester | string (select) | Yes | FK to Semester | 5 |
 | Exam Type | enum (select) | Yes | ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT | ENDSEM |
-| Department | string (select) | No | FK to Department | CSE |
+| Department | string (select) | Yes | FK to Department (mandatory — scopes the cycle) | CSE |
 | Timetable Title | string | Yes | Exam timetable header | End Semester Examination Nov/Dec 2026 |
 | Timetable Issue Date | date | Yes | When timetable was issued | 2026-10-01 |
 | Timetable Document Ref | string | Yes | Reference number | TTCSE-2026-ENDSEM |
@@ -448,6 +448,7 @@ Validation: questionText min 15 chars. Module 1-6. Marks 2, 5, or 10.
 | academicYearId | string | Yes | FK to AcademicYear | cuid | Min 1 char |
 | semesterId | string | Yes | FK to Semester | cuid | Min 1 char |
 | examType | enum | Yes | Type of exam | ENDSEM | ExamType enum |
+| departmentId | string | Yes | FK to Department (required) | cuid | Department scoping |
 | status | enum | No (default DRAFT) | Cycle status | DRAFT | ExamCycleStatus enum |
 | departmentId | string | No | FK to Department | cuid | Min 1 if provided |
 | timetableDocumentRef | string | Yes | Timetable reference | TTCSE-2026-ENDSEM | Trimmed, min 1 char |

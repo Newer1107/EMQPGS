@@ -120,6 +120,9 @@ export class QuestionBankWorkflowService {
 
     const examCycle = await prisma.examCycle.findUnique({ where: { id: examCycleId } });
     if (!examCycle) throw new NotFoundError("Exam cycle not found");
+    if (examCycle.departmentId !== subject.departmentId) {
+      throw new AppError("Exam cycle must belong to the same department as the subject.", 400);
+    }
 
     const pattern = DEFAULT_PATTERNS[examCycle.examType];
     const slotData = buildSlotsFromPattern(pattern);

@@ -7,7 +7,7 @@ export default async function CoeExamCyclesPage() {
     prisma.academicYear.findMany({ orderBy: { startDate: "desc" } }),
     prisma.examCycle.findMany({
       orderBy: { createdAt: "desc" },
-      include: { academicYear: true, semester: true },
+      include: { academicYear: true, semester: true, department: true },
     }),
   ]);
 
@@ -20,6 +20,7 @@ export default async function CoeExamCyclesPage() {
     examType: cycle.examType,
     status: cycle.status,
     departmentId: cycle.departmentId,
+    department: cycle.department,
     timetableDocumentRef: cycle.timetableDocumentRef,
     timetableIssueDate: cycle.timetableIssueDate,
     timetableTitle: cycle.timetableTitle,
