@@ -2,26 +2,26 @@ import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
 import { AppError, ForbiddenError } from "@/lib/errors";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { z } from "zod";
 
-const service = new CoordinatorService();
+const service = new SubjectManagementService();
 const subjectCreateSchema = z.object({
   name: z.string().trim().min(1, "Subject name is required."),
   code: z.string().trim().min(1, "Subject code is required.").max(20).transform((value) => value.toUpperCase()),
   departmentId: z.string().min(1),
-  semester: z.coerce.number().int().positive(),
+  semesterId: z.string().min(1),
   credits: z.coerce.number().positive(),
 });
 
 export const GET = withApiHandler(async (request, context) => {
   const departmentId = request.nextUrl.searchParams.get("departmentId") ?? undefined;
-  const semester = request.nextUrl.searchParams.get("semester");
+  const semesterId = request.nextUrl.searchParams.get("semesterId") ?? undefined;
   const status = request.nextUrl.searchParams.get("status") as "ACTIVE" | "INACTIVE" | null;
 
   return service.listSubjects(context.user!, {
     departmentId,
-    semester: semester ? Number(semester) : undefined,
+    semesterId,
     status: status ?? undefined,
   });
 }, { roles: [Role.COORDINATOR] });
@@ -38,7 +38,7 @@ export const POST = withApiHandler(
         subjectCode: payload.code,
         subjectName: payload.name,
         departmentId: payload.departmentId,
-        semester: payload.semester,
+        semesterId: payload.semesterId,
         creditLoad: Math.trunc(payload.credits),
       });
     } catch (error) {

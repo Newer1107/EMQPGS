@@ -1,8 +1,8 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 
-const service = new CoordinatorService();
+const service = new QuestionBankWorkflowService();
 
 export const PATCH = withApiHandler(
   async (request, context) => {

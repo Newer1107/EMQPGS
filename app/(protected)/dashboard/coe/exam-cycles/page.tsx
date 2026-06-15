@@ -1,30 +1,43 @@
 import { ExamCycleTimetableManager } from "@/components/dashboard/exam-cycle-timetable-manager";
-import { getAdminData } from "@/lib/server-data";
+import { prisma } from "@/lib/db";
 
-export default async function ExamCyclesManagementPage() {
-  const data = await getAdminData();
+export default async function CoeExamCyclesPage() {
+  const [departments, academicYears, examCycles] = await Promise.all([
+    prisma.department.findMany({ orderBy: { name: "asc" } }),
+    prisma.academicYear.findMany({ orderBy: { startDate: "desc" } }),
+    prisma.examCycle.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { academicYear: true, semester: true },
+    }),
+  ]);
+
+  const initialCycles = examCycles.map((cycle) => ({
+    id: cycle.id,
+    academicYearId: cycle.academicYearId,
+    semesterId: cycle.semesterId,
+    academicYear: cycle.academicYear,
+    semester: cycle.semester,
+    examType: cycle.examType,
+    status: cycle.status,
+    departmentId: cycle.departmentId,
+    timetableDocumentRef: cycle.timetableDocumentRef,
+    timetableIssueDate: cycle.timetableIssueDate,
+    timetableTitle: cycle.timetableTitle,
+    timetableBranch: cycle.timetableBranch,
+    timetableRows: cycle.timetableRows,
+    timetableSignature: cycle.timetableSignature,
+  }));
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Examination Cycles</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create and store examination timetable sheets directly inside each academic cycle</p>
+        <h1 className="text-3xl font-semibold tracking-tight">Exam Cycles</h1>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create and manage examination cycles.</p>
       </div>
       <ExamCycleTimetableManager
-        departments={data.departments.map((department) => ({ id: department.id, name: department.name }))}
-        initialCycles={data.examCycles.map((cycle) => ({
-          id: cycle.id,
-          academicYear: cycle.academicYear,
-          semester: cycle.semester,
-          examType: cycle.examType,
-          status: cycle.status,
-          departmentId: cycle.departmentId,
-          timetableDocumentRef: cycle.timetableDocumentRef,
-          timetableIssueDate: cycle.timetableIssueDate,
-          timetableTitle: cycle.timetableTitle,
-          timetableBranch: cycle.timetableBranch,
-          timetableRows: cycle.timetableRows,
-          timetableSignature: cycle.timetableSignature,
-        }))}
+        departments={departments.map((d) => ({ id: d.id, name: d.name }))}
+        academicYears={academicYears.map((ay) => ({ id: ay.id, code: ay.code }))}
+        initialCycles={initialCycles}
       />
     </div>
   );

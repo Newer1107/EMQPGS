@@ -14,7 +14,7 @@ export default async function AuditPage() {
         <Table>
           <THead><TR><TH>Action</TH><TH>Entity</TH><TH>Actor</TH><TH>Timestamp</TH></TR></THead>
           <TBody>
-            {data.auditLogs.map((log) => (
+            {(data.auditLogs as unknown as Array<{ id: string; action: string; entityType: string; createdAt: string; actor?: { name: string } | null }>).map((log) => (
               <TR key={log.id}>
                 <TD>{log.action}</TD>
                 <TD>{log.entityType}</TD>

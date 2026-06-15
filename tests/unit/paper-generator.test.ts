@@ -33,8 +33,8 @@ describe("PaperGenerator", () => {
     const generated = generator.generate(
       {
         subject: { subjectCode: "CS501" },
-        examCycle: { academicYear: "2026-2027", semester: 5, examType: "ENDSEM" },
-        questions,
+        examCycle: { academicYear: { code: "2026-2027" }, semester: { number: 5 }, examType: "ENDSEM" },
+        bankQuestions: questions.map((q) => ({ question: q })),
         generatedPapers: [],
       } as never,
       ["PAPER_A", "PAPER_B", "PAPER_C"],

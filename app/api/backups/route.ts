@@ -1,8 +1,8 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { ProductionService } from "@/modules/production/service";
+import { BackupService } from "@/modules/production/backup.service";
 
-const service = new ProductionService();
+const service = new BackupService();
 
 export const POST = withApiHandler(
   async (_request, context) => service.runSystemBackup(context.user!),

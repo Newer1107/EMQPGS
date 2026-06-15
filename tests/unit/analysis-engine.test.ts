@@ -9,29 +9,21 @@ describe("AnalysisEngine", () => {
       id: "qb-1",
       subject: { subjectCode: "CS501", subjectName: "Advanced Algorithms" },
       examCycle: { academicYear: "2026-2027", semester: 5, examType: "ENDSEM" },
-      questions: [
-        {
+      bankQuestions: [
+        { question: {
           id: "q-1",
-          moduleNumber: 1,
-          marks: 2,
+          moduleNumber: 1, marks: 2,
           questionText: "Explain the greedy choice property with a suitable algorithmic example.",
-          coMapping: "CO1",
-          rbtLevel: "L2",
-          difficultyLevel: "EASY",
-          status: QuestionStatus.APPROVED,
-          teachingIndex: "T1",
-        },
-        {
+          coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "EASY",
+          status: QuestionStatus.APPROVED, teachingIndex: "T1",
+        } },
+        { question: {
           id: "q-2",
-          moduleNumber: 1,
-          marks: 5,
+          moduleNumber: 1, marks: 5,
           questionText: "Analyze the amortized complexity of a disjoint set union operation sequence.",
-          coMapping: "CO2",
-          rbtLevel: "L4",
-          difficultyLevel: "MEDIUM",
-          status: QuestionStatus.APPROVED,
-          teachingIndex: null,
-        },
+          coMapping: "CO2", rbtLevel: "L4", difficultyLevel: "MEDIUM",
+          status: QuestionStatus.APPROVED, teachingIndex: null,
+        } },
       ],
     } as never);
 

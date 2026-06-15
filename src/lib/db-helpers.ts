@@ -5,8 +5,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   Department_code_key: "A department with this code already exists.",
   User_email_key: "A user with this email already exists.",
   Subject_subjectCode_departmentId_key: "This subject code already exists in this department.",
-  ExamCycle_academicYear_semester_examType_key:
-    "An exam cycle with this academic year, semester, and exam type already exists.",
+  ExamCycle_semesterId_examType_key:
+    "An exam cycle with this semester and exam type already exists.",
   QuestionBank_subjectId_examCycleId_key:
     "A question bank already exists for this subject and exam cycle.",
   ModeratorBankAssignment_moderatorId_questionBankId_key:
@@ -15,9 +15,9 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
     "This coordinator is already assigned to this department.",
   SubjectExamCycleLink_subjectId_examCycleId_key:
     "This subject is already linked to this exam cycle.",
-  Question_slotId_key: "A question already exists for this slot.",
-  TeacherAssignment_questionBankId_teacherId_assignmentRole_moduleNumber_key:
-    "This assignment already exists.",
+  AcademicYear_code_key: "An academic year with this code already exists.",
+  Semester_academicYearId_number_key: "This semester number already exists in this academic year.",
+  SubjectVersion_subjectId_versionNumber_key: "This version number already exists for this subject.",
 };
 
 export function handleUniqueConstraint(

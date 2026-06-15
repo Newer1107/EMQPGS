@@ -16,7 +16,7 @@ export default async function DepartmentsManagementPage() {
           <Table>
             <THead><TR><TH>Name</TH><TH>Code</TH><TH>HOD</TH><TH>Active</TH></TR></THead>
             <TBody>
-              {data.departments.map((department) => (
+              {(data.departments as Array<{ id: string; name: string; code: string; hodName: string; isActive: boolean }>).map((department) => (
                 <TR key={department.id}>
                   <TD className="font-medium">{department.name}</TD>
                   <TD>{department.code}</TD>

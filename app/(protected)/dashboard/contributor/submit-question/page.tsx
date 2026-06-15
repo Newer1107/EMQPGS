@@ -1,27 +1,37 @@
-import { Role } from "@prisma/client";
-import { QuestionWorkspace } from "@/components/questions/workspace";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getQuestionContributionWorkspace } from "@/lib/server-data";
 
-export default async function ContributorSubmitQuestionPage() {
-  const workspace = await getQuestionContributionWorkspace(Role.CONTRIBUTOR);
-  if (!workspace) return null;
-
+export default function ContributorSubmitQuestionPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Submit Question</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Claim a slot, draft a question, and submit it into the moderation workflow.</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create and submit questions to the question library.</p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Submission Guidance</CardTitle>
+          <CardTitle>Question Library</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-[var(--muted-foreground)]">
-          Complete the slot reservation and question form below. Attachments are uploaded through signed URLs and linked to your submission.
+        <CardContent className="text-sm space-y-2">
+          <p>Questions are stored in the question library and linked to subject versions.</p>
+          <p>Use the API to create questions:</p>
+          <pre className="rounded-lg bg-[var(--muted)] p-3 text-xs">
+            POST /api/question-library{'\n'}{'{'}
+            "subjectVersionId": "...",{'\n'}
+            "moduleNumber": 1,{'\n'}
+            "marks": 5,{'\n'}
+            "questionText": "...",{'\n'}
+            "coMapping": "CO1",{'\n'}
+            "rbtLevel": "L3"{'\n'}
+            {'}'}
+          </pre>
+          <p className="mt-4">
+            <Link href="/dashboard/contributor/questions" className="text-[var(--foreground)] underline">
+              View my questions →
+            </Link>
+          </p>
         </CardContent>
       </Card>
-      <QuestionWorkspace actor={workspace.actor} questionBank={workspace.questionBank} mode="contributor" />
     </div>
   );
 }

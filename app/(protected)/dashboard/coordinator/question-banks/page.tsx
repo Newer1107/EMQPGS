@@ -5,21 +5,26 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
 import { questionBankStatusLabels } from "@/lib/constants";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
+import { SubjectManagementService } from "@/modules/coordinator/subject.service";
+import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 
 export default async function QuestionBanksManagementPage() {
   const actor = await getCurrentUserFromCookies();
-  const service = new CoordinatorService();
-  const departmentIds = await service.getAssignedDepartmentIds(actor);
+  const deptUtils = new DepartmentAccessUtils();
+  const bankService = new QuestionBankWorkflowService();
+  const subjectService = new SubjectManagementService();
+  const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
   const [questionBanks, subjects, examCycles] = await Promise.all([
-    service.listQuestionBanks(actor),
-    service.listSubjects(actor, { status: "ACTIVE" }),
+    bankService.listQuestionBanks(actor),
+    subjectService.listSubjects(actor, { status: "ACTIVE" }),
     prisma.examCycle.findMany({
       where: {
         departmentId: { in: departmentIds },
         status: ExamCycleStatus.ACTIVE,
       },
+      include: { academicYear: true, semester: true },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -35,11 +40,11 @@ export default async function QuestionBanksManagementPage() {
           <Table>
             <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH></TR></THead>
             <TBody>
-              {questionBanks.map((bank) => (
+              {(questionBanks as unknown as Array<{ id: string; status: import("@prisma/client").QuestionBankStatus; subject: { subjectCode: string }; examCycle: { semester: { name: string }; academicYear: { code: string } } }>).map((bank) => (
                 <TR key={bank.id}>
                   <TD className="font-medium">{bank.subject.subjectCode}</TD>
-                  <TD>{bank.examCycle.academicYear} / S{bank.examCycle.semester}</TD>
-                  <TD><Badge>{questionBankStatusLabels[bank.status] ?? bank.status}</Badge></TD>
+                  <TD>{bank.examCycle.semester.name} · {bank.examCycle.academicYear.code}</TD>
+                  <TD><Badge>{questionBankStatusLabels[bank.status as import("@prisma/client").QuestionBankStatus] ?? bank.status}</Badge></TD>
                 </TR>
               ))}
             </TBody>
@@ -49,8 +54,8 @@ export default async function QuestionBanksManagementPage() {
           title="Create Question Bank"
           endpoint="/api/question-banks"
           fields={[
-            { name: "subjectId", label: "Subject", type: "select", options: subjects.map((subject) => ({ value: subject.id, label: `${subject.subjectCode} - ${subject.subjectName}` })) },
-            { name: "examCycleId", label: "Exam Cycle", type: "select", options: examCycles.map((cycle) => ({ value: cycle.id, label: `${cycle.academicYear} / S${cycle.semester} / ${cycle.examType}` })) },
+            { name: "subjectId", label: "Subject", type: "select", options: (subjects as Array<{ id: string; subjectCode: string; subjectName: string }>).map((subject) => ({ value: subject.id, label: `${subject.subjectCode} - ${subject.subjectName}` })) },
+            { name: "examCycleId", label: "Exam Cycle", type: "select", options: (examCycles as Array<{ id: string; semester: { name: string }; academicYear: { code: string }; examType: string }>).map((cycle) => ({ value: cycle.id, label: `${cycle.semester.name} · ${cycle.academicYear.code} / ${cycle.examType}` })) },
           ]}
         />
       </div>

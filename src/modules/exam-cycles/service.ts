@@ -13,18 +13,46 @@ export class ExamCycleService {
   }
 
   async create(data: ExamCycleInput) {
+    const semester = await prisma.semester.findUnique({
+      where: { id: data.semesterId },
+      include: { academicYear: true },
+    });
+    if (!semester) throw new NotFoundError("Semester not found");
+    if (semester.academicYearId !== data.academicYearId) {
+      throw new AppError("Semester does not belong to the specified academic year.", 400);
+    }
+
     if (data.status === ExamCycleStatus.ACTIVE) {
       return this.activateInTransaction(ExamCycleStatus.ACTIVE, data.departmentId ?? null, undefined, data);
     }
     return withUniqueCheck(
       () => this.repository.create(data),
-      "ExamCycle_academicYear_semester_examType_key",
+      "ExamCycle_semesterId_examType_key",
     );
   }
 
   async update(id: string, data: Partial<ExamCycleInput>) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Exam cycle not found");
+
+    if (data.semesterId && data.academicYearId) {
+      const semester = await prisma.semester.findUnique({
+        where: { id: data.semesterId },
+        include: { academicYear: true },
+      });
+      if (!semester) throw new NotFoundError("Semester not found");
+      if (semester.academicYearId !== data.academicYearId) {
+        throw new AppError("Semester does not belong to the specified academic year.", 400);
+      }
+    } else if (data.semesterId) {
+      const semester = await prisma.semester.findUnique({
+        where: { id: data.semesterId },
+      });
+      if (!semester) throw new NotFoundError("Semester not found");
+      if (semester.academicYearId !== (data.academicYearId ?? entity.academicYearId)) {
+        throw new AppError("Semester does not belong to the specified academic year.", 400);
+      }
+    }
 
     const mergedStatus = data.status ?? entity.status;
     const mergedDept = data.departmentId ?? entity.departmentId;

@@ -8,8 +8,8 @@ const timetableRowSchema = z.object({
 });
 
 export const examCycleSchema = z.object({
-  academicYear: z.string().regex(/^\d{4}-\d{4}$/),
-  semester: z.coerce.number().int().min(1).max(8),
+  academicYearId: z.string().min(1),
+  semesterId: z.string().min(1),
   examType: z.nativeEnum(ExamType),
   status: z.nativeEnum(ExamCycleStatus).optional(),
   departmentId: z.string().min(1).nullable().optional(),

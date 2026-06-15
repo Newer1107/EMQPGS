@@ -1,10 +1,10 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { z } from "zod";
 
-const service = new CoordinatorService();
+const service = new SubjectManagementService();
 const linkCycleSchema = z.object({
   examCycleId: z.string().min(1),
 });

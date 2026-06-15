@@ -6,12 +6,11 @@ export class DashboardService {
   constructor(private readonly notifications = new NotificationService()) {}
 
   async getRoleDashboard(role: Role, userId: string) {
-    const [userCount, departmentCount, activeCycles, questionBanks, pendingAssignments, notifications] = await Promise.all([
+    const [userCount, departmentCount, activeCycles, questionBanks, notifications] = await Promise.all([
       prisma.user.count(),
       prisma.department.count(),
       prisma.examCycle.count({ where: { status: ExamCycleStatus.ACTIVE } }),
       prisma.questionBank.count(),
-      prisma.teacherAssignment.count({ where: { teacherId: userId } }),
       this.notifications.listForUser(userId),
     ]);
 
@@ -29,7 +28,6 @@ export class DashboardService {
         { label: "Departments", value: departmentCount },
         { label: "Active Cycles", value: activeCycles },
         { label: "Question Banks", value: questionBanks },
-        { label: "My Assignments", value: pendingAssignments },
       ],
       pendingTasks: pendingTasksByRole[role],
       notifications,

@@ -1,5 +1,4 @@
 import {
-  AssignmentRole,
   CourseOutcome,
   DifficultyLevel,
   ExamCycleStatus,
@@ -49,11 +48,6 @@ export const questionBankStatusLabels: Record<QuestionBankStatus, string> = {
   AWAITING_COORDINATOR_APPROVAL: "Awaiting Coordinator Approval",
   APPROVED: "Approved",
   LOCKED: "Locked",
-};
-
-export const assignmentRoleLabels: Record<AssignmentRole, string> = {
-  MODERATOR: "Moderator",
-  CONTRIBUTOR: "Contributor",
 };
 
 export const userStatusLabels: Record<UserStatus, string> = {

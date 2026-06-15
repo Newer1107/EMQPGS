@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
-import { ProductionService } from "@/modules/production/service";
+import { MonitoringService } from "@/modules/production/monitoring.service";
 
-const service = new ProductionService();
+const service = new MonitoringService();
 
 export async function GET(request: NextRequest) {
   const token = request.headers.get("x-health-token");

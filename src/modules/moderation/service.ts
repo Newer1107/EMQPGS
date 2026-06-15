@@ -1,34 +1,18 @@
 import {
   NotificationType,
-  QuestionBankStatus,
   QuestionStatus,
   Role,
-  type Prisma,
   type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { env } from "@/lib/env";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
-import { StorageService } from "@/lib/storage/storage-service";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
-
-type QuestionFilters = {
-  statuses?: QuestionStatus[];
-  moduleNumber?: number;
-  markType?: number;
-  bankId?: string;
-  contributorName?: string;
-  sortBy?: "submittedAtAsc" | "submittedAtDesc" | "markType" | "moduleNumber";
-};
-
-const DEADLINE_REMINDER_DAYS = Number(process.env.MODERATOR_DEADLINE_REMINDER_DAYS ?? "3");
 
 export class ModeratorService {
   constructor(
     private readonly notifications = new NotificationService(),
-    private readonly storage = new StorageService(),
   ) {}
 
   async getAssignedBankIds(actor: Actor) {
@@ -44,449 +28,68 @@ export class ModeratorService {
     return assignments.map((assignment) => assignment.questionBankId);
   }
 
-  async getDashboard(actor: Actor) {
+  async listQuestions(actor: Actor) {
     const bankIds = await this.getAssignedBankIds(actor);
-    await this.ensureModeratorNotifications(actor, bankIds);
-
-    const [questionCounts, revisionRequests, banks, events, notifications] = await Promise.all([
-      prisma.question.groupBy({
-        by: ["status"],
-        where: { questionBankId: { in: bankIds } },
-        _count: { _all: true },
-      }),
-      prisma.question.findMany({
-        where: { questionBankId: { in: bankIds }, status: QuestionStatus.REVISION_REQUESTED },
-        select: {
-          id: true,
-          moduleNumber: true,
-          marks: true,
-          reviewedAt: true,
-          updatedAt: true,
-          contributor: { select: { name: true } },
-          questionBank: { select: { subject: { select: { subjectName: true } } } },
-        },
-        orderBy: { reviewedAt: { sort: "asc", nulls: "last" } },
-      }),
-      prisma.questionBank.findMany({
-        where: { id: { in: bankIds } },
-        select: {
-          id: true,
-          subject: { select: { subjectName: true } },
-          examCycle: { select: { academicYear: true, semester: true, examType: true } },
-          questions: {
-            where: { status: { in: [QuestionStatus.PENDING, QuestionStatus.REVISION_SUBMITTED] } },
-            select: { id: true, status: true },
-          },
-        },
-      }),
-      prisma.moderationEvent.findMany({
-        where: { moderatorId: actor.id },
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        select: {
-          id: true,
-          questionId: true,
-          action: true,
-          createdAt: true,
-          question: {
-            select: {
-              questionBank: { select: { subject: { select: { subjectName: true } } } },
-            },
-          },
-        },
-      }),
-      this.notifications.listForUser(actor.id, 50),
-    ]);
-
-    const pending = questionCounts.find((item) => item.status === QuestionStatus.PENDING)?._count._all ?? 0;
-    const approved = questionCounts.find((item) => item.status === QuestionStatus.APPROVED)?._count._all ?? 0;
-    const rejected = questionCounts.find((item) => item.status === QuestionStatus.REJECTED)?._count._all ?? 0;
-    const revisionRequested = questionCounts.find((item) => item.status === QuestionStatus.REVISION_REQUESTED)?._count._all ?? 0;
-
-    return {
-      summary: {
-        pending,
-        approved,
-        rejected,
-        revisionRequested,
-        awaitingRevisionResubmission: revisionRequested,
-      },
-      awaitingRevisionResubmission: revisionRequests.map((question) => ({
-        id: question.id,
-        subjectName: question.questionBank.subject.subjectName,
-        moduleNumber: question.moduleNumber,
-        markType: question.marks,
-        contributorName: question.contributor.name,
-        revisionRequestedAt: (question.reviewedAt ?? question.updatedAt).toISOString(),
-      })),
-      recentModerationActivity: events.map((event) => ({
-        id: event.id,
-        questionId: event.questionId,
-        subjectName: event.question.questionBank.subject.subjectName,
-        action: event.action,
-        timestamp: event.createdAt.toISOString(),
-      })),
-      quickAccessBanks: banks
-        .map((bank) => {
-          const pendingCount = bank.questions.filter((q) => q.status === QuestionStatus.PENDING).length;
-          const revisionSubmittedCount = bank.questions.filter((q) => q.status === QuestionStatus.REVISION_SUBMITTED).length;
-          return {
-            id: bank.id,
-            subjectName: bank.subject.subjectName,
-            examCycle: `${bank.examCycle.academicYear} / Sem ${bank.examCycle.semester} / ${bank.examCycle.examType}`,
-            pendingCount,
-            revisionSubmittedCount,
-            urgency: pendingCount + revisionSubmittedCount,
-          };
-        })
-        .filter((bank) => bank.urgency > 0)
-        .sort((left, right) => right.urgency - left.urgency || left.subjectName.localeCompare(right.subjectName)),
-      notifications: notifications.map((notification) => ({
-        id: notification.id,
-        title: notification.title,
-        message: notification.message,
-        type: notification.type,
-        actionUrl: notification.actionUrl,
-        isRead: notification.isRead,
-        createdAt: notification.createdAt.toISOString(),
-      })),
-      unreadNotificationCount: notifications.filter((notification) => !notification.isRead).length,
-    };
-  }
-
-  async listQuestions(actor: Actor, filters: QuestionFilters = {}) {
-    const bankIds = await this.getAssignedBankIds(actor);
-    if (filters.bankId && !bankIds.includes(filters.bankId)) {
-      throw new ForbiddenError("You do not have access to that question bank.");
-    }
-
-    const orderBy: Prisma.QuestionOrderByWithRelationInput[] =
-      filters.sortBy === "submittedAtDesc"
-        ? [{ submittedAt: "desc" }]
-        : filters.sortBy === "markType"
-          ? [{ marks: "asc" }, { submittedAt: "asc" }]
-          : filters.sortBy === "moduleNumber"
-            ? [{ moduleNumber: "asc" }, { submittedAt: "asc" }]
-            : [{ submittedAt: "asc" }];
-
-    return prisma.question.findMany({
+    return prisma.questionLibraryItem.findMany({
       where: {
-        questionBankId: { in: filters.bankId ? [filters.bankId] : bankIds },
-        ...(filters.statuses?.length ? { status: { in: filters.statuses } } : {}),
-        ...(filters.moduleNumber ? { moduleNumber: filters.moduleNumber } : {}),
-        ...(filters.markType ? { marks: filters.markType } : {}),
-        ...(filters.contributorName
-          ? {
-              contributor: {
-                OR: [
-                  { name: { contains: filters.contributorName } },
-                  { email: { contains: filters.contributorName } },
-                ],
-              },
-            }
-          : {}),
+        bankLinks: { some: { questionBankId: { in: bankIds } } },
       },
-      orderBy,
-      select: {
-        id: true,
-        questionText: true,
-        moduleNumber: true,
-        marks: true,
-        slotNumber: true,
-        status: true,
-        submittedAt: true,
-        createdAt: true,
-        updatedAt: true,
-        rbtLevel: true,
-        coMapping: true,
-        contributor: { select: { id: true, name: true, email: true } },
-        questionBank: {
-          select: {
-            id: true,
-            status: true,
-            subject: { select: { id: true, subjectName: true, subjectCode: true } },
-            examCycle: { select: { id: true, academicYear: true, semester: true, examType: true } },
-          },
-        },
-      },
-    });
-  }
-
-  async getQuestionDetail(actor: Actor, questionId: string) {
-    const question = await prisma.question.findUnique({
-      where: { id: questionId },
+      orderBy: { createdAt: "desc" },
       include: {
-        contributor: true,
-        questionBank: {
-          include: {
-            subject: true,
-            examCycle: true,
-          },
-        },
-        attachments: {
-          include: {
-            fileAsset: true,
-          },
-        },
-        revisions: {
-          orderBy: { versionNumber: "asc" },
-          include: {
-            submittedBy: true,
-          },
-        },
-        moderationEvents: {
-          orderBy: { createdAt: "asc" },
-          include: {
-            moderator: true,
-          },
-        },
+        subjectVersion: { include: { subject: true } },
+        creator: { select: { id: true, name: true, email: true } },
+        bankLinks: { include: { questionBank: { select: { id: true } } } },
       },
     });
-    if (!question) throw new NotFoundError("Question not found");
-    await this.assertBankAccess(actor, question.questionBankId);
-
-    return {
-      id: question.id,
-      questionText: question.questionText,
-      markType: question.marks,
-      moduleNumber: question.moduleNumber,
-      co: question.coMapping,
-      rbtLevel: question.rbtLevel,
-      difficultyLevel: question.difficultyLevel,
-      status: question.status,
-      submittedAt: question.submittedAt?.toISOString() ?? null,
-      contributor: {
-        id: question.contributor.id,
-        name: question.contributor.name,
-        email: question.contributor.email,
-      },
-      bank: {
-        id: question.questionBank.id,
-        subjectName: question.questionBank.subject.subjectName,
-        subjectCode: question.questionBank.subject.subjectCode,
-        examCycle: `${question.questionBank.examCycle.academicYear} / Sem ${question.questionBank.examCycle.semester} / ${question.questionBank.examCycle.examType}`,
-        status: question.questionBank.status,
-      },
-      attachments: await Promise.all(
-        question.attachments.map(async (attachment) => ({
-          id: attachment.id,
-          fileName: attachment.fileAsset.fileName,
-          mimeType: attachment.fileAsset.mimeType,
-          downloadUrl: (await this.storage.createDownloadLinkForAsset(attachment.fileAsset)).downloadUrl,
-          expiresInSeconds: env.SIGNED_URL_EXPIRY_SECONDS,
-        })),
-      ),
-      revisionHistory: [
-        ...question.revisions.map((revision) => ({
-          id: revision.id,
-          versionNumber: revision.versionNumber,
-          questionText: revision.questionText,
-          actor: revision.submittedBy.name,
-          actorEmail: revision.submittedBy.email,
-          moderatorComment: revision.moderatorComment,
-          submittedAt: revision.submittedAt.toISOString(),
-        })),
-        ...question.moderationEvents.map((event) => ({
-          id: event.id,
-          versionNumber: null,
-          questionText: null,
-          actor: event.moderator.name,
-          actorEmail: event.moderator.email,
-          moderatorComment: event.note,
-          submittedAt: event.createdAt.toISOString(),
-          action: event.action,
-        })),
-      ],
-      moderatorComments: question.moderationEvents
-        .filter((event) => Boolean(event.note))
-        .map((event) => ({
-          id: event.id,
-          action: event.action,
-          note: event.note,
-          moderatorName: event.moderator.name,
-          createdAt: event.createdAt.toISOString(),
-        })),
-    };
   }
 
   async approveQuestion(actor: Actor, questionId: string) {
-    return this.runModerationAction(actor, questionId, "QUESTION_APPROVED", QuestionStatus.APPROVED);
+    return this.moderate(actor, questionId, QuestionStatus.APPROVED, "QUESTION_APPROVED");
   }
 
   async rejectQuestion(actor: Actor, questionId: string, reason: string) {
-    if (!reason.trim()) {
-      throw new AppError("Rejection reason is required.", 400);
-    }
-    return this.runModerationAction(actor, questionId, "QUESTION_REJECTED", QuestionStatus.REJECTED, reason.trim(), true);
+    if (!reason.trim()) throw new AppError("Rejection reason is required.", 400);
+    return this.moderate(actor, questionId, QuestionStatus.REJECTED, "QUESTION_REJECTED", reason);
   }
 
   async requestRevision(actor: Actor, questionId: string, instructions: string) {
-    if (!instructions.trim()) {
-      throw new AppError("Revision instructions are required.", 400);
-    }
-    return this.runModerationAction(actor, questionId, "REVISION_REQUESTED", QuestionStatus.REVISION_REQUESTED, instructions.trim());
+    if (!instructions.trim()) throw new AppError("Revision instructions are required.", 400);
+    return this.moderate(actor, questionId, QuestionStatus.REVISION_REQUESTED, "REVISION_REQUESTED", instructions);
   }
 
-  async overrideQuestion(actor: Actor, questionId: string) {
-    const question = await prisma.question.findUnique({
+  private async moderate(actor: Actor, questionId: string, status: QuestionStatus, action: string, note?: string) {
+    const question = await prisma.questionLibraryItem.findUnique({
       where: { id: questionId },
-      include: {
-        questionBank: {
-          include: { subject: true },
-        },
-      },
+      include: { creator: true, subjectVersion: { include: { subject: true } } },
     });
     if (!question) throw new NotFoundError("Question not found");
-    await this.assertBankAccess(actor, question.questionBankId);
-    if (question.status !== QuestionStatus.APPROVED) {
-      throw new AppError("Question must be in APPROVED status to override.", 409);
-    }
-    if (question.questionBank.status === QuestionBankStatus.LOCKED) {
-      throw new AppError("Cannot override - question bank is locked.", 409);
+    if (question.status !== QuestionStatus.PENDING && question.status !== QuestionStatus.REVISION_SUBMITTED) {
+      throw new AppError("Question is not in an actionable moderation status.", 409);
     }
 
-    const updated = await prisma.question.update({
+    const updated = await prisma.questionLibraryItem.update({
       where: { id: questionId },
-      data: {
-        status: QuestionStatus.PENDING,
-        reviewedAt: new Date(),
-      },
-      include: {
-        contributor: true,
-        questionBank: { include: { subject: true } },
-      },
+      data: { status, reviewedAt: new Date(), moderatorRemark: note ?? null },
+      include: { creator: true },
     });
 
     await prisma.moderationEvent.create({
       data: {
         questionId,
         moderatorId: actor.id,
-        action: "MODERATION_OVERRIDE",
+        action,
+        note: note ?? null,
       },
     });
-
-    return updated;
-  }
-
-  private async assertBankAccess(actor: Actor, questionBankId: string) {
-    const bankIds = await this.getAssignedBankIds(actor);
-    if (!bankIds.includes(questionBankId)) {
-      throw new ForbiddenError("You do not have access to that question bank.");
-    }
-  }
-
-  private async runModerationAction(
-    actor: Actor,
-    questionId: string,
-    action: "QUESTION_APPROVED" | "QUESTION_REJECTED" | "REVISION_REQUESTED",
-    status: QuestionStatus,
-    note?: string,
-    releaseSlot = false,
-  ) {
-    const question = await prisma.question.findUnique({
-      where: { id: questionId },
-      include: {
-        contributor: true,
-        questionBank: {
-          include: { subject: true },
-        },
-      },
-    });
-    if (!question) throw new NotFoundError("Question not found");
-    await this.assertBankAccess(actor, question.questionBankId);
-
-    if (question.status !== QuestionStatus.PENDING && question.status !== QuestionStatus.REVISION_SUBMITTED) {
-      throw new AppError("Question is not in an actionable moderation status.", 409);
-    }
-
-    const updated = await prisma.$transaction(async (tx) => {
-      const result = await tx.question.update({
-        where: { id: questionId },
-        data: {
-          status,
-          reviewedAt: new Date(),
-          moderatorRemark: note ?? null,
-          ...(releaseSlot ? { slotId: null } : {}),
-        },
-        include: {
-          contributor: true,
-          questionBank: { include: { subject: true } },
-        },
-      });
-
-      if (releaseSlot && question.slotId) {
-        await tx.questionSlot.update({
-          where: { id: question.slotId },
-          data: {
-            reservedById: null,
-            reservedAt: null,
-            isLocked: false,
-          },
-        });
-      }
-
-      await tx.moderationEvent.create({
-        data: {
-          questionId,
-          moderatorId: actor.id,
-          action,
-          note: note ?? null,
-        },
-      });
-
-      return result;
-    });
-
-    const message =
-      action === "QUESTION_APPROVED"
-        ? `Your question in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber} has been approved.`
-        : action === "QUESTION_REJECTED"
-          ? `Your question in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber} has been rejected. Reason: ${note}`
-          : `Revision requested for your question in ${updated.questionBank.subject.subjectName} - Module ${updated.moduleNumber}. Instructions: ${note}`;
 
     await this.notifications.create(
-      updated.contributor.id,
+      updated.ownerId,
       action === "QUESTION_APPROVED" ? "Question approved" : action === "QUESTION_REJECTED" ? "Question rejected" : "Revision requested",
-      message,
+      `Your question in ${question.subjectVersion.subject.subjectName} has been ${action.toLowerCase().replace("_", " ")}.`,
       "/dashboard/contributor/questions",
       action === "QUESTION_APPROVED" ? NotificationType.SUCCESS : NotificationType.ACTION_REQUIRED,
     );
 
     return updated;
-  }
-
-  private async ensureModeratorNotifications(actor: Actor, bankIds: string[]) {
-    const banks = await prisma.questionBank.findMany({
-      where: { id: { in: bankIds } },
-      include: {
-        subject: true,
-        questions: true,
-      },
-    });
-
-    const writes: Array<Promise<unknown>> = [];
-
-    for (const bank of banks) {
-      const dueDate = bank.subject.questionBankDueDate;
-      const diffDays = Math.ceil((dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-      if (diffDays >= 0 && diffDays <= DEADLINE_REMINDER_DAYS) {
-        writes.push(
-          prisma.notification.upsert({
-            where: { id: `moderator-deadline-${actor.id}-${bank.id}-${diffDays}` },
-            update: {},
-            create: {
-              id: `moderator-deadline-${actor.id}-${bank.id}-${diffDays}`,
-              recipientId: actor.id,
-              title: "Bank approaching deadline",
-              message: `Reminder: ${bank.subject.subjectName} question bank moderation is due in ${diffDays} days.`,
-              actionUrl: `/dashboard/moderator/questions?bankId=${bank.id}`,
-              type: NotificationType.WARNING,
-            },
-          }),
-        );
-      }
-    }
-
-    await Promise.all(writes);
   }
 }

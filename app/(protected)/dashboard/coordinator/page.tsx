@@ -18,7 +18,7 @@ export default async function CoordinatorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Assigned Departments</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.assignedDepartments.map((department) => (
+            {data.assignedDepartments.map((department: { id: string; name: string; activeSubjects: number; activeQuestionBanks: number }) => (
               <div key={department.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{department.name}</p>
                 <p className="text-[var(--muted-foreground)]">{department.activeSubjects} active subjects · {department.activeQuestionBanks} active question banks</p>
@@ -29,7 +29,7 @@ export default async function CoordinatorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Active Exam Cycles</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.activeExamCycles.map((cycle) => (
+            {data.activeExamCycles.map((cycle: { id: string; name: string; startDate: string | null; endDate: string | null; department: string; initializedBanks: number }) => (
               <div key={cycle.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{cycle.name}</p>
                 <p className="text-[var(--muted-foreground)]">{cycle.department} · {cycle.initializedBanks} banks initialized</p>
@@ -40,7 +40,7 @@ export default async function CoordinatorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Per-Subject Bank Fill Status</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.subjectBankStatuses.map((bank) => (
+            {data.subjectBankStatuses.map((bank: { id: string; subjectName: string; subjectCode: string; department: string; examCycle: string; totalSlots: number; filledCount: number; approvedCount: number; pendingModerationCount: number; rejectedCount: number; fillPercentage: number }) => (
               <div key={bank.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{bank.subjectCode} · {bank.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">{bank.department} · {bank.examCycle}</p>
@@ -52,7 +52,7 @@ export default async function CoordinatorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Recent Contribution Activity</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.recentContributionActivity.map((question) => (
+            {data.recentContributionActivity.map((question: { id: string; subjectName: string; contributorName: string; status: string; submittedAt: string }) => (
               <div key={question.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{question.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">{question.contributorName} · {question.status}</p>
@@ -63,7 +63,7 @@ export default async function CoordinatorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Pending Teacher Assignments</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.pendingTeacherAssignments.map((item) => (
+            {data.pendingTeacherAssignments.map((item: { bankId: string; subjectName: string; moduleNumber: number }) => (
               <div key={`${item.bankId}-${item.moduleNumber}`} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{item.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">Module {item.moduleNumber}</p>
@@ -78,7 +78,7 @@ export default async function CoordinatorDashboardPage() {
           <CardHeader><CardTitle>Notification Inbox</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="font-medium">Unread: {data.unreadNotificationCount}</p>
-            {data.notifications.map((notification) => (
+            {data.notifications.map((notification: { id: string; title: string; message: string; type: string; actionUrl: string | null; isRead: boolean; createdAt: string }) => (
               <div key={notification.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{notification.title}</p>
                 <p className="text-[var(--muted-foreground)]">{notification.message}</p>

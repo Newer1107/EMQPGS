@@ -1,13 +1,25 @@
-import { Role } from "@prisma/client";
+import { Role, QuestionStatus } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { ModeratorService } from "@/modules/moderation/service";
-
-const service = new ModeratorService();
+import { prisma } from "@/lib/db";
+import { NotFoundError } from "@/lib/errors";
 
 export const GET = withApiHandler(
-  async (request, context) => {
-    const id = request.nextUrl.pathname.split("/").pop()!;
-    return service.getQuestionDetail(context.user!, id);
+  async (_request, context) => {
+    const id = _request.nextUrl.pathname.split("/").pop()!;
+    const question = await prisma.questionLibraryItem.findUnique({
+      where: { id },
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        subjectVersion: { include: { subject: true, effectiveFromAcademicYear: true } },
+        bankLinks: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
+        moderationEvents: {
+          orderBy: { createdAt: "asc" },
+          include: { moderator: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    if (!question) throw new NotFoundError("Question not found");
+    return question;
   },
   { roles: [Role.MODERATOR] },
 );

@@ -1,11 +1,12 @@
-import { ExamType, PaperVariant, QuestionStatus, type Prisma, type Question } from "@prisma/client";
+import { PaperVariant, QuestionStatus, type Prisma } from "@prisma/client";
+import type { QuestionLibraryItem } from "@prisma/client";
 import { AppError } from "@/lib/errors";
 
 type QuestionBankForPaper = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: true;
-    questions: true;
+    examCycle: { include: { academicYear: true, semester: true } };
+    bankQuestions: { include: { question: true } };
     generatedPapers: {
       include: {
         items: {
@@ -18,7 +19,7 @@ type QuestionBankForPaper = Prisma.QuestionBankGetPayload<{
 
 export type GeneratedPaperPayload = {
   variant: PaperVariant;
-  selectedQuestions: Question[];
+  selectedQuestions: QuestionLibraryItem[];
   inventoryWarnings: string[];
 };
 
@@ -27,19 +28,8 @@ const marksPattern = [2, 5, 10] as const;
 
 export class PaperGenerator {
   generate(questionBank: QuestionBankForPaper, variants: PaperVariant[]) {
-    const approvedQuestions = questionBank.questions.filter((question) => question.status === QuestionStatus.APPROVED);
+    const approvedQuestions = questionBank.bankQuestions.map((bq) => bq.question).filter((question) => question.status === QuestionStatus.APPROVED);
     if (!approvedQuestions.length) throw new AppError("No approved inventory available for paper generation", 409);
-
-    const recentlyUsed = new Set(
-      approvedQuestions
-        .filter(
-          (question) =>
-            question.lastUsedYear === questionBank.examCycle.academicYear &&
-            question.lastUsedSemester === questionBank.examCycle.semester &&
-            question.lastUsedType === questionBank.examCycle.examType,
-        )
-        .map((question) => question.id),
-    );
 
     const historicalExclusion = new Set(
       questionBank.generatedPapers.flatMap((paper) => paper.items.map((item) => item.questionId)),
@@ -47,7 +37,7 @@ export class PaperGenerator {
 
     const consumed = new Set<string>();
     const generated = variants.map((variant) => {
-      const selectedQuestions: Question[] = [];
+      const selectedQuestions: QuestionLibraryItem[] = [];
 
       for (const moduleNumber of modules) {
         for (const marks of marksPattern) {
@@ -55,7 +45,6 @@ export class PaperGenerator {
             .filter((question) => question.moduleNumber === moduleNumber && question.marks === marks)
             .filter((question) => !consumed.has(question.id))
             .filter((question) => !historicalExclusion.has(question.id))
-            .filter((question) => !recentlyUsed.has(question.id))
             .sort((left, right) => this.rankQuestion(left) - this.rankQuestion(right))[0];
 
           if (!candidate) {
@@ -74,23 +63,17 @@ export class PaperGenerator {
     return generated;
   }
 
-  private rankQuestion(question: Question) {
-    const usagePenalty = question.usageCount * 10;
-    const recencyPenalty = question.lastUsedExam ? 20 : 0;
+  private rankQuestion(question: QuestionLibraryItem) {
     const difficultyWeight = question.difficultyLevel === "MEDIUM" ? 0 : question.difficultyLevel === "EASY" ? 2 : 4;
-    return usagePenalty + recencyPenalty + difficultyWeight;
+    return difficultyWeight;
   }
 
-  private inventoryWarnings(approvedQuestions: Question[], usedCount: number) {
+  private inventoryWarnings(approvedQuestions: QuestionLibraryItem[], usedCount: number) {
     const remaining = approvedQuestions.length - usedCount;
     const warnings: string[] = [];
     if (remaining < 5) warnings.push("Remaining approved inventory is below warning threshold (< 5).");
     if (remaining < 2) warnings.push("Remaining approved inventory is below critical threshold (< 2).");
     if (remaining <= 0) warnings.push("Inventory exhausted. Further generation must be blocked.");
     return warnings;
-  }
-
-  static toLastUsedExam(examType: ExamType) {
-    return examType.replaceAll("_", " ");
   }
 }

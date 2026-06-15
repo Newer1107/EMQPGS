@@ -36,7 +36,7 @@ export default async function CoeDashboardPage() {
               <p className="text-sm text-[var(--muted-foreground)]">No notifications</p>
             ) : (
               <ul className="space-y-2">
-                {data.notifications.map((item) => <li key={item.id} className="text-sm">{item.title}</li>)}
+                {(data.notifications as Array<{ id: string; title: string }>).map((item) => <li key={item.id} className="text-sm">{item.title}</li>)}
               </ul>
             )}
           </CardContent>

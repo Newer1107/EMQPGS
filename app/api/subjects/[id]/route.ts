@@ -1,14 +1,14 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { z } from "zod";
 
-const service = new CoordinatorService();
+const service = new SubjectManagementService();
 const subjectUpdateSchema = z.object({
   subjectCode: z.string().min(2).max(20).trim().toUpperCase().optional(),
   subjectName: z.string().min(2).trim().optional(),
-  semester: z.coerce.number().int().min(1).max(8).optional(),
+  semesterId: z.string().min(1).optional(),
   creditLoad: z.coerce.number().int().min(1).max(10).optional(),
 });
 

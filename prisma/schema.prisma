@@ -97,11 +97,6 @@ enum BackupStatus {
   EXPIRED
 }
 
-enum AssignmentRole {
-  MODERATOR
-  CONTRIBUTOR
-}
-
 enum NotificationType {
   INFO
   SUCCESS
@@ -142,6 +137,62 @@ enum QuestionStatus {
   REVISION_SUBMITTED
 }
 
+enum AcademicYearStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum SubjectVersionStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model AcademicYear {
+  id        String            @id @default(cuid())
+  code      String            @unique
+  startDate DateTime
+  endDate   DateTime
+  status    AcademicYearStatus @default(ACTIVE)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  semesters Semester[]
+  examCycles ExamCycle[]
+  subjectVersions SubjectVersion[] @relation("subjectVersionAcademicYear")
+}
+
+model Semester {
+  id            String        @id @default(cuid())
+  number        Int
+  name          String
+  academicYearId String
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id])
+  subjects      Subject[]
+  examCycles    ExamCycle[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@unique([academicYearId, number])
+  @@index([academicYearId])
+}
+
+model SubjectVersion {
+  id                         String                @id @default(cuid())
+  subjectId                  String
+  versionNumber              Int
+  title                      String
+  syllabusDescription        String?
+  effectiveFromAcademicYearId String
+  status                     SubjectVersionStatus  @default(ACTIVE)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  subject                    Subject               @relation(fields: [subjectId], references: [id])
+  effectiveFromAcademicYear  AcademicYear          @relation("subjectVersionAcademicYear", fields: [effectiveFromAcademicYearId], references: [id])
+  libraryItems               QuestionLibraryItem[]
+
+  @@unique([subjectId, versionNumber])
+  @@index([subjectId, status])
+}
+
 model Department {
   id           String    @id @default(cuid())
   name         String
@@ -171,17 +222,17 @@ model User {
   updatedAt        DateTime            @updatedAt
   department       Department?         @relation(fields: [departmentId], references: [id])
   coordinatorDepartments CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
-  assignments      TeacherAssignment[] @relation("assignedTeacher")
-  assignedBy       TeacherAssignment[] @relation("assignedBy")
   moderatorBankAssignments ModeratorBankAssignment[] @relation("moderatorBankUser")
   notifications    Notification[]
   auditLogs        AuditLog[]
   questionBanks    QuestionBank[]      @relation("questionBankCreator")
-  questionSlots    QuestionSlot[]      @relation("slotReservedBy")
-  contributedQuestions Question[]      @relation("questionContributor")
+  createdQuestions  QuestionLibraryItem[] @relation("questionCreator")
+  ownedQuestions    QuestionLibraryItem[] @relation("questionOwner")
   moderationEvents ModerationEvent[]   @relation("moderationEventActor")
-  submittedRevisions QuestionRevision[] @relation("revisionSubmitter")
-  uploadedAttachments QuestionAttachment[] @relation("attachmentUploader")
+  revisionChanges   QuestionRevision[]   @relation("revisionChangedBy")
+  ownershipToUser   QuestionOwnershipHistory[] @relation("ownershipToUser")
+  ownershipFromUser QuestionOwnershipHistory[] @relation("ownershipFromUser")
+  ownershipTransferredBy QuestionOwnershipHistory[] @relation("ownershipTransferredBy")
   deanReviews      DeanReview[]        @relation("deanReviewSelector")
   exportArtifacts  ExportArtifact[]    @relation("exportArtifactGenerator")
   backupsTriggered SystemBackup[]      @relation("backupTrigger")
@@ -192,14 +243,14 @@ model User {
 
 model ExamCycle {
   id                    String            @id @default(cuid())
-  academicYear          String
-  semester              Int
   examType              ExamType
   status                ExamCycleStatus   @default(DRAFT)
   version               Int               @default(0)
   startDate             DateTime?
   endDate               DateTime?
   departmentId          String?
+  academicYearId        String
+  semesterId            String
   timetableDocumentRef  String?
   timetableIssueDate    DateTime?
   timetableTitle        String?
@@ -209,33 +260,39 @@ model ExamCycle {
   createdAt             DateTime          @default(now())
   updatedAt             DateTime          @updatedAt
   department            Department?       @relation(fields: [departmentId], references: [id])
+  academicYear          AcademicYear      @relation(fields: [academicYearId], references: [id])
+  semester              Semester          @relation(fields: [semesterId], references: [id])
   subjectLinks          SubjectExamCycleLink[]
   questionBanks         QuestionBank[]
+  questionUsageHistory  QuestionUsageHistory[] @relation("usageHistoryExamCycle")
 
-  @@unique([academicYear, semester, examType])
+  @@unique([semesterId, examType])
   @@index([status, departmentId])
   @@index([departmentId])
+  @@index([academicYearId])
+  @@index([semesterId])
 }
 
 model Subject {
   id                  String         @id @default(cuid())
   subjectCode         String
   subjectName         String
-  academicYear        String
-  semester            Int
   credits             Int
   status              SubjectStatus  @default(ACTIVE)
   questionBankDueDate DateTime
   departmentId        String
+  semesterId          String
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   department          Department     @relation(fields: [departmentId], references: [id])
+  semester            Semester       @relation(fields: [semesterId], references: [id])
   examCycleLinks      SubjectExamCycleLink[]
   questionBanks       QuestionBank[]
+  versions            SubjectVersion[]
 
   @@unique([subjectCode, departmentId])
   @@index([departmentId])
-  @@index([semester])
+  @@index([semesterId])
 }
 
 model QuestionBank {
@@ -251,10 +308,8 @@ model QuestionBank {
   subject      Subject             @relation(fields: [subjectId], references: [id])
   examCycle    ExamCycle           @relation(fields: [examCycleId], references: [id])
   createdBy    User                @relation("questionBankCreator", fields: [createdById], references: [id])
-  assignments  TeacherAssignment[]
   moderatorAssignments ModeratorBankAssignment[]
-  questionSlots QuestionSlot[]
-  questions    Question[]
+  bankQuestions QuestionBankQuestion[]
   aiReports    AiReport[]
   generatedPapers GeneratedPaper[]
   deanReview   DeanReview?
@@ -271,21 +326,107 @@ model QuestionBank {
   @@index([subjectId])
 }
 
-model TeacherAssignment {
-  id             String         @id @default(cuid())
-  questionBankId String
-  teacherId      String
-  assignmentRole AssignmentRole
-  moduleNumber   Int?
-  assignedById   String
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  questionBank   QuestionBank   @relation(fields: [questionBankId], references: [id])
-  teacher        User           @relation("assignedTeacher", fields: [teacherId], references: [id])
-  assignedBy     User           @relation("assignedBy", fields: [assignedById], references: [id])
+model QuestionLibraryItem {
+  id              String          @id @default(cuid())
+  subjectVersionId String
+  moduleNumber    Int
+  marks           Int
+  questionText    String
+  coMapping       CourseOutcome
+  rbtLevel        RbtLevel
+  difficultyLevel DifficultyLevel?
+  teachingIndex   String?
+  status          QuestionStatus  @default(DRAFT)
+  createdById     String
+  ownerId         String
+  moderatorRemark String?
+  submittedAt     DateTime?
+  reviewedAt      DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  subjectVersion  SubjectVersion  @relation(fields: [subjectVersionId], references: [id])
+  creator         User            @relation("questionCreator", fields: [createdById], references: [id])
+  owner           User            @relation("questionOwner", fields: [ownerId], references: [id])
+  moderationEvents ModerationEvent[]
+  bankLinks       QuestionBankQuestion[]
+  generatedPaperItems GeneratedPaperItem[]
+  revisionHistory QuestionRevision[]
+  ownershipHistory QuestionOwnershipHistory[]
+  usageHistory    QuestionUsageHistory[]
 
-  @@unique([questionBankId, teacherId, assignmentRole, moduleNumber])
-  @@index([teacherId])
+  @@index([subjectVersionId, moduleNumber, marks])
+  @@index([createdById, status])
+  @@index([ownerId])
+  @@index([status])
+}
+
+model QuestionOwnershipHistory {
+  id             String             @id @default(cuid())
+  questionId     String
+  fromUserId     String
+  toUserId       String
+  transferredById String
+  reason         String?
+  transferredAt  DateTime           @default(now())
+  question       QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  fromUser       User              @relation("ownershipFromUser", fields: [fromUserId], references: [id])
+  toUser         User               @relation("ownershipToUser", fields: [toUserId], references: [id])
+  transferredBy  User               @relation("ownershipTransferredBy", fields: [transferredById], references: [id])
+
+  @@index([questionId, transferredAt])
+}
+
+model QuestionRevision {
+  id               String             @id @default(cuid())
+  questionId       String
+  revisionNumber   Int
+  snapshotQuestionText String
+  snapshotModule   Int
+  snapshotMarks    Int
+  snapshotCo       CourseOutcome
+  snapshotRbt      RbtLevel
+  snapshotDifficulty DifficultyLevel?
+  snapshotTeachingIndex String?
+  changedById      String
+  changeReason     String?
+  createdAt        DateTime           @default(now())
+  question         QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  changedBy        User               @relation("revisionChangedBy", fields: [changedById], references: [id])
+
+  @@unique([questionId, revisionNumber])
+  @@index([questionId, createdAt])
+}
+
+model QuestionUsageHistory {
+  id                   String             @id @default(cuid())
+  questionId           String
+  examCycleId          String?
+  generatedPaperId     String?
+  generatedPaperItemId String?
+  academicYearId       String?
+  semesterId           String?
+  examType             ExamType?
+  usedAt               DateTime           @default(now())
+  question             QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  examCycle            ExamCycle?         @relation("usageHistoryExamCycle", fields: [examCycleId], references: [id])
+  generatedPaper       GeneratedPaper?    @relation("usageHistoryGeneratedPaper", fields: [generatedPaperId], references: [id])
+  generatedPaperItem   GeneratedPaperItem? @relation("usageHistoryGeneratedPaperItem", fields: [generatedPaperItemId], references: [id])
+
+  @@index([questionId, usedAt])
+  @@index([academicYearId])
+}
+
+model QuestionBankQuestion {
+  id              String        @id @default(cuid())
+  questionBankId  String
+  questionId      String
+  linkedAt        DateTime      @default(now())
+  questionBank    QuestionBank  @relation(fields: [questionBankId], references: [id])
+  question        QuestionLibraryItem @relation(fields: [questionId], references: [id])
+
+  @@unique([questionBankId, questionId])
+  @@index([questionBankId])
+  @@index([questionId])
 }
 
 model CoordinatorDepartmentAssignment {
@@ -355,84 +496,12 @@ model FileAsset {
   linkedEntityId   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-  attachments      QuestionAttachment[]
   aiReportsJson    AiReport[]      @relation("aiReportJsonAsset")
   aiReportsPdf     AiReport[]      @relation("aiReportPdfAsset")
   generatedPaperFiles GeneratedPaper[] @relation("generatedPaperFileAsset")
   signedQuestionBanks QuestionBank[] @relation("questionBankSignedReport")
   exportArtifacts ExportArtifact[] @relation("exportArtifactFileAsset")
   systemBackups   SystemBackup[]   @relation("systemBackupFileAsset")
-}
-
-model QuestionSlot {
-  id              String       @id @default(cuid())
-  questionBankId  String
-  moduleNumber    Int
-  marks           Int
-  slotNumber      Int
-  version         Int          @default(0)
-  reservedById    String?
-  reservedAt      DateTime?
-  isLocked        Boolean      @default(false)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
-  reservedBy      User?        @relation("slotReservedBy", fields: [reservedById], references: [id])
-  question        Question?
-
-  @@unique([questionBankId, moduleNumber, marks, slotNumber])
-}
-
-model Question {
-  id              String           @id @default(cuid())
-  questionBankId  String
-  slotId          String?          @unique
-  version         Int              @default(0)
-  questionText    String
-  moduleNumber    Int
-  marks           Int
-  slotNumber      Int
-  coMapping       CourseOutcome
-  rbtLevel        RbtLevel
-  teachingIndex   String?
-  difficultyLevel DifficultyLevel?
-  contributorId   String
-  status          QuestionStatus   @default(DRAFT)
-  moderatorRemark String?
-  submittedAt     DateTime?
-  reviewedAt      DateTime?
-  usageCount      Int              @default(0)
-  lastUsedExam    String?
-  lastUsedYear    String?
-  lastUsedSemester Int?
-  lastUsedType    ExamType?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  questionBank    QuestionBank     @relation(fields: [questionBankId], references: [id])
-  slot            QuestionSlot?    @relation(fields: [slotId], references: [id])
-  contributor     User             @relation("questionContributor", fields: [contributorId], references: [id])
-  moderationEvents ModerationEvent[]
-  revisions       QuestionRevision[]
-  attachments     QuestionAttachment[]
-  generatedPaperItems GeneratedPaperItem[]
-
-  @@index([questionBankId, moduleNumber, marks, slotNumber])
-  @@index([contributorId, status])
-  @@index([status])
-}
-
-model QuestionAttachment {
-  id           String    @id @default(cuid())
-  questionId   String
-  fileAssetId  String
-  uploadedById String
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  question     Question   @relation(fields: [questionId], references: [id])
-  fileAsset    FileAsset  @relation(fields: [fileAssetId], references: [id])
-  uploadedBy   User       @relation("attachmentUploader", fields: [uploadedById], references: [id])
-
-  @@unique([questionId, fileAssetId])
 }
 
 model ModerationEvent {
@@ -442,26 +511,11 @@ model ModerationEvent {
   action      String
   note        String?
   createdAt   DateTime @default(now())
-  question    Question @relation(fields: [questionId], references: [id])
+  question    QuestionLibraryItem @relation(fields: [questionId], references: [id])
   moderator   User     @relation("moderationEventActor", fields: [moderatorId], references: [id])
 
   @@index([questionId, createdAt])
   @@index([moderatorId, createdAt])
-}
-
-model QuestionRevision {
-  id               String   @id @default(cuid())
-  questionId       String
-  versionNumber    Int
-  questionText     String
-  submittedById    String
-  submittedAt      DateTime
-  moderatorComment String?
-  question         Question @relation(fields: [questionId], references: [id])
-  submittedBy      User     @relation("revisionSubmitter", fields: [submittedById], references: [id])
-
-  @@unique([questionId, versionNumber])
-  @@index([questionId, submittedAt])
 }
 
 model ModeratorBankAssignment {
@@ -517,6 +571,7 @@ model GeneratedPaper {
   questionBank      QuestionBank           @relation(fields: [questionBankId], references: [id])
   paperFileAsset    FileAsset?             @relation("generatedPaperFileAsset", fields: [paperFileAssetId], references: [id])
   items             GeneratedPaperItem[]
+  usageHistoryRecords QuestionUsageHistory[] @relation("usageHistoryGeneratedPaper")
 
   @@unique([questionBankId, variant])
 }
@@ -526,8 +581,9 @@ model GeneratedPaperItem {
   generatedPaperId  String
   questionId        String
   createdAt         DateTime       @default(now())
-  generatedPaper    GeneratedPaper @relation(fields: [generatedPaperId], references: [id])
-  question          Question       @relation(fields: [questionId], references: [id])
+  generatedPaper      GeneratedPaper @relation(fields: [generatedPaperId], references: [id])
+  question            QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  usageHistoryRecords QuestionUsageHistory[] @relation("usageHistoryGeneratedPaperItem")
 
   @@unique([generatedPaperId, questionId])
 }

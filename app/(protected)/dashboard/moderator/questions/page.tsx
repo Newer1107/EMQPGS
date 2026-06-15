@@ -1,22 +1,37 @@
-import { ModerationWorkspace } from "@/components/moderator/moderation-workspace";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ModeratorService } from "@/modules/moderation/service";
+import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { Badge } from "@/components/ui/badge";
+import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { questionStatusLabels } from "@/lib/constants";
 
-export default async function ModeratorQuestionsPage() {
+export default async function ModerationQuestionsPage() {
+  const actor = await getCurrentUserFromCookies();
+  const service = new ModeratorService();
+  const questions = await service.listQuestions(actor);
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Moderation Queue</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate submitted questions</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate questions from the question library.</p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Moderation Dashboard</CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-[var(--muted-foreground)]">
-          Review all submitted questions, override slot reservations when needed, and push revision requests back to contributors.
-        </CardContent>
-      </Card>
-      <ModerationWorkspace />
+      <DataTableCard title="Questions Awaiting Review">
+        <Table>
+          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH></TR></THead>
+          <TBody>
+            {questions.map((question) => (
+              <TR key={question.id}>
+                <TD className="font-medium">{question.subjectVersion.subject.subjectCode}</TD>
+                <TD>{question.moduleNumber}</TD>
+                <TD>{question.marks}</TD>
+                <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
+                <TD>{question.creator.name}</TD>
+              </TR>
+            ))}
+          </TBody>
+        </Table>
+      </DataTableCard>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export default async function UsersManagementPage() {
           <Table>
             <THead><TR><TH>Name</TH><TH>Email</TH><TH>Department</TH><TH>Role</TH><TH>Status</TH></TR></THead>
             <TBody>
-              {data.users.map((user) => (
+              {(data.users as Array<{ id: string; name: string; email: string; role: string; status: string; department?: { name: string } | null }>).map((user) => (
                 <TR key={user.id}>
                   <TD className="font-medium">{user.name}</TD>
                   <TD>{user.email}</TD>
@@ -36,7 +36,7 @@ export default async function UsersManagementPage() {
           fields={[
             { name: "name", label: "Name", type: "text" },
             { name: "email", label: "Email", type: "email" },
-            { name: "departmentId", label: "Department", type: "select", options: data.departments.map((d) => ({ value: d.id, label: d.name })) },
+            { name: "departmentId", label: "Department", type: "select", options: (data.departments as Array<{ id: string; name: string }>).map((d) => ({ value: d.id, label: d.name })) },
             { name: "role", label: "Role", type: "select", options: Object.values(Role).map((role) => ({ value: role, label: role })) },
             { name: "status", label: "Status", type: "select", options: Object.values(UserStatus).map((status) => ({ value: status, label: status })) },
             { name: "password", label: "Password", type: "text" },

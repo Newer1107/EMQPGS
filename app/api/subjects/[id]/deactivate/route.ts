@@ -1,8 +1,8 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 
-const service = new CoordinatorService();
+const service = new SubjectManagementService();
 
 export const PATCH = withApiHandler(
   async (request, context) => {

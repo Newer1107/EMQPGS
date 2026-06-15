@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { NotificationInbox } from "@/components/moderator/notification-inbox";
-import { ModeratorService } from "@/modules/moderation/service";
+import { ModeratorDashboardService } from "@/modules/moderation/dashboard.service";
 
 export default async function ModeratorDashboardPage() {
   const actor = await getCurrentUserFromCookies();
-  const service = new ModeratorService();
+  const service = new ModeratorDashboardService();
   const data = await service.getDashboard(actor);
 
   return (
@@ -30,7 +30,7 @@ export default async function ModeratorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Questions Awaiting Revision Resubmission</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.awaitingRevisionResubmission.map((item) => (
+            {data.awaitingRevisionResubmission.map((item: { id: string; subjectName: string; moduleNumber: number; markType: number; contributorName: string; revisionRequestedAt: string }) => (
               <Link key={item.id} href={`/dashboard/moderator/questions?questionId=${item.id}`} className="block rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{item.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">Module {item.moduleNumber} · {item.markType}-mark · {item.contributorName}</p>
@@ -42,7 +42,7 @@ export default async function ModeratorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Recent Moderation Activity</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.recentModerationActivity.map((item) => (
+            {data.recentModerationActivity.map((item: { id: string; questionId: string; subjectName: string; action: string; timestamp: string }) => (
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{item.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">{item.action} · {new Date(item.timestamp).toLocaleString()}</p>
@@ -54,7 +54,7 @@ export default async function ModeratorDashboardPage() {
         <Card>
           <CardHeader><CardTitle>Quick-Access Bank List</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {data.quickAccessBanks.map((bank) => (
+            {data.quickAccessBanks.map((bank: { id: string; subjectName: string; examCycle: string; pendingCount: number; revisionSubmittedCount: number; urgency: number }) => (
               <Link key={bank.id} href={`/dashboard/moderator/questions?bankId=${bank.id}`} className="block rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{bank.subjectName}</p>
                 <p className="text-[var(--muted-foreground)]">{bank.examCycle}</p>

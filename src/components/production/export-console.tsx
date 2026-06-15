@@ -10,13 +10,13 @@ import { Select } from "@/components/ui/select";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/client-fetch";
-import type { CoeOverviewItem } from "@/modules/production/service";
+import type { CoeOverviewItem } from "@/modules/production/export.service";
 
 export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
   const normalizedBanks = banks as Array<{
     id: string;
     subject: { subjectCode: string };
-    examCycle: { academicYear: string; examType: string };
+    examCycle: { academicYear: { code: string; id: string }; examType: string; semester: { name: string; number: number } };
     deanReview: object | null;
     exportArtifacts: Array<{
       id: string;
@@ -87,7 +87,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
               <Select id="questionBankId" name="questionBankId">
                 {normalizedBanks.filter((bank) => bank.deanReview).map((bank) => (
                   <option key={bank.id} value={bank.id}>
-                    {bank.subject.subjectCode} · {bank.examCycle.academicYear} · {bank.examCycle.examType}
+                    {bank.subject.subjectCode} · {bank.examCycle.academicYear.code} · {bank.examCycle.examType}
                   </option>
                 ))}
               </Select>

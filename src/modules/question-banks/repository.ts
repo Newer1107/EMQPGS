@@ -7,22 +7,14 @@ export class QuestionBankRepository extends BaseRepository {
   list() {
     return this.prisma.questionBank.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
-        subject: true,
-        examCycle: true,
-        assignments: { include: { teacher: true } },
-      },
+      include: { subject: true, examCycle: true },
     });
   }
 
   findById(id: string) {
     return this.prisma.questionBank.findUnique({
       where: { id },
-      include: {
-        subject: true,
-        examCycle: true,
-        assignments: { include: { teacher: true } },
-      },
+      include: { subject: true, examCycle: true },
     });
   }
 
@@ -37,9 +29,6 @@ export class QuestionBankRepository extends BaseRepository {
       version?: { increment: number };
     },
   ) {
-    return this.prisma.questionBank.update({
-      where,
-      data,
-    });
+    return this.prisma.questionBank.update({ where, data });
   }
 }

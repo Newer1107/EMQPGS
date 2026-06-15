@@ -1,10 +1,10 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { ProductionService } from "@/modules/production/service";
+import { ExportService } from "@/modules/production/export.service";
 import { exportRequestSchema } from "@/modules/production/validation";
 
-const service = new ProductionService();
+const service = new ExportService();
 
 export const GET = withApiHandler(
   async (request) => {

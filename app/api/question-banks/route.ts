@@ -1,10 +1,10 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { z } from "zod";
 
-const service = new CoordinatorService();
+const service = new QuestionBankWorkflowService();
 const questionBankCreateSchema = z.object({
   subjectId: z.string().min(1),
   examCycleId: z.string().min(1),

@@ -1,9 +1,11 @@
 import { Role } from "@prisma/client";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { DashboardService } from "@/modules/dashboard/service";
-import { ProductionService } from "@/modules/production/service";
+import { DeanReviewService } from "@/modules/production/dean-review.service";
+import { ExportService } from "@/modules/production/export.service";
+import { MonitoringService } from "@/modules/production/monitoring.service";
 import { paginatedResponse, type CursorPaginationInput } from "@/lib/pagination";
 
 export async function getDashboardSeed(role: Role) {
@@ -14,13 +16,12 @@ export async function getDashboardSeed(role: Role) {
 
 export async function getAdminData(input: CursorPaginationInput = {}) {
   const take = Math.min(Math.max(input.take ?? 25, 1), 200);
-  const [departments, users, examCycles, subjects, questionBanks, assignments, auditLogs, departmentCount, userCount, questionBankCount] = await Promise.all([
+  const [departments, users, examCycles, subjects, questionBanks, auditLogs, departmentCount, userCount, questionBankCount] = await Promise.all([
     prisma.department.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.subject.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, examCycle: true } }),
-    prisma.teacherAssignment.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { teacher: true, questionBank: { include: { subject: true } } } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, include: { actor: true }, take: 25 }),
     prisma.department.count(),
     prisma.user.count(),
@@ -32,7 +33,6 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
     examCycles: paginatedResponse(examCycles, { take }).data,
     subjects: paginatedResponse(subjects, { take }).data,
     questionBanks: paginatedResponse(questionBanks, { take }).data,
-    assignments: paginatedResponse(assignments, { take }).data,
     auditLogs,
     counts: { departments: departmentCount, users: userCount, questionBanks: questionBankCount },
   };
@@ -44,7 +44,7 @@ export async function getQuestionContributionWorkspace(role: Role) {
     return null;
   }
   const coordinatorDepartmentIds =
-    role === Role.COORDINATOR ? await new CoordinatorService().getAssignedDepartmentIds(actor) : null;
+    role === Role.COORDINATOR ? await new DepartmentAccessUtils().getAssignedDepartmentIds(actor) : null;
   const questionBank = await prisma.questionBank.findFirst({
     where: coordinatorDepartmentIds
       ? {
@@ -56,25 +56,15 @@ export async function getQuestionContributionWorkspace(role: Role) {
     orderBy: { createdAt: "asc" },
     include: {
       subject: true,
-      examCycle: true,
-      assignments: { include: { teacher: true } },
-      questionSlots: {
-        orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
+      examCycle: { include: { academicYear: true, semester: true } },
+      bankQuestions: {
         include: {
-          reservedBy: true,
           question: {
             include: {
-              contributor: true,
-              attachments: { include: { fileAsset: true } },
+              creator: { select: { id: true, name: true } },
+              subjectVersion: { include: { subject: true } },
             },
           },
-        },
-      },
-      questions: {
-        orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
-        include: {
-          contributor: true,
-          attachments: { include: { fileAsset: true } },
         },
       },
     },
@@ -84,23 +74,23 @@ export async function getQuestionContributionWorkspace(role: Role) {
     return null;
   }
 
-  return { actor, questionBank };
+  return { actor, questionBank: questionBank! };
 }
 
 export async function getDeanReviewData() {
   const actor = await getCurrentUserFromCookies();
-  return new ProductionService().getDeanDashboardData(actor);
+  return new DeanReviewService().getDeanDashboardData(actor);
 }
 
 export async function getDeanReviewWorkspaceData(questionBankId: string) {
   const actor = await getCurrentUserFromCookies();
-  return new ProductionService().getDeanReviewWorkspace(questionBankId, actor);
+  return new DeanReviewService().getDeanReviewWorkspace(questionBankId, actor);
 }
 
 export async function getCoeProductionData() {
-  return new ProductionService().listCoeOverview();
+  return new ExportService().listCoeOverview();
 }
 
 export async function getMonitoringData() {
-  return new ProductionService().getObservabilityOverview();
+  return new MonitoringService().getObservabilityOverview();
 }

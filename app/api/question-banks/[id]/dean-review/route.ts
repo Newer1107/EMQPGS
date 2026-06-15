@@ -1,12 +1,12 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
-import { CoordinatorService } from "@/modules/coordinator/service";
-import { ProductionService } from "@/modules/production/service";
+import { ReportingCoordinatorService } from "@/modules/coordinator/reporting-coordinator.service";
+import { DeanReviewService } from "@/modules/production/dean-review.service";
 import { deanReviewSchema } from "@/modules/production/validation";
 
-const service = new ProductionService();
-const coordinatorService = new CoordinatorService();
+const service = new DeanReviewService();
+const coordinatorService = new ReportingCoordinatorService();
 
 export const GET = withApiHandler(
   async (request, context) => {

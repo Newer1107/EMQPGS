@@ -1,8 +1,8 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { CoordinatorService } from "@/modules/coordinator/service";
+import { ReportingCoordinatorService } from "@/modules/coordinator/reporting-coordinator.service";
 
-const service = new CoordinatorService();
+const service = new ReportingCoordinatorService();
 
 export const GET = withApiHandler(
   async (request, context) => {

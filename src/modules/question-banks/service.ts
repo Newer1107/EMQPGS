@@ -2,14 +2,12 @@ import { QuestionBankStatus } from "@prisma/client";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { withOptimisticLock, buildOptimisticUpdate, buildOptimisticWhere } from "@/lib/optimistic-lock";
 import { QuestionBankRepository } from "@/modules/question-banks/repository";
-import { QuestionService } from "@/modules/questions/service";
 import { QuestionBankInput } from "@/modules/question-banks/validation";
 import { isValidTransition } from "@/modules/question-banks/transitions";
 
 export class QuestionBankService {
   constructor(
     private readonly repository = new QuestionBankRepository(),
-    private readonly questionService = new QuestionService(),
   ) {}
 
   list() {
@@ -17,9 +15,7 @@ export class QuestionBankService {
   }
 
   async create(data: QuestionBankInput & { createdById: string }) {
-    const questionBank = await this.repository.create(data);
-    await this.questionService.ensureSlotGrid(questionBank.id);
-    return questionBank;
+    return this.repository.create(data);
   }
 
   async updateStatus(id: string, status: QuestionBankStatus) {
