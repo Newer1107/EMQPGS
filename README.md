@@ -212,7 +212,7 @@ emqpgs/
 ├── app/                          # Next.js App Router
 │   ├── (protected)/              # Authenticated routes
 │   │   └── dashboard/            # Role-based dashboards
-│   │       ├── coe/              #   COE: users, departments, exam-cycles, production, monitoring, audit
+│   │       ├── coe/              #   COE: users, departments, exam-cycles, coordinator-assignments, production, monitoring, audit
 │   │       ├── coordinator/      #   Coordinator: subjects, question-banks, questions, assignments
 │   │       ├── contributor/      #   Contributor: my-subjects, submit-question, my-submissions
 │   │       ├── moderator/        #   Moderator: questions queue, approved, rejected
@@ -230,7 +230,9 @@ emqpgs/
 │   │   ├── exam-cycles/          #   ExamCycle CRUD + activation
 │   │   ├── question-library/     #   QuestionLibraryItem CRUD, ownership, history
 │   │   ├── question-banks/       #   QuestionBank service, transitions, validation
-│   │   ├── question-bank-questions/ # Bridge table management
+│   │   ├── question-bank-questions/ # Bridge table management (service + repository + validation)
+│   │   ├── coordinator-departments/ # Coordinator-department assignment management
+│   │   ├── moderator-assignments/   # Moderator-to-bank assignment service
 │   │   ├── coordinator/          #   Coordinator dashboard, workflow orchestration
 │   │   ├── moderation/           #   Moderation workflows, question review
 │   │   ├── reports/              #   AI analysis, paper generation, signed reports

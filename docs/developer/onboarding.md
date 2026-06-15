@@ -90,6 +90,12 @@ Modules with repositories (they extend `BaseRepository` from `src/modules/shared
 Modules using Prisma directly (no repository layer):
 - `coordinator/`, `moderation/`, `production/`, `reports/`, `notifications/`, `dashboard/`
 
+**Recent additions (June 2026):**
+- `coordinator-departments/` — service + repository + validation for coordinator-department assignments
+- `moderator-assignments/` — service + repository + validation for moderator-to-bank assignments
+- `question-bank-questions/` — service + repository + validation for question-to-bank linking
+- All three now have proper Zod validation and audit logging
+
 ---
 
 ## API Structure

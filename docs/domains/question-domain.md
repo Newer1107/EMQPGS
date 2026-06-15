@@ -48,6 +48,7 @@ SubjectVersion 1──N QuestionLibraryItem
 - **Contributors** create, own, edit, and submit questions
 - **Moderators** review and moderate questions (approve, reject, request revision)
 - **Coordinators** can transfer ownership of questions
+- **Coordinators** can view coverage analytics per subject version
 - **Question status** tracks the moderation lifecycle
 - **QuestionRevision** provides immutable history of content changes
 - **QuestionUsageHistory** records every paper inclusion event
@@ -68,6 +69,17 @@ Contributor → POST /api/question-library { subjectVersionId, moduleNumber, mar
 Contributor → POST /api/question-library?bankId=X { ... }
   → QuestionLibraryService.createForBank()
     → Creates QuestionLibraryItem + QuestionBankQuestion in one call
+```
+
+### Manually Linking Question to Bank
+```
+Coordinator → POST /api/question-bank-questions { questionBankId, questionId }
+  → QuestionBankQuestionService.create()
+    → Validates via questionBankQuestionSchema (Zod)
+    → Validates bank exists
+    → Validates question exists
+    → Validates no duplicate (unique constraint on questionBankId + questionId)
+    → Creates QuestionBankQuestion
 ```
 
 ### Submitting for Moderation
@@ -96,6 +108,17 @@ Coordinator → POST /api/question-library/[id]/transfer-ownership { toUserId, r
   → QuestionLibraryService.transferOwnership()
     → Updates QuestionLibraryItem.ownerId
     → Creates QuestionOwnershipHistory record
+```
+
+### Coverage Analytics
+```
+Coordinator → GET /api/question-library/coverage?subjectVersionId=X
+  → QuestionLibraryService.getCoverage()
+    → Fetches all questions for subject version
+    → Filters to APPROVED questions only
+    → Groups by module (1-6), CO (CO1-CO6), RBT (L1-L6), difficulty (EASY/MEDIUM/HARD)
+    → Returns coverage status per group (adequate/partial/missing or covered/missing)
+    → Frontend: /dashboard/coordinator/coverage
 ```
 
 ## Invariants

@@ -159,6 +159,25 @@ All authenticated routes use `withApiHandler({ roles: [...] })` which enforces R
 
 ---
 
+## Coordinator Department Assignments
+
+### GET /api/coordinator-departments
+- **Roles:** COE
+- **Response:** `CoordinatorDepartmentAssignment[]` with coordinator and department relations
+- **Service:** `CoordinatorDepartmentAssignmentService.list()`
+
+### POST /api/coordinator-departments
+- **Roles:** COE
+- **Body:** `{ coordinatorId, departmentId }`
+- **Validation:** `coordinatorDepartmentAssignmentSchema` — validates coordinator role is COORDINATOR, department exists, no duplicate
+- **Service:** `CoordinatorDepartmentAssignmentService.create()`
+
+### DELETE /api/coordinator-departments/[id]
+- **Roles:** COE
+- **Service:** `CoordinatorDepartmentAssignmentService.delete()`
+
+---
+
 ## Subjects
 
 ### GET /api/subjects
@@ -218,7 +237,7 @@ All authenticated routes use `withApiHandler({ roles: [...] })` which enforces R
 ## Question Banks
 
 ### GET /api/question-banks
-- **Roles:** COE, COORDINATOR, MODERATOR, DEAN
+- **Roles:** COORDINATOR
 - **Response:** `QuestionBank[]` with subject, examCycle, bankQuestions, DeanReview, AiReport, GeneratedPaper
 - **Service:** `QuestionBankWorkflowService.listQuestionBanks()`
 
@@ -276,7 +295,8 @@ All authenticated routes use `withApiHandler({ roles: [...] })` which enforces R
 ### POST /api/question-banks/[id]/assignments/moderator
 - **Roles:** COORDINATOR
 - **Body:** `{ moderatorId }`
-- **Service:** `AssignmentService.assignModerator()`
+- **Validation:** `assignmentSchema` — validates moderator role, bank existence, no duplicate
+- **Service:** `ModeratorAssignmentService.assignModerator()`
 
 ---
 
@@ -379,14 +399,16 @@ All authenticated routes use `withApiHandler({ roles: [...] })` which enforces R
 ## Question Bank Questions (bridge)
 
 ### GET /api/question-bank-questions
-- **Roles:** COORDINATOR, CONTRIBUTOR
+- **Roles:** COE, COORDINATOR, MODERATOR, CONTRIBUTOR
+- **Query:** `?questionBankId=`
 - **Response:** `QuestionBankQuestion[]`
-- **Handler:** Direct Prisma
+- **Service:** `QuestionBankQuestionService.list()`
 
 ### POST /api/question-bank-questions
-- **Roles:** COORDINATOR, CONTRIBUTOR
+- **Roles:** COORDINATOR
 - **Body:** `{ questionBankId, questionId }`
-- **Handler:** Direct Prisma
+- **Validation:** `questionBankQuestionSchema` — validates bank exists, question exists, no duplicate
+- **Service:** `QuestionBankQuestionService.create()`
 
 ---
 

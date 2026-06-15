@@ -42,7 +42,10 @@ Four domains: **Academic**, **Question**, **Exam**, **Production**. Each is docu
 | `notifications/` | In-app + email notifications | `createAndEmail`, `listForUser`, `markAsRead` |
 | `users/` | User CRUD, credentials | `list`, `create`, `update`, `verifyCredentials` |
 | `departments/` | Department CRUD | `list`, `create`, `update`, `delete` |
+| `coordinator-departments/` | Coordinator-department assignment management | `list`, `create`, `delete` |
 | `dashboard/` | Role-specific dashboard aggregation | `getRoleDashboard` |
+| `moderator-assignments/` | Moderator-to-question-bank assignment | `assignModerator` |
+| `question-bank-questions/` | Question-to-bank linking | `list`, `create` |
 
 ---
 

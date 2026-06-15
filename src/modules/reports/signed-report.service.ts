@@ -27,7 +27,7 @@ export class SignedReportService {
       data: {
         signedReportAssetId: fileAssetId,
         signedReportUploadedAt: new Date(),
-        status: QuestionBankStatus.SIGNED_REPORT_UPLOADED,
+        status: QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL,
       },
       include: {
         signedReportAsset: true,

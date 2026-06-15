@@ -40,6 +40,9 @@ AcademicYear 1──N Semester 1──N Subject
 ## Responsibilities
 
 - COE manages AcademicYears and Semesters (CRUD)
+- COE manages Departments (create, edit, delete)
+- COE manages Users (create, edit, disable, re-enable)
+- COE manages Coordinator Department Assignments (assign, remove)
 - Coordinator manages Subjects and SubjectVersions (create, edit, deactivate, version)
 - Subject creation auto-creates the first SubjectVersion (v1)
 - Questions are linked to SubjectVersions, not directly to Subjects
@@ -65,6 +68,27 @@ Coordinator → POST /api/subject-versions { subjectId, title, effectiveFromAcad
     → Archives current ACTIVE version (status → ARCHIVED)
     → Creates new version with versionNumber = previous + 1
     → Returns new SubjectVersion
+```
+
+### Assigning Coordinator to Department
+
+```
+COE → POST /api/coordinator-departments { coordinatorId, departmentId }
+  → CoordinatorDepartmentAssignmentService.create()
+    → Validates: coordinator exists, role is COORDINATOR
+    → Validates: department exists
+    → Validates: no duplicate assignment (unique constraint on coordinatorId + departmentId)
+    → Creates CoordinatorDepartmentAssignment
+    → Returns assignment with coordinator + department data
+```
+
+### Removing Coordinator from Department
+
+```
+COE → DELETE /api/coordinator-departments/[id]
+  → CoordinatorDepartmentAssignmentService.delete()
+    → Validates: assignment exists
+    → Deletes the record
 ```
 
 ### Linking Subject to Exam Cycle

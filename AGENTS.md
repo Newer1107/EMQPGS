@@ -122,6 +122,41 @@ The README is now authoritative. When in doubt, read `prisma/schema.prisma`. Ali
 | API endpoint count | "~95 operations across 63 route files" | verified |
 | `.env.example` | does not exist in repo | does not exist — use `.env` directly |
 
+## Workflow fixes completed (June 2026)
+
+| Gap | Fix | Details |
+|-----|-----|---------|
+| **Coordinator-department assignment UI** | Full CRUD | New page `/dashboard/coe/coordinator-assignments`, new API `POST/DELETE /api/coordinator-departments/:id`, new module `src/modules/coordinator-departments/` |
+| **User edit/disable/re-enable** | Frontend buttons | Edit modal + disable/re-enable buttons on `/dashboard/coe/users` using existing `PATCH/DELETE /api/users/:id` |
+| **Department edit/delete** | Frontend buttons | Edit modal + delete button with confirmation on `/dashboard/coe/departments` using existing `PATCH/DELETE /api/departments/:id` |
+| **Question Coverage Dashboard** | New frontend page | `/dashboard/coordinator/coverage` with filters (academic year, semester, subject, version, bank) + module/CO/RBT/difficulty coverage + gap detection. Uses existing `GET /api/question-library/coverage` |
+| **Moderator dashboard hardcoded arrays** | Replaced with real queries | `ModeratorDashboardService.getDashboard()` now queries DB for awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks |
+| **Signed report auto-advance** | Fixed | `uploadSignedReport()` sets status to `AWAITING_COORDINATOR_APPROVAL` (not `SIGNED_REPORT_UPLOADED`). `coordinatorDecision()` validates bank is in that status. |
+| **Question-bank-questions hardening** | Service + validation + repo | New module `src/modules/question-bank-questions/` with `questionBankQuestionSchema` Zod validation. Route uses `QuestionBankQuestionService.create()`. |
+| **Moderator assignment service layer** | Refactored | New module `src/modules/moderator-assignments/` with `ModeratorAssignmentService`. Route delegates to `service.assignModerator()`. |
+
+## New API routes
+
+| Endpoint | Method | Roles | Purpose |
+|---|---|---|---|
+| `/api/coordinator-departments` | GET, POST | COE | List and create coordinator-department assignments |
+| `/api/coordinator-departments/[id]` | DELETE | COE | Remove coordinator-department assignment |
+
+## New pages
+
+| Path | Role | Purpose |
+|---|---|---|
+| `/dashboard/coe/coordinator-assignments` | COE | Coordinator-department assignment management |
+| `/dashboard/coordinator/coverage` | COORDINATOR | Question coverage analytics dashboard |
+
+## New modules
+
+| Module | Files |
+|---|---|
+| `src/modules/coordinator-departments/` | service.ts, repository.ts, validation.ts |
+| `src/modules/question-bank-questions/` | service.ts, repository.ts, validation.ts |
+| `src/modules/moderator-assignments/` | service.ts, repository.ts, validation.ts |
+
 ## Style and conventions
 
 - No comments in code unless asked (matches your standing rule).

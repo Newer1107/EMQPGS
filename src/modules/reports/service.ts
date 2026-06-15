@@ -36,6 +36,9 @@ export class ReportService {
     if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can approve or reject reports");
     const questionBank = await prisma.questionBank.findUnique({ where: { id: questionBankId } });
     if (!questionBank) throw new NotFoundError("Question bank not found");
+    if (questionBank.status !== QuestionBankStatus.AWAITING_COORDINATOR_APPROVAL) {
+      throw new AppError("Coordinator decision can only be made when the bank is awaiting coordinator approval.", 409);
+    }
 
     const status =
       decision === CoordinatorDecision.APPROVED

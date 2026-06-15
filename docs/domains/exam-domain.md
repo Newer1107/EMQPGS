@@ -101,6 +101,7 @@ DRAFT → IN_PROGRESS → UNDER_MODERATION → MODERATED → REPORT_GENERATED
 - `PATCH /api/question-banks/[id]/status` — validates via `isValidTransition()`, uses optimistic lock
 - `PATCH /api/question-banks/[id]/lock` — canonical lock path (validates exam cycle ACTIVE + endDate, optimistic lock)
 - Coordinator decision APPROVED sets status to `APPROVED` (not LOCKED) — lock is a separate step
+- Signed report upload sets status to `AWAITING_COORDINATOR_APPROVAL` (auto-advances through `SIGNED_REPORT_UPLOADED`)
 
 ### Paper Generation
 ```
@@ -141,6 +142,6 @@ COE → POST /api/exports { questionBankId, format, ... }
 - One QuestionBank per (subject, examCycle) pair
 - One DeanReview per QuestionBank (write-once, no update/delete)
 - One GeneratedPaper per (bank, variant) — 3 variants max per bank
-- LOCKED is terminal — no exits, no unlock API
+- LOCKED is not terminal — unlock API (`POST /api/question-banks/:id/unlock`) allows transition back to `IN_PROGRESS` with a required reason
 - `lockQuestionBank` requires exam cycle status ACTIVE and endDate set
 - APPROVED status does NOT automatically lock the bank — lock is explicit

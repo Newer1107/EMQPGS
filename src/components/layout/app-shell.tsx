@@ -24,12 +24,14 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/monitoring", label: "Monitoring", roles: ["COE"] },
   { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },
+  { href: "/dashboard/coe/coordinator-assignments", label: "Coordinator Assignments", roles: ["COE"] },
   // Coordinator
   { href: "/dashboard/coordinator", label: "Coordinator Dashboard", roles: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/subjects", label: "Subjects", roles: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/question-banks", label: "Question Banks", roles: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/assignments", label: "Assignments", roles: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/questions", label: "Questions", roles: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/coverage", label: "Coverage", roles: ["COORDINATOR"] },
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
   { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
