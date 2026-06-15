@@ -1,6 +1,6 @@
-import { RecordStatus } from "@prisma/client";
+import { Prisma, RecordStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { AppError, NotFoundError } from "@/lib/errors";
+import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { QuestionSlotRepository } from "@/modules/question-slots/repository";
 
@@ -41,7 +41,12 @@ export class QuestionSlotService {
       throw new AppError("This question is already assigned to another slot in the same bank.", 409);
     }
 
-    return this.repository.assignQuestion(slotId, questionId);
+    return this.repository.assignQuestion(slotId, questionId).catch((err: unknown) => {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+        throw new ConflictError("This slot already has a question assigned.");
+      }
+      throw err;
+    });
   }
 
   async unassignFromSlot(slotId: string, actor: Actor) {

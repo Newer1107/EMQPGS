@@ -33,13 +33,17 @@ describe("isValidPhaseTransition", () => {
   });
 });
 
+const mockReadyEngine = {
+  isReady: () => Promise.resolve({ ready: true, issues: [], warnings: [] }),
+};
+
 describe("QuestionBankService.advancePhase", () => {
   it("advances from DRAFTING to MODERATION", async () => {
     const mockRepo = {
       findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, version: 1 }),
       update: () => Promise.resolve({ id: "bank-1", phase: QuestionBankPhase.MODERATION }),
     };
-    const service = new QuestionBankService(mockRepo as any);
+    const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
     const result = await service.advancePhase("bank-1", QuestionBankPhase.MODERATION);
     expect(result).toHaveProperty("phase", QuestionBankPhase.MODERATION);
   });
@@ -49,7 +53,7 @@ describe("QuestionBankService.advancePhase", () => {
       findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, version: 1 }),
       update: () => Promise.resolve({}),
     };
-    const service = new QuestionBankService(mockRepo as any);
+    const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
     await expect(service.advancePhase("bank-1", QuestionBankPhase.COMPLETE)).rejects.toThrow();
   });
 
@@ -58,7 +62,7 @@ describe("QuestionBankService.advancePhase", () => {
       findById: () => Promise.resolve(null),
       update: () => Promise.resolve({}),
     };
-    const service = new QuestionBankService(mockRepo as any);
+    const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
     await expect(service.advancePhase("bank-missing", QuestionBankPhase.MODERATION)).rejects.toThrow();
   });
 });

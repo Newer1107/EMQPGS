@@ -137,7 +137,6 @@ Database is empty. No users, no departments, no academic structure exists.
 | **Field: Timetable Document Ref** | text, optional, default: "TCET/EXAM/ ___ of 2026" |
 | **Field: Timetable Issue Date** | date, optional |
 | **Field: Timetable Title** | text, optional, default: "END SEMESTER EXAMINATIONS (Regular Students) MAY 2026" |
-| **Field: Branch** | text, optional, default: "Computer Engineering" |
 | **Field: Signature** | textarea, optional, default: "Controller of Examinations" |
 | **Field: Timetable Rows** | dynamic rows, each with 3 text fields: Date/Day, Time, Paper |
 | **Buttons** | "+ Add Row" to add a timetable row. "x" to remove a row (disabled if only 1 left) |
@@ -145,7 +144,7 @@ Database is empty. No users, no departments, no academic structure exists.
 | **API** | `POST /api/exam-cycles` |
 | **Service** | `ExamCycleService.create(data)` |
 | **Validation** | Semester must belong to the specified academic year. If status=ACTIVE, only one active exam cycle per department allowed (serializable transaction) |
-| **Database writes** | `ExamCycle { id, examType, status, startDate, endDate, departmentId?, academicYearId, semesterId, timetableDocumentRef?, timetableIssueDate?, timetableTitle?, timetableBranch?, timetableRows? (JSON), timetableSignature?, version: 0, createdAt }` |
+| **Database writes** | `ExamCycle { id, examType, status, startDate, endDate, departmentId?, academicYearId, semesterId, timetableDocumentRef?, timetableIssueDate?, timetableTitle?, timetableRows? (JSON), timetableSignature?, version: 0, createdAt }` |
 | **Audit log** | action="EXAM_CYCLE_CREATED", entityType="EXAM_CYCLE" |
 
 #### Step 7: Activate Exam Cycle

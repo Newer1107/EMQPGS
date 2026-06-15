@@ -12,7 +12,7 @@
 
 | Aspect | Detail |
 |---|---|
-| **Purpose** | Academic department/branch container |
+| **Purpose** | Academic department container |
 | **Key fields** | `id` (String, cuid), `name` (String), `code` (String, unique), `hodName` (String), `isActive` (Boolean, default true) |
 | **Relationships** | `users[]`, `coordinatorAssignments[]`, `subjects[]`, `examCycles[]` |
 | **Unique constraints** | `code` |
@@ -35,7 +35,7 @@
 | Aspect | Detail |
 |---|---|
 | **Purpose** | Represents a single examination event (ISE 1, ISE 2, ENDSEM, etc.) |
-| **Key fields** | `id`, `academicYear` (String, `YYYY-YYYY`), `semester` (Int, 1-8), `examType` (enum), `status` (DRAFT/ACTIVE/CLOSED), `version` (Int, optimistic lock), `startDate`?, `endDate`?, `departmentId`?, `timetableDocumentRef`?, `timetableIssueDate`?, `timetableTitle`?, `timetableBranch`?, `timetableRows` (Json)?, `timetableSignature`? |
+| **Key fields** | `id`, `academicYear` (String, `YYYY-YYYY`), `semester` (Int, 1-8), `examType` (enum), `status` (DRAFT/ACTIVE/CLOSED), `version` (Int, optimistic lock), `startDate`?, `endDate`?, `departmentId`?, `timetableDocumentRef`?, `timetableIssueDate`?, `timetableTitle`?, `timetableRows` (Json)?, `timetableSignature`? |
 | **Relationships** | `department`?, `subjectLinks[]`, `questionBanks[]` |
 | **Unique constraints** | `@@unique([academicYear, semester, examType])` |
 | **Indexes** | `[status, departmentId]`, `[departmentId]` |
@@ -280,7 +280,7 @@ Refer to §1.3 above. Key structural points:
 - `academicYear` + `semester` + `examType` form a unique constraint (one cycle per combo)
 - `departmentId` is nullable — a cycle can be department-scoped or institution-wide
 - `status` transitions: `DRAFT → ACTIVE → CLOSED` (no formal transition table, only guard on `→ACTIVE`)
-- Timetable fields are stored directly on the cycle (document ref, issue date, title, branch, rows as JSON, signature)
+- Timetable fields are stored directly on the cycle (document ref, issue date, title, rows as JSON, signature)
 
 ### 3.2 Lifecycle
 

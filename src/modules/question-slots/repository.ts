@@ -28,7 +28,7 @@ export class QuestionSlotRepository extends BaseRepository {
 
   assignQuestion(id: string, questionId: string) {
     return this.prisma.questionSlot.update({
-      where: { id },
+      where: { id, assignedQuestionId: null },
       data: { assignedQuestionId: questionId },
       include: { assignedQuestion: true },
     });

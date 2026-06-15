@@ -268,7 +268,7 @@ model ExamCycle {
   timetableDocumentRef  String?
   timetableIssueDate    DateTime?
   timetableTitle        String?
-  timetableBranch       String?
+
   timetableRows         Json?
   timetableSignature    String?
   createdAt             DateTime          @default(now())

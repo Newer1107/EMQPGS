@@ -3,7 +3,7 @@
 ## Entities
 
 ### ExamCycle
-- **Fields:** `id`, `examType` (ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT), `status` (DRAFT/ACTIVE/CLOSED), `version` (optimistic lock), `startDate?`, `endDate?`, `departmentId?`, `academicYearId`, `semesterId`, `timetable*` (documentRef, issueDate, title, branch, rows as JSON, signature)
+- **Fields:** `id`, `examType` (ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT), `status` (DRAFT/ACTIVE/CLOSED), `version` (optimistic lock), `startDate?`, `endDate?`, `departmentId?`, `academicYearId`, `semesterId`, `timetable*` (documentRef, issueDate, title, rows as JSON, signature)
 - **Unique:** `@@unique([semesterId, examType])` — one exam of each type per semester
 - **Relationships:** `department?`, `academicYear`, `semester`, `subjectLinks[]`, `questionBanks[]`
 - **Status transitions:** `DRAFT → ACTIVE → CLOSED` (no formal transition table — only activation guard on →ACTIVE)

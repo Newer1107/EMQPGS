@@ -47,7 +47,6 @@ type StoredExamCycle = {
   timetableDocumentRef: string | null;
   timetableIssueDate: string | Date | null;
   timetableTitle: string | null;
-  timetableBranch: string | null;
   timetableRows: unknown;
   timetableSignature: string | null;
 };
@@ -61,7 +60,6 @@ type FormState = {
   timetableDocumentRef: string;
   timetableIssueDate: string;
   timetableTitle: string;
-  timetableBranch: string;
   timetableSignature: string;
   timetableRows: TimetableRow[];
 };
@@ -109,7 +107,6 @@ function buildInitialState(): FormState {
     timetableDocumentRef: "TCET/EXAM/ ___ of 2026",
     timetableIssueDate: "",
     timetableTitle: "END SEMESTER EXAMINATIONS (Regular Students) MAY 2026",
-    timetableBranch: "Computer Engineering",
     timetableSignature: "Controller of Examinations",
     timetableRows: [
       {
@@ -132,7 +129,6 @@ function mapCycleToForm(cycle: StoredExamCycle): FormState {
     timetableDocumentRef: cycle.timetableDocumentRef ?? "TCET/EXAM/ ___ of 2026",
     timetableIssueDate: toDateInputValue(cycle.timetableIssueDate),
     timetableTitle: cycle.timetableTitle ?? "",
-    timetableBranch: cycle.timetableBranch ?? "",
     timetableSignature: cycle.timetableSignature ?? "Controller of Examinations",
     timetableRows: normalizeRows(cycle.timetableRows),
   };
@@ -237,7 +233,6 @@ export function ExamCycleTimetableManager({
       timetableDocumentRef: form.timetableDocumentRef,
       timetableIssueDate: form.timetableIssueDate,
       timetableTitle: form.timetableTitle,
-      timetableBranch: form.timetableBranch,
       timetableRows: form.timetableRows.map(({ id: _id, ...rest }) => rest),
       timetableSignature: form.timetableSignature,
     };
@@ -376,11 +371,6 @@ export function ExamCycleTimetableManager({
           <div className="space-y-2">
             <label htmlFor="timetable-title" className="text-sm font-medium">Timetable Title</label>
             <Input id="timetable-title" value={form.timetableTitle} onChange={(event) => updateField("timetableTitle", event.target.value)} />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="timetable-branch" className="text-sm font-medium">Branch</label>
-            <Input id="timetable-branch" value={form.timetableBranch} onChange={(event) => updateField("timetableBranch", event.target.value)} />
           </div>
 
           <div className="space-y-2">

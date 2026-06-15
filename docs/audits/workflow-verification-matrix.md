@@ -317,7 +317,7 @@
 #### Exam Cycle Form (COE)
 
 **API:** `POST /api/exam-cycles`
-**Schema:** `examCycleSchema` — fields include academicYearId, semesterId, examType, status, departmentId?, timetableDocumentRef, timetableIssueDate, timetableTitle, timetableBranch, timetableRows[] (each with dateDay, time, paper), timetableSignature
+**Schema:** `examCycleSchema` — fields include academicYearId, semesterId, examType, status, departmentId?, timetableDocumentRef, timetableIssueDate, timetableTitle, timetableRows[] (each with dateDay, time, paper), timetableSignature
 **Frontend fields:** ✅ All match
 **Timetable rows:** Dynamic array — schema requires min 1 row, frontend enforces min 1 row (delete disabled)
 **Status:** **VERIFIED**

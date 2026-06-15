@@ -16,7 +16,6 @@ export const examCycleSchema = z.object({
   timetableDocumentRef: z.string().trim().min(1),
   timetableIssueDate: z.coerce.date(),
   timetableTitle: z.string().trim().min(1),
-  timetableBranch: z.string().trim().min(1),
   timetableRows: z.array(timetableRowSchema).min(1),
   timetableSignature: z.string().trim().min(1),
 });

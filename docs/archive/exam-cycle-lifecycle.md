@@ -13,7 +13,7 @@ ExamCycle
   ├── status: DRAFT → ACTIVE → CLOSED
   ├── departmentId ── scoped to a department (nullable)
   ├── startDate / endDate
-  ├── timetable fields (documentRef, issueDate, title, branch, rows, signature)
+  ├── timetable fields (documentRef, issueDate, title, rows, signature)
   │
   ├── SubjectExamCycleLink[] ── join table linking subjects to this cycle
   │     └── Subject
@@ -56,7 +56,7 @@ ExamCycle
 | `examType` | One of: ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT |
 | `departmentId` | Optional — can leave blank (no department scope) or pick a department |
 | `status` | DRAFT (default), ACTIVE, or CLOSED |
-| `timetable*` | Document ref, issue date, title, branch, rows (date+time+paper table), signature |
+| `timetable*` | Document ref, issue date, title, rows (date+time+paper table), signature |
 
 ### What happens in the backend (`ExamCycleService.create`):
 

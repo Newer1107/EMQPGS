@@ -1,13 +1,11 @@
-import { AiReportStatus, NotificationType, QuestionBankPhase, type Prisma, type User } from "@prisma/client";
+import { AiReportStatus, NotificationType, type Prisma, type User } from "@prisma/client";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
-import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES } from "@/lib/constants";
 import { OllamaService } from "@/modules/ai/ollama-service";
 import { AnalysisEngine } from "@/modules/reports/analysis-engine";
-import { PdfService } from "@/modules/reports/pdf-service";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
@@ -22,11 +20,9 @@ const analysisInclude = {
 
 export class AiReportService {
   constructor(
-    private readonly storageService = new StorageService(),
     private readonly notificationService = new NotificationService(),
     private readonly ollamaService = new OllamaService(),
     private readonly analysisEngine = new AnalysisEngine(),
-    private readonly pdfService = new PdfService(),
   ) {}
 
   async createAiReport(questionBankId: string, actor: Actor) {
@@ -34,66 +30,37 @@ export class AiReportService {
     if (!questionBank) throw new NotFoundError("Question bank not found");
 
     const deterministicReport = this.analysisEngine.buildDeterministicReport(questionBank);
-    const aiOverlay = await this.ollamaService.analyzeQuestionBank(this.buildOllamaPrompt(questionBank, deterministicReport));
-    const report = {
-      ...deterministicReport,
-      ...aiOverlay,
-      chartData: deterministicReport.chartData,
-    };
+
+    let report: Record<string, unknown>;
+    try {
+      const aiOverlay = await this.ollamaService.analyzeQuestionBank(this.buildOllamaPrompt(questionBank, deterministicReport));
+      report = {
+        ...deterministicReport,
+        ...aiOverlay,
+        chartData: deterministicReport.chartData,
+      };
+    } catch {
+      report = {
+        ...deterministicReport,
+        executiveSummary: "AI analysis unavailable. Deterministic report only.",
+        missingAreas: [],
+        qualityFindings: [],
+        bloomsBalance: "Not analyzed (Ollama unavailable).",
+        chartData: deterministicReport.chartData,
+      };
+    }
 
     const reportRecord = await prisma.aiReport.create({
       data: {
         questionBankId,
-        status: AiReportStatus.PROCESSING,
+        status: AiReportStatus.COMPLETED,
         modelName: process.env.OLLAMA_MODEL ?? "llama3.1",
         generatedById: actor.id,
-      },
-    });
-
-    const jsonBuffer = Buffer.from(JSON.stringify(report, null, 2), "utf8");
-    const jsonAsset = await this.storageService.uploadServerFile({
-      bucket: "exports",
-      fileName: `${questionBank.subject.subjectCode}-${reportRecord.id}-analysis.json`,
-      mimeType: "application/json",
-      body: jsonBuffer,
-      size: jsonBuffer.byteLength,
-      uploadedById: actor.id,
-    });
-
-    const pdfBytes = await this.pdfService.createAiReportPdf({
-      title: `${questionBank.subject.subjectCode} AI Analysis Report`,
-      subtitle: `${questionBank.examCycle.semester.name} · ${questionBank.examCycle.academicYear.code} · ${questionBank.examCycle.examType}`,
-      report,
-    });
-    const pdfAsset = await this.storageService.uploadServerFile({
-      bucket: "exports",
-      fileName: `${questionBank.subject.subjectCode}-${reportRecord.id}-analysis.pdf`,
-      mimeType: "application/pdf",
-      body: Buffer.from(pdfBytes),
-      size: pdfBytes.byteLength,
-      uploadedById: actor.id,
-    });
-
-    const completed = await prisma.aiReport.update({
-      where: { id: reportRecord.id },
-      data: {
-        status: AiReportStatus.COMPLETED,
-        summary: report.executiveSummary,
+        summary: (report.executiveSummary as string) ?? "",
         reportJson: report as Prisma.InputJsonValue,
-        chartData: report.chartData as Prisma.InputJsonValue,
+        chartData: (report.chartData ?? deterministicReport.chartData) as Prisma.InputJsonValue,
         generatedAt: new Date(),
-        jsonFileAssetId: jsonAsset.id,
-        pdfFileAssetId: pdfAsset.id,
       },
-      include: {
-        jsonFileAsset: true,
-        pdfFileAsset: true,
-      },
-    });
-
-    await prisma.questionBank.update({
-      where: { id: questionBankId },
-      data: { phase: QuestionBankPhase.APPROVAL },
     });
 
     const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
@@ -116,11 +83,11 @@ export class AiReportService {
       actorId: actor.id,
       action: "AI_REPORT_GENERATED",
       entityType: ENTITY_TYPES.AI_REPORT,
-      entityId: completed.id,
+      entityId: reportRecord.id,
       metadata: { questionBankId },
     });
 
-    return completed;
+    return reportRecord;
   }
 
   async listAiReports(questionBankId: string) {

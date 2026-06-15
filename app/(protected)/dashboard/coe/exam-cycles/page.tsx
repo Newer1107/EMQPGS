@@ -23,7 +23,6 @@ export default async function CoeExamCyclesPage() {
     timetableDocumentRef: cycle.timetableDocumentRef,
     timetableIssueDate: cycle.timetableIssueDate,
     timetableTitle: cycle.timetableTitle,
-    timetableBranch: cycle.timetableBranch,
     timetableRows: cycle.timetableRows,
     timetableSignature: cycle.timetableSignature,
   }));

@@ -21,7 +21,7 @@ export default async function SubjectsManagementPage() {
           <Button>Create Subject</Button>
         </Link>
       </div>
-      <DataTableCard title="Branch Subjects">
+      <DataTableCard title="Department Subjects">
         <Table>
           <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Semester</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH><TH>Actions</TH></TR></THead>
           <TBody>

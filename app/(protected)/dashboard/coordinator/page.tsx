@@ -12,7 +12,7 @@ export default async function CoordinatorDashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Coordinator Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Department-scoped operations overview for your assigned branches only.</p>
+        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Department-scoped operations overview for your assigned departments only.</p>
       </div>
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>

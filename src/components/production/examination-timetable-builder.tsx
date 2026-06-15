@@ -116,7 +116,7 @@ export function ExaminationTimetableBuilder() {
 
           <div className="space-y-2">
             <label className="font-mono text-xs uppercase tracking-[0.22em]" htmlFor="branch">
-              Branch
+              Branch/Stream
             </label>
             <Input
               id="branch"

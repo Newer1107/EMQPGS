@@ -2,6 +2,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { ConflictError } from "@/lib/errors";
 
+vi.mock("@/modules/readiness/engine", () => ({
+  ReadinessEngine: class MockReadinessEngine {
+    isReady = vi.fn().mockResolvedValue({ ready: true, issues: [], warnings: [] });
+  },
+}));
+
 vi.mock("@/lib/db", () => {
   const mockDb = {
     questionBank: { findUnique: vi.fn(), update: vi.fn() },
@@ -16,6 +22,7 @@ vi.mock("@/lib/db", () => {
     moderatorBankAssignment: { findMany: vi.fn(), findUnique: vi.fn() },
     notification: { create: vi.fn() },
     user: { findUnique: vi.fn() },
+    questionSlot: { findMany: vi.fn() },
     $transaction: vi.fn(),
   };
   return { prisma: mockDb };

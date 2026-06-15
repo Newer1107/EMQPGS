@@ -12,5 +12,5 @@ export const PATCH = withApiHandler(
     const payload = advancePhaseSchema.parse(await parseJson(request));
     return service.advancePhase(id, payload.targetPhase);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR], audit: { action: "PHASE_ADVANCED", entityType: "QUESTION_BANK" } },
+  { roles: [Role.COORDINATOR], audit: { action: "PHASE_ADVANCED", entityType: "QUESTION_BANK" } },
 );
