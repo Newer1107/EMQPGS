@@ -129,11 +129,13 @@ Submit. System initializes the bank:
 - 126 QuestionSlot records created: module 1-6, each with marks 2, 5, 10, each with slots 1-7
 
 **Step 2.4 — Coordinator verifies Question Slots**
-Navigate to `/dashboard/coordinator/question-banks/[id]`. The slot grid shows:
-- 6 modules (rows)
-- 3 mark values per module (2, 5, 10)
-- 7 slot positions per mark value
-- All 126 slots are empty
+Navigate to `/dashboard/coordinator/question-banks/[id]`. The bank detail page shows:
+- **Summary bar**: total/filled/empty/approved/pending/rejected slot counts
+- **Slot grid**: 6 modules (rows), 3 mark values per module (2, 5, 10), 7 individual slot cells per mark value (color-coded by status: green=approved, amber=pending, blue=draft, red=rejected, dashed=empty)
+- **Slot interaction**: clicking any cell opens a detail panel with question text, contributor, CO, RBT level
+- **Readiness panel**: shows specific blocking issues and warnings for the current phase
+- **Phase-specific sections**: AI report (APPROVAL), generated papers (COMPLETE), dean review (COMPLETE)
+- **Sidebar**: phase advancement actions, workflow timeline, next-step guidance
 - Phase badge: DRAFTING, Record status badge: ACTIVE
 
 Slot breakdown for ENDSEM:
@@ -190,22 +192,23 @@ On the question bank detail page, the coordinator checks metrics. All 126 slots 
 ### Phase 4: Advance to MODERATION (Coordinator)
 
 **Step 4.1 — Coordinator checks readiness**
-Navigate to `/dashboard/coordinator/question-banks/[id]/readiness` or click "Check Readiness".
+On the bank detail sidebar, the coordinator sees the "Actions" panel. Clicking the current phase's advance button triggers a readiness check:
 - Target Phase: MODERATION
-- ReadinessEngine checks: all 126 slots must be filled
-- If any slot is empty, system returns issues listing each empty slot
+- `ReadinessEngine` checks: all 126 slots must be filled
+- If any slot is empty, the panel displays specific issues (e.g. "14 of 126 slots empty")
+- Warnings (e.g. low CO coverage) are also shown but do not block advancement
 
 **Step 4.2 — Coordinator advances phase**
-On the question bank detail page, click "Advance Phase".
-- Target Phase: MODERATION
+Click "Advance to Moderation" in the Actions panel.
 - System validates transition DRAFTING → MODERATION via `isValidPhaseTransition()`
 - Phase changes to MODERATION
 
 ### Phase 5: Moderator Assignment (Coordinator)
 
 **Step 5.1 — Coordinator assigns Moderator**
-Navigate to `/dashboard/coordinator/question-banks/[id]`, click "Assign Moderator".
-- Moderator: select `moderator@emqpgs.local`
+Navigate to `/dashboard/coordinator/assignments`.
+- Select the question bank from the list
+- Select a moderator from the dropdown
 Submit. `ModeratorBankAssignment` record created. System validates MODERATOR role, prevents duplicates (unique constraint on `[moderatorId, questionBankId]`).
 
 Multiple moderators can be assigned to the same bank.
@@ -250,10 +253,11 @@ Moderator reviews again and approves or rejects.
 - AI report should be completed (or at least triggered)
 
 **Step 7.2 — Coordinator triggers AI Analysis**
-Navigate to question bank detail, click "Trigger AI Analysis" (`POST /api/question-banks/[id]/reports`).
+From the bank detail sidebar or via the API (`POST /api/question-banks/[id]/reports`):
 - System calls `AiReportService` which may invoke Ollama for natural-language summary
 - AnalysisEngine computes coverage, RBT distribution, difficulty distribution, duplicate detection
 - Report is stored as AiReport record with status COMPLETED (or FAILED)
+- The bank detail page renders the report summary in the AI Report section when available
 - Note: AI analysis does NOT auto-advance the phase
 
 **Step 7.3 — Coordinator advances to APPROVAL**
@@ -265,16 +269,17 @@ Navigate to question bank detail, click "Trigger AI Analysis" (`POST /api/questi
 ### Phase 8: Paper Generation & Coordinator Decision (Coordinator)
 
 **Step 8.1 — Coordinator generates papers**
-On the question bank detail page, click "Generate Papers" (`POST /api/question-banks/[id]/papers`).
-- Default: 3 variants (PAPER_A, PAPER_B, PAPER_C)
-- `PaperGenerator.generate()` selects questions from filled slots, balancing CO/RBT/difficulty distribution
+From the bank detail sidebar or via API (`POST /api/question-banks/[id]/papers`):
+- Generates 3 variants (PAPER_A, PAPER_B, PAPER_C)
+- `PaperGenerator.generate()` selects 1 approved question per (module, marks) pair per variant — 6 modules × 3 marks = 18 questions per variant, 54 total across all 3 variants
+- Each variant draws from the same approved pool. Once a question is used in one variant, it is excluded from subsequent variants within the same generation run (no overlap within a run).
 - PDF created via PdfService, uploaded to MinIO `generated-papers` bucket
 - GeneratedPaper records created/upserted per variant
 - PaperSnapshot upserted with coverage, difficulty, quality scores
 - Usage history recorded for each selected question
 - Coordinator receives notification
 
-Verification: All 3 variants are distinct. Each variant contains 54 questions (6 modules × 9 questions — one per (marks,slot) combination). Duplicate risk score checked via text similarity (threshold 0.84).
+Verification: All 3 variants are distinct. Each variant has 18 questions (6 modules × 3 marks). Duplicate risk score checked via text similarity (threshold 0.84).
 
 **Step 8.2 — Coordinator makes decision**
 On the question bank detail page, click "Coordinator Decision".
