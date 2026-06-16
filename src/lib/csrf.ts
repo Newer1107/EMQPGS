@@ -39,8 +39,8 @@ export async function assertCsrfProtection(method: string) {
   }
 
   if (origin) {
-    const authUrl = new URL(env.AUTH_URL);
-    if (origin !== authUrl.origin) {
+    const hostHeader = headerStore.get("host");
+    if (hostHeader && new URL(origin).host !== hostHeader) {
       throw new ForbiddenError("Cross-site request blocked");
     }
   }
