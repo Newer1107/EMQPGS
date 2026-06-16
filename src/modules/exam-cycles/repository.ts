@@ -2,8 +2,10 @@ import { BaseRepository } from "@/modules/shared/base-repository";
 import { ExamCycleInput } from "@/modules/exam-cycles/validation";
 
 export class ExamCycleRepository extends BaseRepository {
-  list() {
+  list(take = 50, skip = 0) {
     return this.prisma.examCycle.findMany({
+      take: Math.min(take, 500),
+      skip,
       orderBy: { createdAt: "desc" },
       include: {
         department: true,

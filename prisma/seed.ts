@@ -407,6 +407,12 @@ function seededShuffle<T>(arr: readonly T[], seed: number): T[] {
 // ──────────────────────────────────────────────
 
 async function main() {
+  if (process.env.NODE_ENV === "production" && process.env.ALLOW_PRODUCTION_SEED !== "true") {
+    console.error("\n⚠️  Refusing to seed in production.\n");
+    console.error("  Set ALLOW_PRODUCTION_SEED=true to override this guard.\n");
+    process.exit(1);
+  }
+
   const passwordHash = await bcrypt.hash(PASSWORD, 12);
 
   // ---------- DEPARTMENTS ----------

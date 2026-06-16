@@ -22,13 +22,15 @@ export class QuestionBankWorkflowService {
     private readonly deptUtils = new DepartmentAccessUtils(),
   ) {}
 
-  async listQuestionBanks(actor: Actor, filters: BankFilters = {}) {
+  async listQuestionBanks(actor: Actor, filters: BankFilters = {}, take = 50, skip = 0) {
     const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
     if (filters.departmentId && !departmentIds.includes(filters.departmentId)) {
       throw new AppError("You do not have access to that department.", 403);
     }
 
     const banks = await prisma.questionBank.findMany({
+      take: Math.min(take, 500),
+      skip,
       where: {
         subject: {
           departmentId: filters.departmentId ?? { in: departmentIds },

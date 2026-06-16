@@ -4,28 +4,25 @@ import { QuestionLibraryService, QuestionUsageService } from "@/modules/question
 import { NotFoundError, ForbiddenError, AppError } from "@/lib/errors";
 
 vi.mock("@/lib/db", () => {
-  const mockTx = {
-    questionLibraryItem: { update: vi.fn() },
-    questionOwnershipHistory: { create: vi.fn() },
-  };
+  const mockQuestion = { id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5, questionText: "What is the capital of France?", coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "MEDIUM", teachingIndex: "3.1", status: "DRAFT", createdById: "user-1", ownerId: "user-1", moderatorRemark: null, submittedAt: null, reviewedAt: null, createdAt: new Date(), updatedAt: new Date() };
   const mockPrisma = {
     subjectVersion: { findUnique: vi.fn() },
     questionLibraryItem: {
       findUnique: vi.fn(),
       findMany: vi.fn(),
-      create: vi.fn(),
+      create: vi.fn().mockResolvedValue(mockQuestion),
       update: vi.fn(),
     },
-    questionRevision: { count: vi.fn(), create: vi.fn(), findMany: vi.fn() },
+    questionRevision: { count: vi.fn().mockResolvedValue(0), create: vi.fn().mockResolvedValue({}), findMany: vi.fn() },
     questionOwnershipHistory: { create: vi.fn(), findMany: vi.fn() },
     questionUsageHistory: { create: vi.fn(), findMany: vi.fn() },
     moderationEvent: { findMany: vi.fn() },
     questionSlot: { findFirst: vi.fn(), update: vi.fn() },
     examCycle: { findUnique: vi.fn() },
     user: { findUnique: vi.fn() },
-    $transaction: vi.fn((cb: (tx: typeof mockTx) => unknown) => cb(mockTx)),
+    $transaction: vi.fn((cb: (tx: typeof mockPrisma) => unknown) => cb(mockPrisma)),
   };
-  mockTx.questionLibraryItem.update.mockImplementation((args: { data: { ownerId: string } }) => ({ ...mockQuestion, ownerId: args.data.ownerId }));
+  mockPrisma.questionLibraryItem.update.mockImplementation((args: { data: { ownerId: string } }) => ({ ...mockQuestion, ownerId: args.data.ownerId }));
   return { prisma: mockPrisma };
 });
 
@@ -54,13 +51,13 @@ function mockRepoUpdate(overrides: Partial<QuestionLibraryItem> = {}) {
 describe("Question Governance Hardening", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockImplementation((args: { data: { ownerId: string } }) => Promise.resolve({ ...mockQuestion, ownerId: args.data.ownerId ?? mockQuestion.ownerId }));
     (prisma.subjectVersion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "sv-1" });
     (prisma.questionLibraryItem.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockQuestion);
     (prisma.questionRevision.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
     (prisma.questionRevision.create as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (prisma.questionLibraryItem.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "new-owner", status: "ACTIVE", role: "CONTRIBUTOR" });
-    mockRepoUpdate();
   });
 
   describe("1. Revision coverage — every tracked field change creates a revision", () => {

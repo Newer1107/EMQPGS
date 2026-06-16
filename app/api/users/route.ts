@@ -7,15 +7,18 @@ import { userSchema } from "@/modules/users/validation";
 const service = new UserService();
 
 export const GET = withApiHandler(async (request, context) => {
+  const take = parseInt(request.nextUrl.searchParams.get("take") ?? "50", 10);
+  const skip = parseInt(request.nextUrl.searchParams.get("skip") ?? "0", 10);
+
   if (context.user!.role === Role.COORDINATOR) {
     const role = request.nextUrl.searchParams.get("role");
     if (role !== Role.CONTRIBUTOR) {
       return [];
     }
-    return service.list();
+    return service.list(take, skip);
   }
 
-  return service.list();
+  return service.list(take, skip);
 }, { roles: [Role.COE, Role.COORDINATOR] });
 
 export const POST = withApiHandler(

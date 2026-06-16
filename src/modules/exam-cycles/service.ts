@@ -8,8 +8,8 @@ import { withUniqueCheck } from "@/lib/db-helpers";
 export class ExamCycleService {
   constructor(private readonly repository = new ExamCycleRepository()) {}
 
-  list() {
-    return this.repository.list();
+  list(take?: number, skip?: number) {
+    return this.repository.list(take, skip);
   }
 
   async create(data: ExamCycleInput) {

@@ -567,6 +567,7 @@ model AuditLog {
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId])
+  @@index([actorId, action, createdAt])
 }
 
 model FileAsset {

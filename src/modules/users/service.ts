@@ -7,8 +7,8 @@ import { UserInput } from "@/modules/users/validation";
 export class UserService {
   constructor(private readonly repository = new UserRepository()) {}
 
-  list() {
-    return this.repository.list();
+  list(take?: number, skip?: number) {
+    return this.repository.list(take, skip);
   }
 
   findByEmail(email: string) {

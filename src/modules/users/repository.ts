@@ -22,8 +22,10 @@ const authUserSelect = {
 } as const;
 
 export class UserRepository extends BaseRepository {
-  list() {
+  list(take = 50, skip = 0) {
     return this.prisma.user.findMany({
+      take: Math.min(take, 500),
+      skip,
       orderBy: { createdAt: "desc" },
       select: publicUserSelect,
     });

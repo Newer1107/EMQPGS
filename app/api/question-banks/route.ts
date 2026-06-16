@@ -14,11 +14,13 @@ export const GET = withApiHandler(async (request, context) => {
   const departmentId = request.nextUrl.searchParams.get("departmentId") ?? undefined;
   const examCycleId = request.nextUrl.searchParams.get("examCycleId") ?? undefined;
   const status = request.nextUrl.searchParams.get("status") as "ACTIVE" | "LOCKED" | null;
+  const take = parseInt(request.nextUrl.searchParams.get("take") ?? "50", 10);
+  const skip = parseInt(request.nextUrl.searchParams.get("skip") ?? "0", 10);
   return service.listQuestionBanks(context.user!, {
     departmentId,
     examCycleId,
     status: status ?? undefined,
-  });
+  }, take, skip);
 }, { roles: [Role.COORDINATOR] });
 
 export const POST = withApiHandler(
