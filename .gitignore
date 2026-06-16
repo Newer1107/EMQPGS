@@ -47,3 +47,6 @@ next-env.d.ts
 /test-artifacts/**/*.json
 /test-artifacts/**/*.ts
 
+.opencode
+opencode.json
+
