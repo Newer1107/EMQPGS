@@ -1,9 +1,12 @@
+import type { Metadata } from "next";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getAdminData } from "@/lib/server-data";
 import { DeleteDepartmentButton, EditDepartmentButton } from "./dept-actions";
+
+export const metadata: Metadata = { title: "Departments — EMQPGS" };
 
 export default async function DepartmentsManagementPage() {
   const data = await getAdminData();

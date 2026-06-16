@@ -1,3 +1,4 @@
+import { QuestionStatus } from "@prisma/client";
 import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ModeratorService } from "@/modules/moderation/service";
@@ -10,7 +11,10 @@ import { questionStatusLabels } from "@/lib/constants";
 export default async function ModerationQuestionsPage() {
   const actor = await getCurrentUserFromCookies();
   const service = new ModeratorService();
-  const questions = await service.listQuestions(actor);
+  const allQuestions = await service.listQuestions(actor);
+  const questions = allQuestions.filter(
+    (q) => q.status === QuestionStatus.PENDING || q.status === QuestionStatus.REVISION_SUBMITTED,
+  );
 
   return (
     <div className="space-y-6">
@@ -18,7 +22,7 @@ export default async function ModerationQuestionsPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Moderation Queue</h1>
         <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate questions from the question library.</p>
       </div>
-      <DataTableCard title="Questions Awaiting Review">
+      <DataTableCard title={`Pending Review (${questions.length})`}>
         <Table>
           <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Actions</TH></TR></THead>
           <TBody>

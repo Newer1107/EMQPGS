@@ -278,16 +278,18 @@ export class DeanReviewService {
     if (actor.role !== Role.DEAN) {
       throw new ForbiddenError("Only the dean can access this resource.");
     }
-    if (!actor.departmentId) {
-      throw new ForbiddenError("Dean account is not associated with an institution.");
-    }
+    // Dean is institution-wide; no departmentId required.
+  }
+
+  private deanDepartmentFilter(actor: Actor): { departmentId?: string } {
+    return actor.departmentId ? { departmentId: actor.departmentId } : {};
   }
 
   private async listDeanQuestionBanks(actor: Actor) {
     return prisma.questionBank.findMany({
       where: {
         recordStatus: RecordStatus.LOCKED,
-        subject: { departmentId: actor.departmentId! },
+        subject: this.deanDepartmentFilter(actor),
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
         },
@@ -302,7 +304,7 @@ export class DeanReviewService {
       where: {
         id: questionBankId,
         recordStatus: RecordStatus.LOCKED,
-        subject: { departmentId: actor.departmentId! },
+        subject: this.deanDepartmentFilter(actor),
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
         },
