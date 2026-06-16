@@ -1,14 +1,8 @@
 import { notFound } from "next/navigation";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { questionBankPhaseLabels, recordStatusLabels, questionStatusLabels, difficultyLabels } from "@/lib/constants";
-import { BankActionsPanel } from "@/components/forms/bank-actions-panel";
-import { SlotCoverageDashboard } from "@/components/forms/slot-coverage-dashboard";
-import { WorkflowTimeline } from "@/components/forms/workflow-timeline";
-import { NextStepGuidance } from "@/components/forms/next-step-guidance";
+import { BankDetailClient, type SlotItem, type AiReportItem, type GeneratedPaperItem, type DeanReviewItem } from "./bank-detail-client";
+import { examTypeLabels } from "@/lib/constants";
 
 export default async function QuestionBankDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,72 +11,79 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
   const bank = await bankService.getQuestionBankDetail(actor, id);
   if (!bank) notFound();
 
-  const slots = bank.slots as Array<{ assignedQuestion: { id: string; moduleNumber: number; marks: number; status: string } | null }>;
-  const questions = slots
-    .filter((s) => s.assignedQuestion)
-    .map((s) => ({
-      id: s.assignedQuestion!.id,
-      moduleNumber: s.assignedQuestion!.moduleNumber,
-      marks: s.assignedQuestion!.marks,
-      status: s.assignedQuestion!.status,
-    }));
+  const totalModules = bank.pattern?.totalModules ?? 6;
+  const marksOptions = (bank.pattern?.marksPattern as number[]) ?? [2, 5, 10];
+  const slotsPerModule = bank.pattern?.slotsPerModule ?? 7;
+  const totalSlots = bank.pattern?.totalSlots ?? 126;
+
+  const slots: SlotItem[] = bank.slots.map((s) => ({
+    slotNumber: s.slotNumber,
+    moduleNumber: s.moduleNumber,
+    marks: s.marks,
+    isLocked: s.isLocked,
+    assignedQuestion: s.assignedQuestion
+      ? {
+          id: s.assignedQuestion.id,
+          questionText: s.assignedQuestion.questionText,
+          status: s.assignedQuestion.status,
+          coMapping: s.assignedQuestion.coMapping,
+          rbtLevel: s.assignedQuestion.rbtLevel,
+          difficultyLevel: s.assignedQuestion.difficultyLevel,
+          creator: s.assignedQuestion.creator,
+        }
+      : null,
+  }));
+
+  const aiReports: AiReportItem[] = (bank.aiReports ?? []).map((r) => ({
+    id: r.id,
+    status: r.status,
+    modelName: r.modelName,
+    summary: r.summary,
+    failureReason: r.failureReason,
+    generatedAt: r.generatedAt?.toISOString() ?? null,
+  }));
+
+  const generatedPapers: GeneratedPaperItem[] = (bank.generatedPapers ?? []).map((p) => ({
+    id: p.id,
+    variant: p.variant,
+    status: p.status,
+    coverageScore: p.coverageScore,
+    difficultyScore: p.difficultyScore,
+    qualityScore: p.qualityScore,
+    duplicateRisk: p.duplicateRisk,
+    recommendation: p.recommendation,
+    questionCount: p.items.length,
+  }));
+
+  let deanReview: DeanReviewItem | null = null;
+  if (bank.deanReview) {
+    deanReview = {
+      id: bank.deanReview.id,
+      regularPaper: bank.deanReview.regularPaper,
+      supplementaryPaper: bank.deanReview.supplementaryPaper,
+      ktPaper: bank.deanReview.ktPaper,
+      reviewedBy: bank.deanReview.reviewedBy.name,
+      reviewedAt: bank.deanReview.reviewedAt.toISOString(),
+      status: bank.deanReview.status,
+    };
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">{bank.subject.subjectName}</h1>
-          <p className="text-muted-foreground">
-            {bank.subject.subjectCode} &middot; {bank.examCycle.academicYear.code} &middot; Sem {bank.examCycle.semester.number} &middot; {bank.examCycle.examType.replaceAll("_", " ")}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge>{questionBankPhaseLabels[bank.phase] ?? bank.phase}</Badge>
-          <Badge className={bank.recordStatus === "LOCKED" ? "bg-red-100 text-red-800 border-red-300" : ""}>{recordStatusLabels[bank.recordStatus] ?? bank.recordStatus}</Badge>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          <SlotCoverageDashboard questions={questions} />
-          <Card>
-            <CardHeader>
-              <CardTitle>Questions ({questions.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <THead>
-                  <TR>
-                    <TH>Module</TH>
-                    <TH>Marks</TH>
-                    <TH>Status</TH>
-                  </TR>
-                </THead>
-                <TBody>
-                  {questions.map((question) => (
-                    <TR key={question.id}>
-                      <TD>{question.moduleNumber}</TD>
-                      <TD>{question.marks}</TD>
-                      <TD><Badge>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
-                    </TR>
-                  ))}
-                  {questions.length === 0 && (
-                    <TR>
-                      <TD colSpan={3} className="text-center text-muted-foreground py-4">No questions assigned yet.</TD>
-                    </TR>
-                  )}
-                </TBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <BankActionsPanel questionBankId={bank.id} phase={bank.phase} recordStatus={bank.recordStatus} />
-          <WorkflowTimeline phase={bank.phase} recordStatus={bank.recordStatus} />
-          <NextStepGuidance phase={bank.phase} recordStatus={bank.recordStatus} />
-        </div>
-      </div>
-    </div>
+    <BankDetailClient
+      bankId={bank.id}
+      subjectName={bank.subject.subjectName}
+      subjectCode={bank.subject.subjectCode}
+      examCycleLabel={`${bank.examCycle.academicYear.code} · Sem ${bank.examCycle.semester.number} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}`}
+      phase={bank.phase}
+      recordStatus={bank.recordStatus}
+      totalSlots={totalSlots}
+      totalModules={totalModules}
+      marksOptions={marksOptions}
+      slotsPerModule={slotsPerModule}
+      slots={slots}
+      aiReports={aiReports}
+      generatedPapers={generatedPapers}
+      deanReview={deanReview}
+    />
   );
 }

@@ -1,15 +1,14 @@
 import {
   ExamCycleStatus,
+  QuestionBankPhase,
   QuestionStatus,
   RecordStatus,
   SubjectStatus,
-  type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
 import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
-import { QUESTION_MODULE_COUNT } from "@/modules/questions/slot-template";
 
 type QuestionFilters = {
   subjectId?: string;
@@ -18,6 +17,85 @@ type QuestionFilters = {
   status?: QuestionStatus;
   contributorId?: string;
 };
+
+export type BankStatusItem = {
+  id: string;
+  subjectName: string;
+  subjectCode: string;
+  department: string;
+  examCycle: string;
+  examType: string;
+  phase: string;
+  recordStatus: string;
+  fillPercentage: number;
+  approvedPercentage: number;
+  daysInPhase: number;
+  totalSlots: number;
+  filledCount: number;
+  approvedCount: number;
+  pendingModerationCount: number;
+  rejectedCount: number;
+  nextAction: string;
+  hasModerator: boolean;
+  aiReportStatus: string | null;
+};
+
+export type AttentionItem = {
+  type: "stalled" | "missing_moderator" | "ready";
+  bankId: string;
+  subject: string;
+  subjectCode: string;
+  phase: string;
+  daysInPhase: number;
+  detail: string;
+};
+
+export type PhaseDistribution = {
+  drafting: number;
+  moderation: number;
+  approval: number;
+  complete: number;
+};
+
+const STALL_DAYS_THRESHOLD = 7;
+
+function computeNextAction(
+  phase: string,
+  recordStatus: string,
+  fillPct: number,
+  pendingCount: number,
+  approvedCount: number,
+  totalSlots: number,
+  aiReportStatus: string | undefined | null,
+  hasGeneratedPapers: boolean,
+  hasDeanReview: boolean,
+): string {
+  if (recordStatus === "LOCKED") return "Locked";
+  if (recordStatus === "ARCHIVED") return "Archived";
+
+  switch (phase) {
+    case "DRAFTING":
+      if (fillPct < 100) return "Assign Questions";
+      return "Ready for Moderation";
+    case "MODERATION":
+      if (pendingCount > 0) return "Await Moderation";
+      return "Ready for Approval";
+    case "APPROVAL":
+      if (aiReportStatus !== "COMPLETED") return "Generate AI Report";
+      return "Review AI Report";
+    case "COMPLETE":
+      if (recordStatus === "LOCKED") return "Locked";
+      if (hasDeanReview) return "Lock Bank";
+      if (hasGeneratedPapers) return "Dean Review";
+      return "Generate Papers";
+    default:
+      return "—";
+  }
+}
+
+function computeDaysInPhase(updatedAt: Date): number {
+  return Math.max(0, Math.floor((Date.now() - updatedAt.getTime()) / (1000 * 60 * 60 * 24)));
+}
 
 export class CoordinatorService {
   constructor(
@@ -28,7 +106,7 @@ export class CoordinatorService {
   async getDashboard(actor: Actor) {
     const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
 
-    const [departments, activeCycles, questionBanks, recentQuestions, notifications] = await Promise.all([
+    const [departments, activeCycles, banks, recentQuestions, notifications] = await Promise.all([
       prisma.department.findMany({
         where: { id: { in: departmentIds } },
         select: {
@@ -57,9 +135,7 @@ export class CoordinatorService {
       }),
       prisma.questionBank.findMany({
         where: { subject: { departmentId: { in: departmentIds } } },
-        select: {
-          id: true,
-          recordStatus: true,
+        include: {
           subject: {
             select: {
               id: true,
@@ -70,8 +146,28 @@ export class CoordinatorService {
             },
           },
           examCycle: {
-            select: { id: true, examType: true, academicYear: { select: { id: true, code: true } }, semester: { select: { id: true, number: true, name: true } } },
+            select: {
+              id: true,
+              examType: true,
+              academicYear: { select: { id: true, code: true } },
+              semester: { select: { id: true, number: true, name: true } },
+            },
           },
+          pattern: { select: { totalSlots: true } },
+          slots: {
+            where: { assignedQuestionId: { not: null } },
+            select: {
+              assignedQuestion: { select: { status: true } },
+            },
+          },
+          moderatorAssignments: { select: { id: true } },
+          aiReports: {
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { status: true },
+          },
+          generatedPapers: { select: { id: true } },
+          deanReview: { select: { id: true } },
         },
         orderBy: { updatedAt: "desc" },
       }),
@@ -93,12 +189,133 @@ export class CoordinatorService {
 
     const unreadNotificationCount = notifications.filter((item) => !item.isRead).length;
 
+    const bankStatuses: BankStatusItem[] = banks.map((bank) => {
+      const totalSlots = bank.pattern?.totalSlots ?? 126;
+      const filledCount = bank.slots.length;
+      const approvedCount = bank.slots.filter(
+        (s) => s.assignedQuestion?.status === QuestionStatus.APPROVED,
+      ).length;
+      const pendingModerationCount = bank.slots.filter(
+        (s) =>
+          s.assignedQuestion?.status === QuestionStatus.PENDING ||
+          s.assignedQuestion?.status === QuestionStatus.REVISION_SUBMITTED,
+      ).length;
+      const rejectedCount = bank.slots.filter(
+        (s) =>
+          s.assignedQuestion?.status === QuestionStatus.REJECTED ||
+          s.assignedQuestion?.status === QuestionStatus.REVISION_REQUESTED,
+      ).length;
+
+      const fillPercentage = totalSlots > 0
+        ? Math.round((filledCount / totalSlots) * 100)
+        : 0;
+      const approvedPercentage = totalSlots > 0
+        ? Math.round((approvedCount / totalSlots) * 100)
+        : 0;
+      const daysInPhase = computeDaysInPhase(bank.updatedAt);
+      const hasModerator = bank.moderatorAssignments.length > 0;
+      const aiReportStatus = bank.aiReports[0]?.status ?? null;
+      const hasGeneratedPapers = bank.generatedPapers.length > 0;
+      const hasDeanReview = bank.deanReview !== null;
+
+      const nextAction = computeNextAction(
+        bank.phase,
+        bank.recordStatus,
+        fillPercentage,
+        pendingModerationCount,
+        approvedCount,
+        totalSlots,
+        aiReportStatus,
+        hasGeneratedPapers,
+        hasDeanReview,
+      );
+
+      return {
+        id: bank.id,
+        subjectName: bank.subject.subjectName,
+        subjectCode: bank.subject.subjectCode,
+        department: bank.subject.department?.name ?? "",
+        examCycle: `${bank.examCycle.semester.name} · ${bank.examCycle.academicYear.code}`,
+        examType: bank.examCycle.examType.replaceAll("_", " "),
+        phase: bank.phase,
+        recordStatus: bank.recordStatus,
+        fillPercentage,
+        approvedPercentage,
+        daysInPhase,
+        totalSlots,
+        filledCount,
+        approvedCount,
+        pendingModerationCount,
+        rejectedCount,
+        nextAction,
+        hasModerator,
+        aiReportStatus,
+      };
+    });
+
+    const phaseDistribution: PhaseDistribution = {
+      drafting: banks.filter((b) => b.phase === QuestionBankPhase.DRAFTING).length,
+      moderation: banks.filter((b) => b.phase === QuestionBankPhase.MODERATION).length,
+      approval: banks.filter((b) => b.phase === QuestionBankPhase.APPROVAL).length,
+      complete: banks.filter((b) => b.phase === QuestionBankPhase.COMPLETE).length,
+    };
+
+    const attentionItems: AttentionItem[] = [];
+    for (const bank of bankStatuses) {
+      if (bank.recordStatus === "LOCKED" || bank.recordStatus === "ARCHIVED") continue;
+
+      if (bank.daysInPhase > STALL_DAYS_THRESHOLD && bank.phase !== "COMPLETE") {
+        attentionItems.push({
+          type: "stalled",
+          bankId: bank.id,
+          subject: bank.subjectName,
+          subjectCode: bank.subjectCode,
+          phase: bank.phase,
+          daysInPhase: bank.daysInPhase,
+          detail: `${bank.daysInPhase} days in ${bank.phase.toLowerCase()}`,
+        });
+      }
+
+      if (
+        (bank.phase === "DRAFTING" || bank.phase === "MODERATION") &&
+        !bank.hasModerator
+      ) {
+        attentionItems.push({
+          type: "missing_moderator",
+          bankId: bank.id,
+          subject: bank.subjectName,
+          subjectCode: bank.subjectCode,
+          phase: bank.phase,
+          daysInPhase: bank.daysInPhase,
+          detail: "No moderator assigned",
+        });
+      }
+
+      if (
+        (bank.phase === "DRAFTING" && bank.fillPercentage >= 100) ||
+        (bank.phase === "MODERATION" && bank.pendingModerationCount === 0 && bank.filledCount > 0) ||
+        (bank.phase === "APPROVAL" && bank.aiReportStatus === "COMPLETED")
+      ) {
+        attentionItems.push({
+          type: "ready",
+          bankId: bank.id,
+          subject: bank.subjectName,
+          subjectCode: bank.subjectCode,
+          phase: bank.phase,
+          daysInPhase: bank.daysInPhase,
+          detail: `Ready to advance from ${bank.phase.toLowerCase()}`,
+        });
+      }
+    }
+
     return {
       assignedDepartments: departments.map((department) => ({
         id: department.id,
         name: department.name,
         activeSubjects: department.subjects.length,
-        activeQuestionBanks: questionBanks.filter((bank) => bank.subject.departmentId === department.id && bank.recordStatus !== RecordStatus.LOCKED).length,
+        activeQuestionBanks: banks.filter(
+          (b) => b.subject.departmentId === department.id && b.recordStatus !== RecordStatus.LOCKED,
+        ).length,
       })),
       activeExamCycles: activeCycles.map((cycle) => ({
         id: cycle.id,
@@ -108,7 +325,9 @@ export class CoordinatorService {
         department: cycle.department?.name ?? "Unassigned",
         initializedBanks: cycle._count.questionBanks,
       })),
-      subjectBankStatuses: [],
+      phaseDistribution,
+      attentionItems,
+      bankStatuses,
       recentContributionActivity: recentQuestions.map((question) => ({
         id: question.id,
         subjectName: question.subjectVersion.subject.subjectName,
@@ -116,7 +335,6 @@ export class CoordinatorService {
         status: question.status,
         submittedAt: question.submittedAt?.toISOString() ?? question.createdAt.toISOString(),
       })),
-      pendingTeacherAssignments: [],
       notifications: notifications.map((item) => ({
         id: item.id,
         title: item.title,
