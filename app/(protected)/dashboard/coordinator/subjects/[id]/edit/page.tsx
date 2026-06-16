@@ -11,17 +11,12 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ id
 
   const subject = await prisma.subject.findUnique({
     where: { id },
-    include: { department: true, semester: true },
+    include: { department: true },
   });
   if (!subject) notFound();
   await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
 
   const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
-  const semesters = await prisma.semester.findMany({
-    where: { academicYear: { status: "ACTIVE" } },
-    include: { academicYear: true },
-    orderBy: [{ academicYearId: "asc" }, { number: "asc" }],
-  });
   const departments = await prisma.department.findMany({ where: { id: { in: departmentIds } }, orderBy: { name: "asc" } });
 
   return (
@@ -32,12 +27,11 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ id
       </div>
       <SubjectForm
         departments={departments}
-        semesters={semesters}
         initialValues={{
           name: subject.subjectName,
           code: subject.subjectCode,
           departmentId: subject.departmentId,
-          semesterId: subject.semesterId,
+          semesterNumber: subject.semesterNumber,
           credits: subject.credits,
         }}
         endpoint={`/api/subjects/${id}`}

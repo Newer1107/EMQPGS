@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: process.env.NODE_ENV === "development" && process.env.ALLOWED_DEV_ORIGINS
+    ? process.env.ALLOWED_DEV_ORIGINS.split(",")
+    : undefined,
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
 

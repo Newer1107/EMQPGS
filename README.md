@@ -71,7 +71,7 @@ Immutable records of bank state at key moments:
 
 ```
 COE:
-  Create AcademicYear → Create Semester → Create ExamCycle (DRAFT) → Activate (ACTIVE)
+  Create AcademicYear → (8 semesters auto-generated) → Create ExamCycle (DRAFT) → Activate (ACTIVE)
 
 Coordinator:
   Create Subject (auto-creates SubjectVersion v1) → Link Subject to ExamCycle
@@ -119,8 +119,8 @@ Transitions not listed are illegal and return HTTP 409. Record status (`ACTIVE`/
 
 ```
 src/modules/
-├── academic-years/       AcademicYear CRUD
-├── semesters/            Semester CRUD
+├── academic-years/       AcademicYear CRUD (auto-generates 8 semesters, has activeSemesterType ODD/EVEN)
+├── semesters/            Semester read-only (auto-generated, no manual CRUD)
 ├── subject-versions/     SubjectVersion CRUD + archive
 ├── exam-cycles/          ExamCycle CRUD + activation
 ├── departments/          Department CRUD

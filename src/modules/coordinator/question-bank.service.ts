@@ -49,7 +49,7 @@ export class QuestionBankWorkflowService {
             id: true,
             subjectName: true,
             subjectCode: true,
-            semester: true,
+            semesterNumber: true,
             department: { select: { id: true, name: true } },
           },
         },

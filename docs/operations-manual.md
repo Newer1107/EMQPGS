@@ -21,11 +21,11 @@
 
 ### COE (Controller of Examination)
 
-**Purpose:** System administrator. Manages the institutional structure — users, departments, academic years, semesters, exam cycles, exports, backups, and audit.
+**Purpose:** System administrator. Manages the institutional structure — users, departments, academic years, exam cycles, exports, backups, and audit.
 
-**Permissions:** Full read/write on departments, users, academic years, semesters, exam cycles, coordinator-department assignments. Read-only on question banks, subjects, papers, reports. Manage exports and backups.
+**Permissions:** Full read/write on departments, users, academic years, exam cycles, coordinator-department assignments. Semesters are auto-generated — no manual CRUD. Read-only on question banks, subjects, papers, reports. Manage exports and backups.
 
-**Responsibilities:** Create the academic calendar structure, register users, assign coordinators to departments, activate exam cycles, export finalized papers, trigger backups, monitor audit logs.
+**Responsibilities:** Create the academic calendar structure (all 8 semesters auto-generated), register users, assign coordinators to departments, activate exam cycles, export finalized papers, trigger backups, monitor audit logs.
 
 **Actions available:**
 
@@ -36,8 +36,8 @@
 | Delete department | `/dashboard/coe/departments` | DELETE `/api/departments/[id]` |
 | Create user | `/dashboard/coe/users` | POST `/api/users` |
 | Edit/disable user | `/dashboard/coe/users` | PATCH `/api/users/[id]` |
-| Create academic year | `/dashboard/coe/academic-years` | POST `/api/academic-years` |
-| Create semester | `/dashboard/coe/semesters` | POST `/api/semesters` |
+| Create academic year | `/dashboard/coe/academic-years` | POST `/api/academic-years` (auto-generates 8 semesters) |
+| *Semesters* | *Auto-generated* | *No manual CRUD — 8 semesters created on year creation* |
 | Create exam cycle | `/dashboard/coe/exam-cycles` | POST `/api/exam-cycles` |
 | Activate/close exam cycle | `/dashboard/coe/exam-cycles` | PATCH `/api/exam-cycles/[id]` |
 | Assign coordinator to department | `/dashboard/coe/coordinator-assignments` | POST `/api/coordinator-departments` |

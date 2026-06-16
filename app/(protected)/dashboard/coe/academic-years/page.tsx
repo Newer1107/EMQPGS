@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { AcademicYearForm } from "@/components/forms/academic-year-form";
+import { Badge } from "@/components/ui/badge";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 
@@ -19,7 +20,7 @@ export default async function CoeAcademicYearsPage() {
         <AcademicYearForm />
         <DataTableCard title="Existing Academic Years">
           <Table>
-            <THead><TR><TH>Code</TH><TH>Start Date</TH><TH>End Date</TH><TH>Status</TH><TH>Semesters</TH></TR></THead>
+            <THead><TR><TH>Code</TH><TH>Start Date</TH><TH>End Date</TH><TH>Status</TH><TH>Active Semester Type</TH><TH>Semesters</TH></TR></THead>
             <TBody>
               {academicYears.map((ay) => (
                 <TR key={ay.id}>
@@ -27,6 +28,7 @@ export default async function CoeAcademicYearsPage() {
                   <TD>{new Date(ay.startDate).toLocaleDateString()}</TD>
                   <TD>{new Date(ay.endDate).toLocaleDateString()}</TD>
                   <TD>{ay.status}</TD>
+                  <TD><Badge>{ay.activeSemesterType}</Badge></TD>
                   <TD>{ay.semesters.map((s) => `Sem ${s.number} (${s.name})`).join(", ") || "None"}</TD>
                 </TR>
               ))}

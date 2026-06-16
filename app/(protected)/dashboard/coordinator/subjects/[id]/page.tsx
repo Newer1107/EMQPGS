@@ -19,7 +19,6 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
     where: { id },
     include: {
       department: true,
-      semester: { include: { academicYear: true } },
       versions: { orderBy: { versionNumber: "desc" }, include: { effectiveFromAcademicYear: true } },
       examCycleLinks: { include: { examCycle: { include: { academicYear: true, semester: true } } } },
       questionBanks: { include: { examCycle: true } },
@@ -40,7 +39,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{subject.subjectName}</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode} · {subject.department.name} · {subject.semester.name} ({subject.semester.academicYear.code})</p>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode} · {subject.department.name} · Semester {subject.semesterNumber}</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/dashboard/coordinator/subjects/${id}/edit`}>
@@ -70,7 +69,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Credits</span><span>{subject.credits}</span></div>
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><span>{subject.status}</span></div>
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Department</span><span>{subject.department.name}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span>{subject.semester.name} ({subject.semester.academicYear.code})</span></div>
+            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span>{subject.semesterNumber}</span></div>
           </CardContent>
         </Card>
 

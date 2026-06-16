@@ -1,4 +1,4 @@
-import { AcademicYearStatus } from "@prisma/client";
+import { AcademicYearStatus, SemesterType } from "@prisma/client";
 import { z } from "zod";
 
 export const academicYearSchema = z.object({
@@ -6,6 +6,7 @@ export const academicYearSchema = z.object({
   startDate: z.coerce.date(),
   endDate: z.coerce.date(),
   status: z.nativeEnum(AcademicYearStatus).optional(),
+  activeSemesterType: z.nativeEnum(SemesterType).optional(),
 });
 
 export type AcademicYearInput = z.infer<typeof academicYearSchema>;

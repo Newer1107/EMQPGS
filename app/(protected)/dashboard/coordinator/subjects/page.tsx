@@ -25,7 +25,7 @@ export default async function SubjectsManagementPage() {
         <Table>
           <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Semester</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH><TH>Actions</TH></TR></THead>
           <TBody>
-            {(subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; credits: number; status: string; department: { name: string; id: string }; semester: { name: string; academicYear: { code: string } }; examCycleLinks: Array<{ examCycle: { semester: { name: string }; academicYear: { code: string } } }> }>).map((subject) => (
+            {(subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; credits: number; status: string; department: { name: string; id: string }; semesterNumber: number; examCycleLinks: Array<{ examCycle: { semester: { name: string }; academicYear: { code: string } } }> }>).map((subject) => (
               <TR key={subject.id}>
                 <TD>{subject.department.name}</TD>
                 <TD className="font-medium">{subject.subjectCode}</TD>
@@ -34,7 +34,7 @@ export default async function SubjectsManagementPage() {
                     {subject.subjectName}
                   </Link>
                 </TD>
-                <TD>{subject.semester.name} · {subject.semester.academicYear.code}</TD>
+                <TD>Semester {subject.semesterNumber}</TD>
                 <TD>{subject.credits}</TD>
                 <TD>{subject.status}</TD>
                 <TD>{subject.examCycleLinks.map((link) => `${link.examCycle.semester.name} · ${link.examCycle.academicYear.code}`).join(", ") || "Not linked"}</TD>

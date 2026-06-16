@@ -8,7 +8,7 @@ const service = new SubjectManagementService();
 const subjectUpdateSchema = z.object({
   subjectCode: z.string().min(2).max(20).trim().toUpperCase().optional(),
   subjectName: z.string().min(2).trim().optional(),
-  semesterId: z.string().min(1).optional(),
+  semesterNumber: z.coerce.number().int().min(1).max(8).optional(),
   creditLoad: z.coerce.number().int().min(1).max(10).optional(),
 });
 

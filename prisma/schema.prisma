@@ -149,6 +149,11 @@ enum QuestionStatus {
   REVISION_SUBMITTED
 }
 
+enum SemesterType {
+  ODD
+  EVEN
+}
+
 enum AcademicYearStatus {
   ACTIVE
   CLOSED
@@ -160,16 +165,17 @@ enum SubjectVersionStatus {
 }
 
 model AcademicYear {
-  id        String            @id @default(cuid())
-  code      String            @unique
-  startDate DateTime
-  endDate   DateTime
-  status    AcademicYearStatus @default(ACTIVE)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
-  semesters Semester[]
-  examCycles ExamCycle[]
-  subjectVersions SubjectVersion[] @relation("subjectVersionAcademicYear")
+  id                 String            @id @default(cuid())
+  code               String            @unique
+  startDate          DateTime
+  endDate            DateTime
+  status             AcademicYearStatus @default(ACTIVE)
+  activeSemesterType SemesterType       @default(ODD)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  semesters          Semester[]
+  examCycles         ExamCycle[]
+  subjectVersions    SubjectVersion[]  @relation("subjectVersionAcademicYear")
 }
 
 model Semester {
@@ -178,7 +184,6 @@ model Semester {
   name          String
   academicYearId String
   academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id])
-  subjects      Subject[]
   examCycles    ExamCycle[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -295,18 +300,16 @@ model Subject {
   status              SubjectStatus  @default(ACTIVE)
   questionBankDueDate DateTime
   departmentId        String
-  semesterId          String
+  semesterNumber      Int
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   department          Department     @relation(fields: [departmentId], references: [id])
-  semester            Semester       @relation(fields: [semesterId], references: [id])
   examCycleLinks      SubjectExamCycleLink[]
   questionBanks       QuestionBank[]
   versions            SubjectVersion[]
 
   @@unique([subjectCode, departmentId])
   @@index([departmentId])
-  @@index([semesterId])
 }
 
 model QuestionBank {

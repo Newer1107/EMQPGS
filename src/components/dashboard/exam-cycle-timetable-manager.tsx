@@ -7,7 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { SemesterType } from "@prisma/client";
 import { apiFetch } from "@/lib/client-fetch";
+import { isSemesterActive } from "@/lib/semester-utils";
 
 type ExamType = "ISE_1" | "ISE_2" | "ENDSEM" | "SUPPLEMENTARY" | "KT";
 type ExamCycleStatus = "DRAFT" | "ACTIVE" | "CLOSED";
@@ -20,6 +22,7 @@ type DepartmentOption = {
 type AcademicYearOption = {
   id: string;
   code: string;
+  activeSemesterType?: string;
 };
 
 type SemesterOption = {
@@ -165,26 +168,33 @@ export function ExamCycleTimetableManager({
     setForm((current) => ({ ...current, [field]: value }));
   }
 
-  async function loadSemesters(academicYearId: string) {
+  async function loadSemesters(academicYearId: string): Promise<SemesterOption[]> {
     if (!academicYearId) {
       setSemesters([]);
-      return;
+      return [];
     }
     try {
       const response = await fetch(`/api/semesters?academicYearId=${academicYearId}`);
       const result = await response.json();
       if (result.success) {
         setSemesters(result.data);
+        return result.data;
       }
     } catch {
       // silently fail
     }
+    return [];
   }
 
   async function handleAcademicYearChange(value: string) {
     updateField("academicYearId", value);
     updateField("semesterId", "");
-    await loadSemesters(value);
+    const loaded = await loadSemesters(value);
+    const ay = academicYears.find((a) => a.id === value);
+    if (ay?.activeSemesterType && loaded.length > 0) {
+      const first = loaded.find((s) => isSemesterActive(s.number, ay.activeSemesterType as SemesterType));
+      if (first) updateField("semesterId", first.id);
+    }
   }
 
   function editCycle(cycle: StoredExamCycle) {

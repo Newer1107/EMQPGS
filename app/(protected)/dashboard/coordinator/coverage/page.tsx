@@ -9,7 +9,7 @@ export default async function CoveragePage() {
   const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
 
   const [academicYears, semesters, subjects, subjectVersions, questionBanks] = await Promise.all([
-    prisma.academicYear.findMany({ orderBy: { startDate: "desc" }, select: { id: true, code: true } }),
+    prisma.academicYear.findMany({ orderBy: { startDate: "desc" }, select: { id: true, code: true, activeSemesterType: true } }),
     prisma.semester.findMany({
       orderBy: { number: "asc" },
       select: { id: true, number: true, name: true, academicYearId: true },
@@ -17,7 +17,7 @@ export default async function CoveragePage() {
     prisma.subject.findMany({
       where: { departmentId: { in: departmentIds }, status: "ACTIVE" },
       orderBy: { subjectName: "asc" },
-      select: { id: true, subjectCode: true, subjectName: true, semesterId: true },
+      select: { id: true, subjectCode: true, subjectName: true, semesterNumber: true },
     }),
     prisma.subjectVersion.findMany({
       where: { subject: { departmentId: { in: departmentIds } }, status: "ACTIVE" },

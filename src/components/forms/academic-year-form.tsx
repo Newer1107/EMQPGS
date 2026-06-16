@@ -10,7 +10,7 @@ import { apiFetch } from "@/lib/client-fetch";
 
 export function AcademicYearForm() {
   const [loading, setLoading] = useState(false);
-  const [values, setValues] = useState({ code: "", startDate: "", endDate: "" });
+  const [values, setValues] = useState({ code: "", startDate: "", endDate: "", activeSemesterType: "ODD" });
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -23,12 +23,13 @@ export function AcademicYearForm() {
           code: values.code,
           startDate: values.startDate,
           endDate: values.endDate,
+          activeSemesterType: values.activeSemesterType,
         }),
       });
       const result = await response.json();
       if (response.ok && result.success) {
         toast.success("Academic year created");
-        setValues({ code: "", startDate: "", endDate: "" });
+        setValues({ code: "", startDate: "", endDate: "", activeSemesterType: "ODD" });
       } else {
         toast.error(result.error?.message ?? "Failed to create");
       }
@@ -60,6 +61,18 @@ export function AcademicYearForm() {
               <Label htmlFor="endDate">End Date</Label>
               <Input id="endDate" type="date" value={values.endDate} onChange={(e) => setValues((v) => ({ ...v, endDate: e.target.value }))} required />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="activeSemesterType">Active Semester Type</Label>
+            <select
+              id="activeSemesterType"
+              className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 text-sm"
+              value={values.activeSemesterType}
+              onChange={(e) => setValues((v) => ({ ...v, activeSemesterType: e.target.value }))}
+            >
+              <option value="ODD">ODD (Sem 1,3,5,7)</option>
+              <option value="EVEN">EVEN (Sem 2,4,6,8)</option>
+            </select>
           </div>
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Creating..." : "Create Academic Year"}

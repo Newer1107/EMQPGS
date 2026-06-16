@@ -10,28 +10,29 @@ import { Select } from "@/components/ui/select";
 import { apiFetch } from "@/lib/client-fetch";
 import { useRouter } from "next/navigation";
 
+const SEMESTER_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
+
 type SubjectFormProps = {
   departments: Array<{ id: string; name: string; code: string }>;
-  semesters: Array<{ id: string; number: number; name: string; academicYear: { code: string } }>;
   initialValues?: {
     name?: string;
     code?: string;
     departmentId?: string;
-    semesterId?: string;
+    semesterNumber?: number;
     credits?: number;
   };
   endpoint: string;
   title: string;
 };
 
-export function SubjectForm({ departments, semesters, initialValues, endpoint, title }: SubjectFormProps) {
+export function SubjectForm({ departments, initialValues, endpoint, title }: SubjectFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({
     name: initialValues?.name ?? "",
     code: initialValues?.code ?? "",
     departmentId: initialValues?.departmentId ?? "",
-    semesterId: initialValues?.semesterId ?? "",
+    semesterNumber: String(initialValues?.semesterNumber ?? ""),
     credits: String(initialValues?.credits ?? ""),
   });
 
@@ -47,7 +48,7 @@ export function SubjectForm({ departments, semesters, initialValues, endpoint, t
       name: values.name,
       code: values.code,
       departmentId: values.departmentId,
-      semesterId: values.semesterId,
+      semesterNumber: Number(values.semesterNumber),
       credits: Number(values.credits),
     };
 
@@ -100,11 +101,11 @@ export function SubjectForm({ departments, semesters, initialValues, endpoint, t
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="semesterId">Semester</Label>
-              <Select id="semesterId" value={values.semesterId} onChange={(e) => setField("semesterId", e.target.value)} required>
+              <Label htmlFor="semesterNumber">Semester</Label>
+              <Select id="semesterNumber" value={values.semesterNumber} onChange={(e) => setField("semesterNumber", e.target.value)} required>
                 <option value="">Select</option>
-                {semesters.map((s) => (
-                  <option key={s.id} value={s.id}>Sem {s.number} - {s.name} ({s.academicYear.code})</option>
+                {SEMESTER_OPTIONS.map((n) => (
+                  <option key={n} value={n}>Semester {n}</option>
                 ))}
               </Select>
             </div>

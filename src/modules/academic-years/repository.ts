@@ -22,13 +22,14 @@ export class AcademicYearRepository extends BaseRepository {
     });
   }
 
-  create(data: { code: string; startDate: Date; endDate: Date; status?: import("@prisma/client").AcademicYearStatus }) {
+  create(data: { code: string; startDate: Date; endDate: Date; status?: import("@prisma/client").AcademicYearStatus; activeSemesterType?: import("@prisma/client").SemesterType }) {
     return this.prisma.academicYear.create({
       data: {
         code: data.code,
         startDate: data.startDate,
         endDate: data.endDate,
         status: data.status ?? "ACTIVE",
+        activeSemesterType: data.activeSemesterType ?? "ODD",
       },
       include: { semesters: true },
     });

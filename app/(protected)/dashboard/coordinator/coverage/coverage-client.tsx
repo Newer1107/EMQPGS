@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { apiFetch } from "@/lib/client-fetch";
+import { SemesterType } from "@prisma/client";
+import { isSemesterActive } from "@/lib/semester-utils";
 
-type AcademicYear = { id: string; code: string };
+type AcademicYear = { id: string; code: string; activeSemesterType: string };
 type Semester = { id: string; number: number; name: string; academicYearId: string };
-type Subject = { id: string; subjectCode: string; subjectName: string; semesterId: string };
+type Subject = { id: string; subjectCode: string; subjectName: string; semesterNumber: number };
 type SubjectVersion = { id: string; versionNumber: number; title: string; subjectId: string; effectiveFromAcademicYearId: string };
 type QuestionBank = { id: string; subjectId: string; examCycleId: string; phase: string; recordStatus: string };
 
@@ -55,7 +57,8 @@ export function CoverageDashboardClient({
   const [loading, setLoading] = useState(false);
 
   const filteredSemesters = selectedAcademicYear ? semesters.filter((s) => s.academicYearId === selectedAcademicYear) : [];
-  const filteredSubjects = selectedSemester ? subjects.filter((s) => s.semesterId === selectedSemester) : subjects;
+  const selectedSemesterObj = semesters.find((s) => s.id === selectedSemester);
+  const filteredSubjects = selectedSemesterObj ? subjects.filter((s) => s.semesterNumber === selectedSemesterObj.number) : subjects;
   const filteredVersions = selectedSubject ? subjectVersions.filter((v) => v.subjectId === selectedSubject) : subjectVersions;
   const filteredBanks = selectedSubject ? questionBanks.filter((b) => b.subjectId === selectedSubject) : questionBanks;
 
@@ -106,7 +109,14 @@ export function CoverageDashboardClient({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
               <Label>Academic Year</Label>
-              <Select value={selectedAcademicYear} onChange={(e) => { setSelectedAcademicYear(e.target.value); setSelectedSemester(""); }}>
+              <Select value={selectedAcademicYear} onChange={(e) => {
+                const ayId = e.target.value;
+                setSelectedAcademicYear(ayId);
+                const ay = academicYears.find((a) => a.id === ayId);
+                const sems = semesters.filter((s) => s.academicYearId === ayId);
+                const first = ay ? sems.find((s) => isSemesterActive(s.number, ay.activeSemesterType as SemesterType)) : null;
+                setSelectedSemester(first ? first.id : "");
+              }}>
                 <option value="">All Years</option>
                 {academicYears.map((ay) => (
                   <option key={ay.id} value={ay.id}>{ay.code}</option>

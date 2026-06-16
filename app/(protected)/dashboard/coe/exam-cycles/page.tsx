@@ -36,7 +36,7 @@ export default async function CoeExamCyclesPage() {
       </div>
       <ExamCycleTimetableManager
         departments={departments.map((d) => ({ id: d.id, name: d.name }))}
-        academicYears={academicYears.map((ay) => ({ id: ay.id, code: ay.code }))}
+        academicYears={academicYears.map((ay) => ({ id: ay.id, code: ay.code, activeSemesterType: ay.activeSemesterType }))}
         initialCycles={initialCycles}
       />
     </div>

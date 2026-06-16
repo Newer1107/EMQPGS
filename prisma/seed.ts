@@ -15,6 +15,7 @@ import {
   RecordStatus,
   ReviewStatus,
   Role,
+  SemesterType,
   SubjectStatus,
   SubjectVersionStatus,
   UserStatus,
@@ -42,20 +43,9 @@ const DEPARTMENTS = [
 ] as const;
 
 const ACADEMIC_YEARS = [
-  { code: "2024-2025", startDate: new Date("2024-06-01"), endDate: new Date("2025-05-31"), status: AcademicYearStatus.CLOSED },
-  { code: "2025-2026", startDate: new Date("2025-06-01"), endDate: new Date("2026-05-31"), status: AcademicYearStatus.CLOSED },
-  { code: "2026-2027", startDate: new Date("2026-06-01"), endDate: new Date("2027-05-31"), status: AcademicYearStatus.ACTIVE },
-] as const;
-
-const SEMESTER_DEFS = [
-  { number: 1, name: "Semester I", yearCode: "2024-2025" },
-  { number: 2, name: "Semester II", yearCode: "2024-2025" },
-  { number: 3, name: "Semester III", yearCode: "2025-2026" },
-  { number: 4, name: "Semester IV", yearCode: "2025-2026" },
-  { number: 5, name: "Semester V", yearCode: "2026-2027" },
-  { number: 6, name: "Semester VI", yearCode: "2026-2027" },
-  { number: 7, name: "Semester VII", yearCode: "2026-2027" },
-  { number: 8, name: "Semester VIII", yearCode: "2026-2027" },
+  { code: "2024-2025", startDate: new Date("2024-06-01"), endDate: new Date("2025-05-31"), status: AcademicYearStatus.CLOSED, activeSemesterType: SemesterType.ODD },
+  { code: "2025-2026", startDate: new Date("2025-06-01"), endDate: new Date("2026-05-31"), status: AcademicYearStatus.CLOSED, activeSemesterType: SemesterType.EVEN },
+  { code: "2026-2027", startDate: new Date("2026-06-01"), endDate: new Date("2027-05-31"), status: AcademicYearStatus.ACTIVE, activeSemesterType: SemesterType.ODD },
 ] as const;
 
 // ──────────────────────────────────────────────
@@ -430,29 +420,42 @@ async function main() {
     depts.set(d.code, rec.id);
   }
 
-  // ---------- ACADEMIC YEARS ----------
+  // ---------- ACADEMIC YEARS (auto-generates 8 semesters each) ----------
   const years = new Map<string, string>();
+  const semNumberToId = new Map<number, string>();
+  const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
   for (const y of ACADEMIC_YEARS) {
     const rec = await prisma.academicYear.upsert({
       where: { code: y.code },
-      update: {},
-      create: y,
+      update: { activeSemesterType: y.activeSemesterType },
+      create: {
+        code: y.code,
+        startDate: y.startDate,
+        endDate: y.endDate,
+        status: y.status,
+        activeSemesterType: y.activeSemesterType,
+      },
     });
     years.set(y.code, rec.id);
-  }
 
-  // ---------- SEMESTERS ----------
-  const semById = new Map<string, string>(); // "${semNumber}" -> id in current year
-  const semNumberToId = new Map<number, string>();
-  for (const s of SEMESTER_DEFS) {
-    const ayId = years.get(s.yearCode)!;
-    const rec = await prisma.semester.upsert({
-      where: { academicYearId_number: { academicYearId: ayId, number: s.number } },
-      update: {},
-      create: { number: s.number, name: s.name, academicYearId: ayId },
+    const existing = await prisma.semester.count({ where: { academicYearId: rec.id } });
+    if (existing === 0) {
+      await prisma.semester.createMany({
+        data: Array.from({ length: 8 }, (_, i) => ({
+          number: i + 1,
+          name: `Semester ${ROMAN[i]}`,
+          academicYearId: rec.id,
+        })),
+      });
+    }
+
+    const sems = await prisma.semester.findMany({
+      where: { academicYearId: rec.id },
+      orderBy: { number: "asc" },
     });
-    semById.set(`${s.yearCode}-${s.number}`, rec.id);
-    semNumberToId.set(s.number, rec.id);
+    for (const s of sems) {
+      semNumberToId.set(s.number, s.id);
+    }
   }
 
   // ---------- USERS ----------
@@ -568,9 +571,6 @@ async function main() {
   for (const [deptCode, subjectList] of Object.entries(SUBJECTS)) {
     const deptId = depts.get(deptCode)!;
     for (const subj of subjectList) {
-      const semId = semNumberToId.get(subj.semNumber);
-      if (!semId) continue;
-
       const dbSubject = await prisma.subject.upsert({
         where: { subjectCode_departmentId: { subjectCode: subj.code, departmentId: deptId } },
         update: {},
@@ -581,7 +581,7 @@ async function main() {
           status: SubjectStatus.ACTIVE,
           questionBankDueDate: new Date("2026-08-15"),
           departmentId: deptId,
-          semesterId: semId,
+          semesterNumber: subj.semNumber,
         },
       });
       subjectIds.set(subj.code, dbSubject.id);
@@ -1285,7 +1285,7 @@ async function main() {
   console.log(`  Departments:        ${deptCount}`);
   console.log(`  Users:              ${userCount}`);
   console.log(`  Academic Years:     ${ACADEMIC_YEARS.length}`);
-  console.log(`  Semesters:          ${SEMESTER_DEFS.length}`);
+  console.log(`  Semesters:          ${await prisma.semester.count()}`);
   console.log(`  Subjects:           ${subjectCount}`);
   console.log(`  Exam Cycles:        ${cycleCount}`);
   console.log(`  Question Banks:     ${bankCount}`);

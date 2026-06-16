@@ -9,20 +9,20 @@ type SubjectPayload = {
   subjectCode: string;
   subjectName: string;
   departmentId: string;
-  semesterId: string;
+  semesterNumber: number;
   creditLoad: number;
 };
 
 type SubjectUpdatePayload = {
   subjectCode?: string;
   subjectName?: string;
-  semesterId?: string;
+  semesterNumber?: number;
   creditLoad?: number;
 };
 
 type SubjectFilters = {
   departmentId?: string;
-  semesterId?: string;
+  semesterNumber?: number;
   status?: SubjectStatus;
 };
 
@@ -48,7 +48,7 @@ export class SubjectManagementService {
       where: {
         departmentId: { in: departmentIds },
         ...(filters.departmentId ? { departmentId: filters.departmentId } : {}),
-        ...(filters.semesterId ? { semesterId: filters.semesterId } : {}),
+        ...(filters.semesterNumber ? { semesterNumber: filters.semesterNumber } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
       select: {
@@ -59,18 +59,10 @@ export class SubjectManagementService {
         status: true,
         questionBankDueDate: true,
         departmentId: true,
-        semesterId: true,
+        semesterNumber: true,
         createdAt: true,
         updatedAt: true,
         department: { select: { id: true, name: true, code: true } },
-        semester: {
-          select: {
-            id: true,
-            number: true,
-            name: true,
-            academicYear: { select: { id: true, code: true } },
-          },
-        },
         versions: {
           where: { status: "ACTIVE" },
           select: {
@@ -97,7 +89,7 @@ export class SubjectManagementService {
           },
         },
       },
-      orderBy: [{ departmentId: "asc" }, { semesterId: "asc" }, { subjectCode: "asc" }],
+      orderBy: [{ departmentId: "asc" }, { semesterNumber: "asc" }, { subjectCode: "asc" }],
     });
   }
 
@@ -113,13 +105,14 @@ export class SubjectManagementService {
       await this.deptUtils.assertDepartmentAccess(actor, payload.departmentId);
     }
 
-    const semester = await prisma.semester.findUnique({
-      where: { id: payload.semesterId },
-      include: { academicYear: true },
-    });
-    if (!semester) {
-      throw new NotFoundError("Semester not found");
+    if (payload.semesterNumber < 1 || payload.semesterNumber > 8) {
+      throw new AppError("Semester number must be between 1 and 8", 400);
     }
+
+    const currentAcademicYear = await prisma.academicYear.findFirst({
+      where: { status: "ACTIVE" },
+      orderBy: { startDate: "desc" },
+    });
 
     return prisma.$transaction(async (tx) => {
       const subject = await withUniqueCheck(
@@ -132,7 +125,7 @@ export class SubjectManagementService {
               status: SubjectStatus.ACTIVE,
               questionBankDueDate: addDays(30),
               departmentId: payload.departmentId,
-              semesterId: payload.semesterId,
+              semesterNumber: payload.semesterNumber,
             },
             include: { department: true },
           }),
@@ -145,7 +138,7 @@ export class SubjectManagementService {
           versionNumber: 1,
           title: payload.subjectName,
           syllabusDescription: null,
-          effectiveFromAcademicYearId: semester.academicYearId,
+          effectiveFromAcademicYearId: currentAcademicYear?.id ?? "",
           status: "ACTIVE",
         },
       });
@@ -164,7 +157,7 @@ export class SubjectManagementService {
       data: {
         ...(payload.subjectCode !== undefined ? { subjectCode: payload.subjectCode } : {}),
         ...(payload.subjectName !== undefined ? { subjectName: payload.subjectName } : {}),
-        ...(payload.semesterId !== undefined ? { semesterId: payload.semesterId } : {}),
+        ...(payload.semesterNumber !== undefined ? { semesterNumber: payload.semesterNumber } : {}),
         ...(payload.creditLoad !== undefined ? { credits: payload.creditLoad } : {}),
       },
       include: { department: true },

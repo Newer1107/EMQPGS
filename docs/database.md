@@ -16,10 +16,17 @@
 | startDate | DateTime | |
 | endDate | DateTime | |
 | status | AcademicYearStatus | ACTIVE or CLOSED |
+| activeSemesterType | SemesterType | ODD or EVEN. Determines default operational semester filter. |
 
 **Relationships:** Has many Semesters, ExamCycles, SubjectVersions.
 
 Invariant: Only one ACTIVE academic year at a time (application-enforced).
+
+**SemesterType** — operational filter, not a replacement for Semester.
+- `ODD`: Semesters 1, 3, 5, 7
+- `EVEN`: Semesters 2, 4, 6, 8
+
+When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The `activeSemesterType` field controls which semesters are shown by default in dropdowns and filters. Users may override to view all semesters.
 
 ### Semester
 
@@ -55,7 +62,7 @@ Invariant: Only one ACTIVE academic year at a time (application-enforced).
 | status | SubjectStatus | ACTIVE or INACTIVE |
 | questionBankDueDate | DateTime | Deadline for bank completion |
 | departmentId | String | FK → Department |
-| semesterId | String | FK → Semester |
+| semesterNumber | Int | 1-8. Static — not a FK. Subject is year-agnostic. |
 
 **Unique:** `@@unique([subjectCode, departmentId])` — same code can exist in different departments.
 
@@ -499,6 +506,7 @@ Invariant: One dean review per bank. Write-once (no update path).
 | CoordinatorDecision | APPROVED, REJECTED | ApprovalDecision |
 | ExportFormat | PDF, DOCX, ZIP | ExportArtifact |
 | ExportArtifactStatus | PENDING, COMPLETED, FAILED, EXPIRED | ExportArtifact |
+| SemesterType | ODD, EVEN | AcademicYear (activeSemesterType) |
 | BackupStatus | PENDING, COMPLETED, FAILED, EXPIRED | SystemBackup |
 | NotificationType | INFO, SUCCESS, WARNING, ACTION_REQUIRED | Notification |
 | CourseOutcome | CO1-CO6 | QuestionLibraryItem, QuestionRevision |
