@@ -4,11 +4,19 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/client-fetch";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, roleLabels } from "@/lib/constants";
+
+const ROLES = [
+  { key: "COE", label: roleLabels.COE, desc: "System governance & oversight" },
+  { key: "COORDINATOR", label: roleLabels.COORDINATOR, desc: "Workflow & bank management" },
+  { key: "CONTRIBUTOR", label: roleLabels.CONTRIBUTOR, desc: "Question creation" },
+  { key: "MODERATOR", label: roleLabels.MODERATOR, desc: "Quality assurance" },
+  { key: "DEAN", label: roleLabels.DEAN, desc: "Final paper review" },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,48 +48,112 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-[var(--border)] px-6 py-4">
-        <div className="mx-auto flex max-w-7xl items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--foreground)] text-sm font-bold text-[var(--background)]">
-            {APP_NAME[0]}
+    <div className="flex min-h-screen">
+      <aside className="hidden lg:flex lg:w-[45%] xl:w-[42%] flex-col justify-between bg-neutral-950 p-12 xl:p-16 text-white">
+        <div className="space-y-10">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex h-12 w-12 items-center justify-center border border-white/20 rounded-lg">
+                <span className="text-lg font-bold tracking-widest font-[var(--font-display)]">EM</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white/60">Institutional Platform</p>
+              </div>
+            </div>
+
+            <h1 className="text-3xl xl:text-4xl font-[var(--font-display)] tracking-tight leading-tight">
+              {APP_NAME}
+            </h1>
+            <p className="mt-3 text-base text-white/60 leading-relaxed max-w-md">
+              Examination Management &amp; Question Paper Generation System
+            </p>
           </div>
-          <span className="text-lg font-semibold">{APP_NAME}</span>
+
+          <div className="space-y-4">
+            <p className="text-sm text-white/40 uppercase tracking-widest text-xs font-medium">
+              System Overview
+            </p>
+            <p className="text-sm text-white/70 leading-relaxed max-w-sm">
+              A role-governed platform for end-to-end examination lifecycle management — from
+              question bank creation through moderation, approval, paper generation, and secure export.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs text-white/40 uppercase tracking-widest font-medium">Roles</p>
+            <div className="space-y-2">
+              {ROLES.map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center gap-3 text-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-white/30 shrink-0" />
+                  <span className="text-white/80 font-medium min-w-[7rem]">{label}</span>
+                  <span className="text-white/40 text-xs">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </header>
-      <div className="flex flex-1 items-center justify-center px-4 py-12">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Sign in</CardTitle>
-            <CardDescription>Enter your credentials to access the system</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4" action={async (formData) => onSubmit(formData)}>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="you@institution.edu" required />
-              </div>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="password">Password</Label>
-                  <Link href="/forgot-password" className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:underline">
-                    Forgot password?
-                  </Link>
+
+        <div className="pt-8 border-t border-white/10">
+          <div className="flex items-center gap-4 text-xs text-white/30">
+            <span>Secure platform</span>
+            <span className="h-3 w-px bg-white/10" />
+            <span>Role-based access</span>
+            <span className="h-3 w-px bg-white/10" />
+            <span>Audit trail</span>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex items-center justify-center p-6 bg-white">
+        <div className="w-full max-w-sm mx-auto">
+          <div className="mb-8">
+            <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
+            <p className="mt-1.5 text-sm text-neutral-500">Sign in to your account to continue.</p>
+          </div>
+
+          <Card className="border-neutral-200 shadow-sm">
+            <CardContent className="p-6">
+              <form className="space-y-5" action={async (formData) => onSubmit(formData)}>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" name="email" type="email" placeholder="you@institution.edu" required />
                 </div>
-                <Input id="password" name="password" type="password" placeholder="Enter your password" required />
-              </div>
-              {error && (
-                <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
-                  {error}
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-neutral-500 hover:text-neutral-900 hover:underline transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <Input id="password" name="password" type="password" placeholder="Enter your password" required />
                 </div>
-              )}
-              <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? "Signing in..." : "Sign in"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+
+                {error && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                    {error}
+                  </div>
+                )}
+
+                <Button className="w-full h-11" type="submit" disabled={loading}>
+                  {loading ? "Signing in\u2026" : "Sign in"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="flex lg:hidden mt-8 pt-6 border-t border-neutral-100">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-400">
+              <span>Secure platform</span>
+              <span>Role-based access</span>
+              <span>Audit trail</span>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
