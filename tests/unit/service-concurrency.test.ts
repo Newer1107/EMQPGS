@@ -23,6 +23,7 @@ vi.mock("@/lib/db", () => {
     notification: { create: vi.fn() },
     user: { findUnique: vi.fn() },
     questionSlot: { findMany: vi.fn() },
+    academicYear: { findFirst: vi.fn() },
     $transaction: vi.fn(),
   };
   return { prisma: mockDb };
@@ -71,6 +72,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
       academicYear: { id: "ay-1", code: "2026-2027" },
       academicYearId: "ay-1",
     });
+    vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" });
     vi.mocked(prisma.coordinatorDepartmentAssignment.findMany).mockResolvedValue([
       { departmentId: "dept-1" },
     ]);

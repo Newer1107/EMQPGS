@@ -113,6 +113,9 @@ export class SubjectManagementService {
       where: { status: "ACTIVE" },
       orderBy: { startDate: "desc" },
     });
+    if (!currentAcademicYear) {
+      throw new AppError("No active academic year found. Activate an academic year before creating subjects.", 400);
+    }
 
     return prisma.$transaction(async (tx) => {
       const subject = await withUniqueCheck(
@@ -138,7 +141,7 @@ export class SubjectManagementService {
           versionNumber: 1,
           title: payload.subjectName,
           syllabusDescription: null,
-          effectiveFromAcademicYearId: currentAcademicYear?.id ?? "",
+          effectiveFromAcademicYearId: currentAcademicYear.id,
           status: "ACTIVE",
         },
       });

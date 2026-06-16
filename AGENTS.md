@@ -11,6 +11,7 @@ Examination Management & Question Paper Generation System. Next.js 16 App Router
 ## Start here
 
 - `README.md` — full feature/API/env reference (current).
+- `docs/architecture/current-system.md` — **start here** for a single-page system overview.
 - `docs/architecture.md` — domain model, entity relationships, workflow, readiness, paper generation, snapshots, approval, invariants.
 - `docs/database.md` — every table, purpose, relationships, invariants.
 - `docs/api.md` — active API routes with request/response shapes and permissions.
@@ -45,7 +46,7 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 
 - Middleware lives in `proxy.ts` (not `middleware.ts`) and exports a function literally named `proxy`. Don't rename it to `middleware`. See `node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md`.
 - App Router is under `app/`. Pages: `app/(protected)/dashboard/<role>/...`, public: `app/login`, `app/forgot-password`, `app/reset-password`. Root page redirects `/` → `/login`.
-- API routes: `app/api/**/route.ts` — 63 files, ~95 endpoints. Always wrap handlers with `withApiHandler` from `@/lib/api-handler`. Do not call services directly from `route.ts` without the wrapper (it owns RBAC, CSRF, rate limit, audit logging, error formatting).
+- API routes: `app/api/**/route.ts` — ~50 files, ~85 endpoints. Always wrap handlers with `withApiHandler` from `@/lib/api-handler`. Do not call services directly from `route.ts` without the wrapper (it owns RBAC, CSRF, rate limit, audit logging, error formatting).
 - Security headers (CSP, X-Frame-Options, etc.) are set globally in `next.config.ts`. Don't duplicate them in route handlers.
   - CSP `script-src` adds `'unsafe-eval'` in development (`NODE_ENV=development`) for webpack HMR / React dev tools. This is stripped in production — do not weaken the production path.
 
@@ -96,14 +97,20 @@ Required command order on a fresh checkout: `docker compose up -d mysql minio mi
 
 ## Seed users
 
-`npm run prisma:seed` creates these (all password `Password@123`):
+`npm run prisma:seed` creates 9 departments and these users (all password `Password@123`):
+
+**Per-department users** — every department gets:
+- 1 coordinator: `coordinator.<dept>@emqpgs.local`
+- 1 moderator: `moderator.<dept>@emqpgs.local`
+- 3 contributors: `contributor{1,2,3}.<dept>@emqpgs.local`
+
+Departments: AIDS, AIML, COMP, CSEC, CIVL, ENCS, INFO, IOT, MME.
+
+**System-wide users:**
 - `coe@emqpgs.local` (COE)
-- `coordinator@emqpgs.local` (COORDINATOR)
-- `moderator@emqpgs.local` (MODERATOR)
-- `contributor@emqpgs.local` (CONTRIBUTOR)
 - `dean@emqpgs.local` (DEAN)
 
-Plus 9 departments (AIDS, AIML, COMP, CSEC, CIVL, ENCS, INFO, IOT, MME), 27 active exam cycles (9 depts × 3 semesters III/V/VII), subjects per department, question banks, and coordinator↔department assignments.
+Plus 27 active exam cycles (9 depts × 3 semesters III/V/VII), subjects per department, question banks, and coordinator↔department assignments.
 
 ## Testing
 
@@ -123,7 +130,7 @@ When in doubt, read `prisma/schema.prisma`. Key facts:
 | `QuestionStatus` | `DRAFT`, `PENDING`, `APPROVED`, `REJECTED`, `REVISION_REQUESTED`, `REVISION_SUBMITTED` |
 | Bank linkage | `QuestionSlot` (NOT `QuestionBankQuestion`) |
 | Signed report | Does not exist in schema |
-| API route count | ~85 endpoints across 59 route files |
+| API route count | ~85 endpoints across 59 route files (note: `/status` endpoint removed in B6 cleanup) |
 
 ## Workflow fixes completed (June 2026)
 
@@ -163,7 +170,7 @@ When in doubt, read `prisma/schema.prisma`. Key facts:
 - No comments in code unless asked (matches your standing rule).
 - Module names: lowercase, kebab-case for multi-word (`question-banks`, `exam-cycles`).
 - Prisma enum values are SCREAMING_SNAKE.
-- Service classes take their dependencies via constructor with defaults (see `QuestionService`). Don't new up services in route handlers — declare a module-scope instance like the existing routes do.
+- Service classes take their dependencies via constructor with defaults (see `QuestionLibraryService`). Don't new up services in route handlers — declare a module-scope instance like the existing routes do.
 - Use `Role` from `@prisma/client`, not string literals, for role checks.
 
 ## Things that will silently break if you don't know

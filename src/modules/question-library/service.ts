@@ -1,8 +1,9 @@
-import { Prisma, QuestionStatus, type User } from "@prisma/client";
+import { Prisma, QuestionStatus, RecordStatus, type User } from "@prisma/client";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
 import { withOptimisticLock } from "@/lib/optimistic-lock";
+import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
@@ -119,6 +120,12 @@ export class QuestionLibraryService {
       throw new ForbiddenError("You cannot edit this question");
     }
 
+    const lockedBank = await prisma.questionSlot.findFirst({
+      where: { assignedQuestionId: id, questionBank: { recordStatus: RecordStatus.LOCKED } },
+      include: { questionBank: true },
+    });
+    if (lockedBank) ensureQuestionBankMutable(lockedBank.questionBank.recordStatus);
+
     const updated = await this.repository.update(id, input).catch((err: unknown) => {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
         throw new ConflictError(
@@ -165,6 +172,11 @@ export class QuestionLibraryService {
     const question = await this.repository.findById(questionId);
     if (!question) throw new NotFoundError("Question not found");
     if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can transfer ownership");
+
+    const targetUser = await prisma.user.findUnique({ where: { id: toUserId } });
+    if (!targetUser) throw new NotFoundError("Target user not found");
+    if (targetUser.status !== "ACTIVE") throw new AppError("Cannot transfer ownership to a disabled user.", 400);
+    if (targetUser.role !== "CONTRIBUTOR") throw new AppError("Ownership can only be transferred to contributors.", 400);
 
     const [updated] = await prisma.$transaction(async (tx) => {
       const updatedQuestion = await tx.questionLibraryItem.update({

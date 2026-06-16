@@ -2,11 +2,13 @@ import {
   NotificationType,
   Prisma,
   QuestionStatus,
+  RecordStatus,
   Role,
   type User,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { NotificationService } from "@/modules/notifications/service";
 
 type Actor = Pick<User, "id" | "role" | "email" | "name">;
@@ -67,6 +69,12 @@ export class ModeratorService {
     if (question.status !== QuestionStatus.PENDING && question.status !== QuestionStatus.REVISION_SUBMITTED) {
       throw new AppError("Question is not in an actionable moderation status.", 409);
     }
+
+    const lockedBank = await prisma.questionSlot.findFirst({
+      where: { assignedQuestionId: questionId, questionBank: { recordStatus: RecordStatus.LOCKED } },
+      include: { questionBank: true },
+    });
+    if (lockedBank) ensureQuestionBankMutable(lockedBank.questionBank.recordStatus);
 
     const originalStatus = question.status;
 

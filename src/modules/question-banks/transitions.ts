@@ -3,7 +3,7 @@ import { QuestionBankPhase } from "@prisma/client";
 const PHASE_TRANSITIONS: Record<QuestionBankPhase, QuestionBankPhase[]> = {
   [QuestionBankPhase.DRAFTING]: [QuestionBankPhase.MODERATION],
   [QuestionBankPhase.MODERATION]: [QuestionBankPhase.APPROVAL],
-  [QuestionBankPhase.APPROVAL]: [QuestionBankPhase.COMPLETE, QuestionBankPhase.MODERATION],
+  [QuestionBankPhase.APPROVAL]: [QuestionBankPhase.MODERATION],
   [QuestionBankPhase.COMPLETE]: [],
 };
 

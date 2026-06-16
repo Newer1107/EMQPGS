@@ -3,6 +3,7 @@ import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { ENTITY_TYPES } from "@/lib/constants";
+import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { AiReportService } from "@/modules/reports/ai-report.service";
 import { PaperGenerationService } from "@/modules/reports/paper.service";
 
@@ -26,6 +27,7 @@ export class ReportService {
     if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can approve or reject reports");
     const questionBank = await prisma.questionBank.findUnique({ where: { id: questionBankId } });
     if (!questionBank) throw new NotFoundError("Question bank not found");
+    ensureQuestionBankMutable(questionBank.recordStatus);
     if (questionBank.phase !== QuestionBankPhase.APPROVAL) {
       throw new AppError("Coordinator decision can only be made when the bank is in APPROVAL phase.", 409);
     }

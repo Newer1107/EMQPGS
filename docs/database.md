@@ -515,3 +515,17 @@ Invariant: One dean review per bank. Write-once (no update path).
 | QuestionStatus | DRAFT, PENDING, APPROVED, REJECTED, REVISION_REQUESTED, REVISION_SUBMITTED | QuestionLibraryItem |
 | AcademicYearStatus | ACTIVE, CLOSED | AcademicYear |
 | SubjectVersionStatus | ACTIVE, ARCHIVED | SubjectVersion |
+
+---
+
+## Cross-References
+
+| Topic | Document |
+|---|---|
+| Single-page system overview | `docs/architecture/current-system.md` |
+| Architecture & domain model | `docs/architecture.md` |
+| API reference | `docs/api.md` |
+| Workflow guide | `docs/workflow.md` |
+| Operations manual | `docs/operations-manual.md` |
+| Domain deep-dives | `docs/archive/{academic,exam,question,production}-domain.md` |
+| Onboarding | `docs/onboarding.md` |

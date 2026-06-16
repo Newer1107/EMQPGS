@@ -5,6 +5,7 @@ import { QuestionBankRepository } from "@/modules/question-banks/repository";
 import { QuestionBankInput } from "@/modules/question-banks/validation";
 import { isValidPhaseTransition } from "@/modules/question-banks/transitions";
 import { ReadinessEngine } from "@/modules/readiness/engine";
+import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 
 export class QuestionBankService {
   constructor(
@@ -23,6 +24,7 @@ export class QuestionBankService {
   async advancePhase(id: string, targetPhase: QuestionBankPhase) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Question bank not found");
+    ensureQuestionBankMutable(entity.recordStatus);
     if (!isValidPhaseTransition(entity.phase, targetPhase)) {
       throw new AppError(`Cannot transition from ${entity.phase} to ${targetPhase}`, 409);
     }

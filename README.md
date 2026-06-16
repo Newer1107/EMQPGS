@@ -269,12 +269,16 @@ All variables validated at startup by `src/lib/env.ts` using Zod. No `.env.examp
 npm run prisma:seed
 ```
 
-Creates 2 departments (CSE, ECE), 5 users with password `Password@123`:
-- `coe@emqpgs.local` (COE)
-- `coordinator@emqpgs.local` (COORDINATOR)
-- `moderator@emqpgs.local` (MODERATOR)
-- `contributor@emqpgs.local` (CONTRIBUTOR)
-- `dean@emqpgs.local` (DEAN)
+Creates 9 departments (AIDS, AIML, COMP, CSEC, CIVL, ENCS, INFO, IOT, MME), plus these users with password `Password@123`:
+
+**Per-department users** (one coordinator, one moderator, three contributors per department):
+- `coordinator.aids@emqpgs.local` (COORDINATOR), `coordinator.aiml@emqpgs.local`, etc.
+- `moderator.aids@emqpgs.local` (MODERATOR), `moderator.aiml@emqpgs.local`, etc.
+- `contributor{1,2,3}.aids@emqpgs.local` (CONTRIBUTOR), same pattern for each department
+
+**System-wide users**:
+- `coe@emqpgs.local` (COE, no department)
+- `dean@emqpgs.local` (DEAN, no department)
 
 Plus 27 active exam cycles (ENDSEM, 2026-2027, 9 departments × 3 semesters III/V/VII), subjects per department, question banks, and coordinator-department assignments.
 
@@ -310,13 +314,16 @@ Created by `minio-init` service in `docker-compose.yml`. Do not add buckets with
 ## 12. Architecture documents
 
 | Document | What it covers |
-|---|---|
+|---|---|---|
+| `docs/architecture/current-system.md` | **Start here** — single-page system overview |
 | `docs/architecture.md` | Domain model, entity relationships, workflow, readiness, paper generation, snapshots, approval |
 | `docs/database.md` | Every table, purpose, relationships, invariants |
 | `docs/api.md` | All active routes with request/response shapes and permissions |
 | `docs/workflow.md` | Phase transitions, ReadinessEngine rules, locking, approval, paper lifecycle |
+| `docs/operations-manual.md` | Operations, deployment, monitoring, and role guides |
 | `docs/onboarding.md` | 30-minute developer orientation |
-| `docs/gap-report.md` | Documentation audit findings |
+| `docs/rbac-matrix.md` | Role capability matrix |
+| `docs/e2e-workflow.md` | Complete academic cycle walkthrough |
 
 ---
 

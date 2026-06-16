@@ -22,6 +22,7 @@ vi.mock("@/lib/db", () => {
     moderationEvent: { findMany: vi.fn() },
     questionSlot: { findFirst: vi.fn(), update: vi.fn() },
     examCycle: { findUnique: vi.fn() },
+    user: { findUnique: vi.fn() },
     $transaction: vi.fn((cb: (tx: typeof mockTx) => unknown) => cb(mockTx)),
   };
   mockTx.questionLibraryItem.update.mockImplementation((args: { data: { ownerId: string } }) => ({ ...mockQuestion, ownerId: args.data.ownerId }));
@@ -58,6 +59,7 @@ describe("Question Governance Hardening", () => {
     (prisma.questionRevision.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
     (prisma.questionRevision.create as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (prisma.questionLibraryItem.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "new-owner", status: "ACTIVE", role: "CONTRIBUTOR" });
     mockRepoUpdate();
   });
 

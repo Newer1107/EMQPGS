@@ -297,3 +297,18 @@ QuestionBankMetricsService → Direct Prisma calls
 9. **ReadinessEngine is advisory only** — does not block or auto-advance
 10. **Question status lifecycle** — DRAFT→PENDING→APPROVED|REJECTED|REVISION_REQUESTED→REVISION_SUBMITTED
 11. **QuestionLibraryItem is SubjectVersion-scoped** — cannot exist outside a subject version
+
+---
+
+## 11. Cross-References
+
+| Topic | Document |
+|---|---|
+| Single-page system overview | `docs/architecture/current-system.md` |
+| Database schema | `docs/database.md` |
+| API reference | `docs/api.md` |
+| Workflow guide | `docs/workflow.md` |
+| Operations manual | `docs/operations-manual.md` |
+| RBAC matrix | `docs/rbac-matrix.md` |
+| Onboarding | `docs/onboarding.md` |
+| Architectural decisions | `docs/adr/ADR-001` through `005` |

@@ -12,8 +12,8 @@ describe("isValidPhaseTransition", () => {
     expect(isValidPhaseTransition(QuestionBankPhase.MODERATION, QuestionBankPhase.APPROVAL)).toBe(true);
   });
 
-  it("APPROVAL → COMPLETE is valid", () => {
-    expect(isValidPhaseTransition(QuestionBankPhase.APPROVAL, QuestionBankPhase.COMPLETE)).toBe(true);
+  it("APPROVAL → COMPLETE is invalid (coordinator decision gates this)", () => {
+    expect(isValidPhaseTransition(QuestionBankPhase.APPROVAL, QuestionBankPhase.COMPLETE)).toBe(false);
   });
 
   it("APPROVAL → MODERATION is valid (loopback on reject)", () => {
@@ -40,7 +40,7 @@ const mockReadyEngine = {
 describe("QuestionBankService.advancePhase", () => {
   it("advances from DRAFTING to MODERATION", async () => {
     const mockRepo = {
-      findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, version: 1 }),
+      findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, recordStatus: "ACTIVE", version: 1 }),
       update: () => Promise.resolve({ id: "bank-1", phase: QuestionBankPhase.MODERATION }),
     };
     const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
@@ -50,7 +50,7 @@ describe("QuestionBankService.advancePhase", () => {
 
   it("throws on invalid transition", async () => {
     const mockRepo = {
-      findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, version: 1 }),
+      findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, recordStatus: "ACTIVE", version: 1 }),
       update: () => Promise.resolve({}),
     };
     const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
@@ -64,5 +64,14 @@ describe("QuestionBankService.advancePhase", () => {
     };
     const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
     await expect(service.advancePhase("bank-missing", QuestionBankPhase.MODERATION)).rejects.toThrow();
+  });
+
+  it("throws on locked bank", async () => {
+    const mockRepo = {
+      findById: () => Promise.resolve({ phase: QuestionBankPhase.DRAFTING, recordStatus: "LOCKED", version: 1 }),
+      update: () => Promise.resolve({}),
+    };
+    const service = new QuestionBankService(mockRepo as any, mockReadyEngine as any);
+    await expect(service.advancePhase("bank-locked", QuestionBankPhase.MODERATION)).rejects.toThrow("Locked question bank cannot be modified");
   });
 });

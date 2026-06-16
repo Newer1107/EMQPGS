@@ -26,6 +26,7 @@ describe("coordinatorDecision", () => {
     vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
       phase: QuestionBankPhase.APPROVAL,
+      recordStatus: "ACTIVE",
     } as any);
     vi.mocked(prisma.$transaction).mockResolvedValue([{ id: "decision-1", decision: CoordinatorDecision.APPROVED }]);
 
@@ -39,6 +40,7 @@ describe("coordinatorDecision", () => {
     vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
       phase: QuestionBankPhase.APPROVAL,
+      recordStatus: "ACTIVE",
     } as any);
     vi.mocked(prisma.$transaction).mockResolvedValue([{ id: "decision-2", decision: CoordinatorDecision.REJECTED }]);
 
@@ -60,11 +62,26 @@ describe("coordinatorDecision", () => {
     vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
       id: "bank-1",
       phase: QuestionBankPhase.DRAFTING,
+      recordStatus: "ACTIVE",
     } as any);
 
     const service = new ReportService();
     await expect(
       service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", mockActor),
     ).rejects.toThrow();
+  });
+
+  it("throws on locked bank", async () => {
+    const { prisma } = await import("@/lib/db");
+    vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
+      id: "bank-1",
+      phase: QuestionBankPhase.APPROVAL,
+      recordStatus: "LOCKED",
+    } as any);
+
+    const service = new ReportService();
+    await expect(
+      service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", mockActor),
+    ).rejects.toThrow("Locked question bank cannot be modified");
   });
 });
