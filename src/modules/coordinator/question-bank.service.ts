@@ -74,7 +74,7 @@ export class QuestionBankWorkflowService {
       where: { id: questionBankId },
       include: {
         subject: { include: { department: true } },
-        examCycle: { include: { academicYear: true, semester: true } },
+        examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
         slots: {
           include: {
             assignedQuestion: {
@@ -122,7 +122,8 @@ export class QuestionBankWorkflowService {
 
     const examCycle = await prisma.examCycle.findUnique({ where: { id: examCycleId } });
     if (!examCycle) throw new NotFoundError("Exam cycle not found");
-    if (examCycle.departmentId !== subject.departmentId) {
+    // Legacy check: skip for batch-aware cycles (subject match is via CurriculumSubject → SubjectExamCycleLink)
+    if (!examCycle.batchSemesterId && examCycle.departmentId !== subject.departmentId) {
       throw new AppError("Exam cycle must belong to the same department as the subject.", 400);
     }
 

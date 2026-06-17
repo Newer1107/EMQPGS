@@ -1,5 +1,5 @@
 import { BaseRepository } from "@/modules/shared/base-repository";
-import { ExamCycleInput } from "@/modules/exam-cycles/validation";
+import type { ExamCycleInput } from "@/modules/exam-cycles/validation";
 
 export class ExamCycleRepository extends BaseRepository {
   list(take = 50, skip = 0) {
@@ -11,7 +11,13 @@ export class ExamCycleRepository extends BaseRepository {
         department: true,
         academicYear: true,
         semester: true,
-        questionBanks: true,
+        batchSemester: {
+          include: {
+            batch: { select: { id: true, name: true, code: true } },
+            academicUnit: { select: { id: true, name: true, code: true } },
+          },
+        },
+        questionBanks: { select: { id: true } },
       },
     });
   }
@@ -19,7 +25,33 @@ export class ExamCycleRepository extends BaseRepository {
   findById(id: string) {
     return this.prisma.examCycle.findUnique({
       where: { id },
-      include: { academicYear: true, semester: true },
+      include: {
+        academicYear: true,
+        semester: true,
+        batchSemester: {
+          include: {
+            batch: { include: { programme: true } },
+            academicUnit: true,
+          },
+        },
+        subjectLinks: { include: { subject: { select: { id: true, subjectCode: true, subjectName: true } } } },
+      },
+    });
+  }
+
+  findByBatch(batchId: string) {
+    return this.prisma.examCycle.findMany({
+      where: { batchSemester: { batchId } },
+      orderBy: [{ batchSemester: { semesterNumber: "asc" } }, { examType: "asc" }],
+      include: {
+        batchSemester: {
+          include: {
+            batch: { select: { id: true, name: true } },
+            academicUnit: { select: { id: true, name: true } },
+          },
+        },
+        _count: { select: { questionBanks: true, subjectLinks: true } },
+      },
     });
   }
 

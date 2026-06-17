@@ -127,3 +127,4 @@ export function EditDepartmentButton({ department }: { department: Department })
     </>
   );
 }
+

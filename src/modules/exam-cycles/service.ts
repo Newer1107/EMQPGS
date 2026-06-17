@@ -1,7 +1,7 @@
 import { ExamCycleStatus, Prisma } from "@prisma/client";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { ExamCycleRepository } from "@/modules/exam-cycles/repository";
-import { ExamCycleInput } from "@/modules/exam-cycles/validation";
+import { ExamCycleInput, BatchExamCycleInput } from "@/modules/exam-cycles/validation";
 import { prisma } from "@/lib/db";
 import { withUniqueCheck } from "@/lib/db-helpers";
 
@@ -12,6 +12,15 @@ export class ExamCycleService {
     return this.repository.list(take, skip);
   }
 
+  async findByBatch(batchId: string) {
+    return this.repository.findByBatch(batchId);
+  }
+
+  async findById(id: string) {
+    return this.repository.findById(id);
+  }
+
+  // Legacy create path — unchanged
   async create(data: ExamCycleInput) {
     const semester = await prisma.semester.findUnique({
       where: { id: data.semesterId },
@@ -29,6 +38,92 @@ export class ExamCycleService {
       () => this.repository.create(data),
       "ExamCycle_semesterId_examType_departmentId_key",
     );
+  }
+
+  // Batch-aware creation from a BatchSemester
+  // All academic context is derived from the BatchSemester relation.
+  async createFromBatch(data: BatchExamCycleInput) {
+    const batchSemester = await prisma.batchSemester.findUnique({
+      where: { id: data.batchSemesterId },
+      include: {
+        batch: { include: { curriculumScheme: true } },
+        academicUnit: true,
+        academicYear: true,
+      },
+    });
+    if (!batchSemester) throw new NotFoundError("Batch semester not found");
+    if (!batchSemester.batch.curriculumSchemeId) {
+      throw new AppError("Batch has no curriculum scheme assigned.", 400);
+    }
+
+    // Discover all curriculum subjects for this batch-semester context
+    // Group-specific subjects (GROUP_1, GROUP_2) are included alongside ALL subjects.
+    // The group distinction lives on CurriculumSubject, not on ExamCycle.
+    const curriculumSubjects = await prisma.curriculumSubject.findMany({
+      where: {
+        curriculumSchemeId: batchSemester.batch.curriculumSchemeId,
+        semesterNumber: batchSemester.semesterNumber,
+        academicUnitId: batchSemester.academicUnitId,
+      },
+      include: { subject: true },
+    });
+
+    if (curriculumSubjects.length === 0 && !data.subjectOverrides) {
+      throw new AppError(
+        `No subjects found for semester ${batchSemester.semesterNumber} in this batch's curriculum. Add curriculum subjects first or provide subject overrides.`,
+        400,
+      );
+    }
+
+    const subjectIds = data.subjectOverrides && data.subjectOverrides.length > 0
+      ? data.subjectOverrides
+      : [...new Set(curriculumSubjects.map((cs) => cs.subjectId))];
+
+    if (subjectIds.length === 0) {
+      throw new AppError("No subjects to link to this exam cycle.", 400);
+    }
+
+    const dept = await prisma.department.findFirst();
+    const legacySemester = await prisma.semester.findFirst({
+      where: { academicYearId: batchSemester.academicYearId, number: batchSemester.semesterNumber },
+    });
+
+    return prisma.$transaction(async (tx) => {
+      const cycle = await tx.examCycle.create({
+        data: {
+          examType: data.examType,
+          status: data.status ?? ExamCycleStatus.DRAFT,
+          departmentId: dept?.id ?? "",
+          academicYearId: batchSemester.academicYearId,
+          semesterId: legacySemester?.id ?? "",
+          batchSemesterId: batchSemester.id,
+          timetableDocumentRef: data.timetableDocumentRef,
+          timetableIssueDate: data.timetableIssueDate,
+          timetableTitle: data.timetableTitle,
+          timetableRows: data.timetableRows,
+          timetableSignature: data.timetableSignature,
+        },
+      });
+
+      for (const subjectId of subjectIds) {
+        await tx.subjectExamCycleLink.create({
+          data: { subjectId, examCycleId: cycle.id },
+        });
+      }
+
+      return tx.examCycle.findUnique({
+        where: { id: cycle.id },
+        include: {
+          batchSemester: {
+            include: {
+              batch: { select: { id: true, name: true, code: true } },
+              academicUnit: { select: { id: true, name: true, code: true } },
+            },
+          },
+          subjectLinks: { include: { subject: { select: { id: true, subjectCode: true, subjectName: true } } } },
+        },
+      });
+    });
   }
 
   async update(id: string, data: Partial<ExamCycleInput>) {

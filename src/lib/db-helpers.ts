@@ -18,6 +18,14 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   AcademicYear_code_key: "An academic year with this code already exists.",
   Semester_academicYearId_number_key: "This semester number already exists in this academic year.",
   SubjectVersion_subjectId_versionNumber_key: "This version number already exists for this subject.",
+  CurriculumSubject_curriculumSchemeId_subjectId_semesterNumbe_key:
+    "This subject is already placed in this semester with the same group assignment.",
+  Programme_code_key: "A programme with this code already exists.",
+  Batch_code_key: "A batch with this code already exists.",
+  TeachingGroup_batchId_groupNumber_key: "This teaching group already exists for this batch.",
+  AcademicUnit_code_key: "An academic unit with this code already exists.",
+  CurriculumScheme_programmeId_year_key: "This year already exists for this programme.",
+  BatchSemester_batchId_semesterNumber_key: "This semester number already exists for this batch.",
 };
 
 export function handleUniqueConstraint(

@@ -387,7 +387,7 @@ export class DeanReviewService {
 
 const deanDashboardInclude = {
   subject: true,
-  examCycle: { include: { academicYear: true, semester: true } },
+  examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
   generatedPapers: {
     orderBy: [{ generatedAt: "desc" as const }, { createdAt: "desc" as const }],
   },
@@ -400,7 +400,7 @@ const deanDashboardInclude = {
 
 const deanWorkspaceInclude = {
   subject: true,
-  examCycle: { include: { academicYear: true, semester: true } },
+  examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
   aiReports: { orderBy: { createdAt: "desc" as const }, take: 1 },
   generatedPapers: {
     orderBy: { variant: "asc" as const },

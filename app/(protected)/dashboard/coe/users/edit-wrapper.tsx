@@ -32,3 +32,4 @@ export function EditUserFormWrapper({ user, departments }: { user: UserData; dep
     </>
   );
 }
+

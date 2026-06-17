@@ -11,3 +11,4 @@ export default async function CoELayout({ children }: { children: React.ReactNod
 
   return children;
 }
+

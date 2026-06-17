@@ -6,7 +6,6 @@ datasource db {
   provider = "mysql"
   url      = env("DATABASE_URL")
 }
-
 enum Role {
   COE
   COORDINATOR
@@ -14,17 +13,14 @@ enum Role {
   CONTRIBUTOR
   DEAN
 }
-
 enum UserStatus {
   ACTIVE
   DISABLED
 }
-
 enum SubjectStatus {
   ACTIVE
   INACTIVE
 }
-
 enum ExamType {
   ISE_1
   ISE_2
@@ -32,90 +28,76 @@ enum ExamType {
   SUPPLEMENTARY
   KT
 }
-
 enum ExamCycleStatus {
   DRAFT
   ACTIVE
   CLOSED
 }
-
 enum QuestionBankPhase {
   DRAFTING
   MODERATION
   APPROVAL
   COMPLETE
 }
-
 enum RecordStatus {
   ACTIVE
   LOCKED
   ARCHIVED
 }
-
 enum ReviewStatus {
   PENDING
   SUBMITTED
   CONFIRMED
 }
-
 enum SnapshotType {
   LOCKED
   APPROVED
   EXPORTED
 }
-
 enum AiReportStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
-
 enum PaperGenerationStatus {
   PENDING
   PROCESSING
   COMPLETED
   FAILED
 }
-
 enum PaperVariant {
   PAPER_A
   PAPER_B
   PAPER_C
 }
-
 enum CoordinatorDecision {
   APPROVED
   REJECTED
 }
-
 enum ExportFormat {
   PDF
   DOCX
   ZIP
 }
-
 enum ExportArtifactStatus {
   PENDING
   COMPLETED
   FAILED
   EXPIRED
 }
-
 enum BackupStatus {
   PENDING
   COMPLETED
   FAILED
   EXPIRED
 }
-
 enum NotificationType {
   INFO
   SUCCESS
   WARNING
   ACTION_REQUIRED
 }
-
 enum CourseOutcome {
   CO1
   CO2
@@ -124,7 +106,6 @@ enum CourseOutcome {
   CO5
   CO6
 }
-
 enum RbtLevel {
   L1
   L2
@@ -133,13 +114,11 @@ enum RbtLevel {
   L5
   L6
 }
-
 enum DifficultyLevel {
   EASY
   MEDIUM
   HARD
 }
-
 enum QuestionStatus {
   DRAFT
   PENDING
@@ -148,22 +127,43 @@ enum QuestionStatus {
   REVISION_REQUESTED
   REVISION_SUBMITTED
 }
-
 enum SemesterType {
   ODD
   EVEN
 }
-
 enum AcademicYearStatus {
   ACTIVE
   CLOSED
 }
-
 enum SubjectVersionStatus {
   ACTIVE
   ARCHIVED
 }
-
+enum AcademicUnitType {
+  ES_H
+  DEPARTMENT
+}
+enum GroupAssignment {
+  ALL
+  GROUP_1
+  GROUP_2
+}
+enum BatchStatus {
+  ACTIVE
+  GRADUATED
+}
+enum BatchSemesterStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+enum DegreeType {
+  BE
+  BTECH
+  MTECH
+  PHD
+  DIPLOMA
+}
 model AcademicYear {
   id                 String            @id @default(cuid())
   code               String            @unique
@@ -176,8 +176,8 @@ model AcademicYear {
   semesters          Semester[]
   examCycles         ExamCycle[]
   subjectVersions    SubjectVersion[]  @relation("subjectVersionAcademicYear")
+  batchSemesters     BatchSemester[]
 }
-
 model Semester {
   id            String        @id @default(cuid())
   number        Int
@@ -191,7 +191,6 @@ model Semester {
   @@unique([academicYearId, number])
   @@index([academicYearId])
 }
-
 model SubjectVersion {
   id                         String                @id @default(cuid())
   subjectId                  String
@@ -209,7 +208,6 @@ model SubjectVersion {
   @@unique([subjectId, versionNumber])
   @@index([subjectId, status])
 }
-
 model Department {
   id           String    @id @default(cuid())
   name         String
@@ -223,7 +221,6 @@ model Department {
   subjects     Subject[]
   examCycles   ExamCycle[]
 }
-
 model User {
   id               String              @id @default(cuid())
   name             String
@@ -259,7 +256,6 @@ model User {
   @@index([role])
   @@index([departmentId])
 }
-
 model ExamCycle {
   id                    String            @id @default(cuid())
   examType              ExamType
@@ -267,9 +263,12 @@ model ExamCycle {
   version               Int               @default(0)
   startDate             DateTime?
   endDate               DateTime?
+  // Legacy fields (keep for backward compatibility)
   departmentId          String
   academicYearId        String
   semesterId            String
+  // New batch-aware field (sole source of academic context)
+  batchSemesterId       String?
   timetableDocumentRef  String?
   timetableIssueDate    DateTime?
   timetableTitle        String?
@@ -281,6 +280,7 @@ model ExamCycle {
   department            Department        @relation(fields: [departmentId], references: [id])
   academicYear          AcademicYear      @relation(fields: [academicYearId], references: [id])
   semester              Semester          @relation(fields: [semesterId], references: [id])
+  batchSemester         BatchSemester?    @relation(fields: [batchSemesterId], references: [id])
   subjectLinks          SubjectExamCycleLink[]
   questionBanks         QuestionBank[]
   questionUsageHistory  QuestionUsageHistory[] @relation("usageHistoryExamCycle")
@@ -290,8 +290,8 @@ model ExamCycle {
   @@index([departmentId])
   @@index([academicYearId])
   @@index([semesterId])
+  @@index([batchSemesterId])
 }
-
 model Subject {
   id                  String         @id @default(cuid())
   subjectCode         String
@@ -307,11 +307,11 @@ model Subject {
   examCycleLinks      SubjectExamCycleLink[]
   questionBanks       QuestionBank[]
   versions            SubjectVersion[]
+  curriculumSubjects  CurriculumSubject[]
 
   @@unique([subjectCode, departmentId])
   @@index([departmentId])
 }
-
 model QuestionBank {
   id           String              @id @default(cuid())
   subjectId    String
@@ -344,7 +344,6 @@ model QuestionBank {
   @@index([subjectId])
   @@index([phase, recordStatus])
 }
-
 model QuestionLibraryItem {
   id              String          @id @default(cuid())
   subjectVersionId String
@@ -378,7 +377,6 @@ model QuestionLibraryItem {
   @@index([ownerId])
   @@index([status])
 }
-
 model QuestionOwnershipHistory {
   id             String             @id @default(cuid())
   questionId     String
@@ -394,7 +392,6 @@ model QuestionOwnershipHistory {
 
   @@index([questionId, transferredAt])
 }
-
 model QuestionRevision {
   id               String             @id @default(cuid())
   questionId       String
@@ -415,7 +412,6 @@ model QuestionRevision {
   @@unique([questionId, revisionNumber])
   @@index([questionId, createdAt])
 }
-
 model QuestionUsageHistory {
   id                   String             @id @default(cuid())
   questionId           String
@@ -453,7 +449,6 @@ model QuestionSlot {
   @@index([questionBankId, assignedQuestionId])
   @@index([assignedQuestionId])
 }
-
 model PaperPattern {
   id              String       @id @default(cuid())
   questionBankId  String       @unique
@@ -466,7 +461,6 @@ model PaperPattern {
   updatedAt       DateTime     @updatedAt
   questionBank    QuestionBank @relation(fields: [questionBankId], references: [id])
 }
-
 model ApprovalDecision {
   id              String              @id @default(cuid())
   questionBankId  String
@@ -480,7 +474,6 @@ model ApprovalDecision {
 
   @@index([questionBankId])
 }
-
 model QuestionBankSnapshot {
   id              String             @id @default(cuid())
   questionBankId  String
@@ -497,7 +490,6 @@ model QuestionBankSnapshot {
 
   @@index([questionBankId, snapshotType, createdAt])
 }
-
 model PaperSnapshot {
   id              String       @id @default(cuid())
   questionBankId  String
@@ -513,7 +505,6 @@ model PaperSnapshot {
 
   @@unique([questionBankId, variant])
 }
-
 model CoordinatorDepartmentAssignment {
   id           String     @id @default(cuid())
   coordinatorId String
@@ -524,7 +515,6 @@ model CoordinatorDepartmentAssignment {
 
   @@unique([coordinatorId, departmentId])
 }
-
 model SubjectExamCycleLink {
   id          String    @id @default(cuid())
   subjectId    String
@@ -535,7 +525,6 @@ model SubjectExamCycleLink {
 
   @@unique([subjectId, examCycleId])
 }
-
 model Notification {
   id          String           @id @default(cuid())
   recipientId String
@@ -550,7 +539,6 @@ model Notification {
 
   @@index([recipientId, isRead, createdAt])
 }
-
 model AuditLog {
   id          String   @id @default(cuid())
   actorId      String?
@@ -569,7 +557,6 @@ model AuditLog {
   @@index([actorId])
   @@index([actorId, action, createdAt])
 }
-
 model FileAsset {
   id               String   @id @default(cuid())
   bucket           String
@@ -586,7 +573,6 @@ model FileAsset {
   exportArtifacts ExportArtifact[] @relation("exportArtifactFileAsset")
   systemBackups   SystemBackup[]   @relation("systemBackupFileAsset")
 }
-
 model ModerationEvent {
   id          String   @id @default(cuid())
   questionId  String
@@ -600,7 +586,6 @@ model ModerationEvent {
   @@index([questionId, createdAt])
   @@index([moderatorId, createdAt])
 }
-
 model ModeratorBankAssignment {
   id             String       @id @default(cuid())
   moderatorId    String
@@ -611,7 +596,6 @@ model ModeratorBankAssignment {
 
   @@unique([moderatorId, questionBankId])
 }
-
 model AiReport {
   id                 String          @id @default(cuid())
   questionBankId     String
@@ -633,7 +617,6 @@ model AiReport {
 
   @@index([questionBankId, status])
 }
-
 model GeneratedPaper {
   id                String                 @id @default(cuid())
   questionBankId    String
@@ -657,7 +640,6 @@ model GeneratedPaper {
 
   @@unique([questionBankId, variant])
 }
-
 model GeneratedPaperItem {
   id                String         @id @default(cuid())
   generatedPaperId  String
@@ -668,7 +650,6 @@ model GeneratedPaperItem {
 
   @@unique([generatedPaperId, questionId])
 }
-
 model DeanReview {
   id                 String       @id @default(cuid())
   questionBankId     String       @unique
@@ -684,7 +665,6 @@ model DeanReview {
   questionBank       QuestionBank @relation(fields: [questionBankId], references: [id])
   reviewedBy         User         @relation("deanReviewSelector", fields: [reviewedById], references: [id])
 }
-
 model ExportArtifact {
   id             String               @id @default(cuid())
   questionBankId String
@@ -702,7 +682,6 @@ model ExportArtifact {
 
   @@index([questionBankId, format, status])
 }
-
 model SystemBackup {
   id            String       @id @default(cuid())
   status        BackupStatus @default(PENDING)
@@ -718,3 +697,155 @@ model SystemBackup {
   fileAsset     FileAsset?   @relation("systemBackupFileAsset", fields: [fileAssetId], references: [id])
   triggeredBy   User?        @relation("backupTrigger", fields: [triggeredById], references: [id])
 }
+
+// ──────────────────────────────────────────────
+// Academic Domain — new foundation models
+// ──────────────────────────────────────────────
+
+/// AcademicUnit represents curriculum ownership (ES&H, Computer Engineering, IT, etc.).
+/// This is distinct from Department, which represents faculty HR affiliation.
+model AcademicUnit {
+  id        String          @id @default(cuid())
+  name      String
+  code      String          @unique
+  type      AcademicUnitType @default(DEPARTMENT)
+  hodName   String
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  programmes           Programme[]          @relation("programmeHomeUnit")
+  programmesFirstYear  Programme[]          @relation("programmeFirstYearUnit")
+  curriculumSubjects   CurriculumSubject[]
+  batchSemesters       BatchSemester[]      @relation("batchSemesterAcademicUnit")
+
+}
+/// Programme represents a degree a student graduates with (BE Computer Engineering, BE IT, etc.).
+/// Owned by an AcademicUnit. Accreditation is per Programme.
+model Programme {
+  id                     String       @id @default(cuid())
+  name                   String
+  code                   String       @unique
+  degreeType             DegreeType   @default(BE)
+  durationYears          Int          @default(4)
+  durationSemesters      Int          @default(8)
+  homeAcademicUnitId     String
+  firstYearAcademicUnitId String?
+  isActive               Boolean      @default(true)
+  createdAt              DateTime     @default(now())
+  updatedAt              DateTime     @updatedAt
+
+  homeAcademicUnit       AcademicUnit @relation("programmeHomeUnit", fields: [homeAcademicUnitId], references: [id])
+  firstYearAcademicUnit  AcademicUnit? @relation("programmeFirstYearUnit", fields: [firstYearAcademicUnitId], references: [id])
+
+  curriculumSchemes      CurriculumScheme[]
+  batches                Batch[]
+}
+/// CurriculumScheme defines a named curriculum plan for a Programme (e.g. "2025 Scheme").
+model CurriculumScheme {
+  id         String   @id @default(cuid())
+  programmeId String
+  name       String
+  year       Int
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  programme          Programme           @relation(fields: [programmeId], references: [id])
+  curriculumSubjects CurriculumSubject[]
+  batches            Batch[]
+
+  @@unique([programmeId, year])
+}
+/// CurriculumSubject is the authoritative mapping of Subject → (Semester, AcademicUnit, TeachingGroup).
+/// This is a pure curriculum entity — it describes what subjects are studied, not operational deadlines.
+/// A Subject can appear multiple times across different semesters and group assignments.
+model CurriculumSubject {
+  id                  String          @id @default(cuid())
+  curriculumSchemeId  String
+  subjectId           String
+  semesterNumber      Int             // 1-8
+  academicUnitId      String          // which unit offers this subject in this semester
+  groupAssignment     GroupAssignment @default(ALL)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  curriculumScheme CurriculumScheme @relation(fields: [curriculumSchemeId], references: [id])
+  subject          Subject          @relation(fields: [subjectId], references: [id])
+  academicUnit     AcademicUnit     @relation(fields: [academicUnitId], references: [id])
+
+  @@unique([curriculumSchemeId, subjectId, semesterNumber, groupAssignment])
+  @@index([curriculumSchemeId, semesterNumber, academicUnitId])
+  @@index([subjectId])
+}
+/// Batch represents an academic cohort (e.g. "BE Computer 2025-29").
+/// No student table exists. Batch is a cohort descriptor only.
+/// Tracks its own current semester for fast dashboard/reporting access.
+model Batch {
+  id                   String       @id @default(cuid())
+  name                 String
+  code                 String       @unique
+  programmeId          String
+  curriculumSchemeId   String
+  admissionYear        Int
+  graduationYear       Int
+  status               BatchStatus  @default(ACTIVE)
+  hasTeachingGroups    Boolean      @default(false)
+  currentBatchSemesterId String?
+  currentSemesterNumber Int?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  programme            Programme        @relation(fields: [programmeId], references: [id])
+  curriculumScheme     CurriculumScheme @relation(fields: [curriculumSchemeId], references: [id])
+  currentBatchSemester BatchSemester?   @relation("BatchToBatchSemesterCurrent", fields: [currentBatchSemesterId], references: [id])
+
+  batchSemesters   BatchSemester[]
+  teachingGroups   TeachingGroup[]
+
+  @@index([currentBatchSemesterId])
+}
+/// BatchSemester is a per-batch instance of a semester (batch's semester 5, not a global one).
+/// Each batch owns its own schedule with independent start/end dates.
+/// The COE sets dates manually — no assumptions about a college calendar.
+/// Always belongs to an AcademicYear for reporting purposes.
+model BatchSemester {
+  id              String               @id @default(cuid())
+  batchId         String
+  semesterNumber  Int                  // 1-8
+  academicYearId  String
+  academicUnitId  String               // ES&H for sem 1-2, home unit for sem 3-8
+  startDate       DateTime?
+  endDate         DateTime?
+  status          BatchSemesterStatus  @default(UPCOMING)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  batch         Batch        @relation(fields: [batchId], references: [id])
+  batchCurrentOf Batch[]    @relation("BatchToBatchSemesterCurrent")
+  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id])
+  academicUnit  AcademicUnit @relation("batchSemesterAcademicUnit", fields: [academicUnitId], references: [id])
+  examCycles    ExamCycle[]
+
+  @@unique([batchId, semesterNumber])
+  @@index([academicYearId])
+  @@index([academicUnitId])
+}
+/// TeachingGroup records which teaching groups exist for a batch in first year.
+/// Each group has a name (e.g. "Physics Group") and belongs to a batch.
+/// Maximum 2 groups per batch. Subject-to-group mapping is on CurriculumSubject,
+/// NOT on this entity.
+model TeachingGroup {
+  id          String   @id @default(cuid())
+  batchId     String
+  groupNumber Int      // 1 or 2
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [id])
+
+  @@unique([batchId, groupNumber])
+}
+

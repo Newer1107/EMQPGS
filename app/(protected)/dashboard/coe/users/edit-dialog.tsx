@@ -110,3 +110,4 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
     </div>
   );
 }
+

@@ -131,6 +131,23 @@ When in doubt, read `prisma/schema.prisma`. Key facts:
 | Bank linkage | `QuestionSlot` (NOT `QuestionBankQuestion`) |
 | Signed report | Does not exist in schema |
 | API route count | ~85 endpoints across 59 route files (note: `/status` endpoint removed in B6 cleanup) |
+| Academic domain | 7 new models added June 2026: `AcademicUnit`, `Programme`, `CurriculumScheme`, `CurriculumSubject`, `Batch`, `BatchSemester`, `TeachingGroup`. See migration `20260617190824_add_academic_domain`. |
+
+## Academic domain foundation (added June 2026)
+
+- `AcademicUnit` — curriculum ownership (ES&H, COMP, IT...). `AcademicUnitType` enum: `ES_H`, `DEPARTMENT`. Distinct from `Department` (faculty HR).
+- `Programme` — degree (BE Computer, BE IT...). Belongs to an AcademicUnit via `homeAcademicUnitId`. `DegreeType` enum: `BE`, `BTECH`, `MTECH`, `PHD`, `DIPLOMA`.
+- `CurriculumScheme` — named curriculum plan (e.g. "2025 Scheme"). `@@unique([programmeId, year])`.
+- `CurriculumSubject` — authoritative mapping: Subject → (Semester, Scheme, AcademicUnit, Group). `@@unique([curriculumSchemeId, subjectId, semesterNumber, groupAssignment])`. `GroupAssignment` enum: `ALL`, `GROUP_1`, `GROUP_2`.
+- `Batch` — cohort descriptor. No student table. Links to Programme + CurriculumScheme. `BatchStatus` enum: `ACTIVE`, `GRADUATED`.
+- `BatchSemester` — per-batch semester with independent dates. Belongs to `AcademicYear` for reporting. `BatchSemesterStatus` enum: `UPCOMING`, `ACTIVE`, `COMPLETED`.
+- `TeachingGroup` — records groups (1 or 2) per batch. `@@unique([batchId, groupNumber])`.
+
+**Key rules:**
+- CurriculumSubject owns group/subject/semester mapping — NOT ExamCycle. Group swapping between semesters is done by changing CurriculumSubject data, not by automated logic.
+- Subject is untouched (keeps `departmentId`, `semesterNumber`, `questionBankDueDate`). CurriculumSubject is additive.
+- ExamCycle is untouched. Batch-awareness added in later phases.
+- QuestionBank pipeline (QuestionBank, QuestionSlot, QuestionLibraryItem, moderation, paper gen, approval) is completely unchanged.
 
 ## Workflow fixes completed (June 2026)
 

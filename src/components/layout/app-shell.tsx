@@ -25,6 +25,12 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },
   { href: "/dashboard/coe/coordinator-assignments", label: "Coordinator Assignments", roles: ["COE"] },
+  // Academic Setup
+  { href: "/dashboard/coe/academic-setup", label: "Academic Setup", roles: ["COE"] },
+  { href: "/dashboard/coe/academic-units", label: "Academic Units", roles: ["COE"] },
+  { href: "/dashboard/coe/programmes", label: "Programmes", roles: ["COE"] },
+  { href: "/dashboard/coe/curriculum", label: "Curriculum", roles: ["COE"] },
+  { href: "/dashboard/coe/batches", label: "Batches", roles: ["COE"] },
   // Coordinator
   { href: "/dashboard/coordinator", label: "Coordinator Dashboard", roles: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/subjects", label: "Subjects", roles: ["COORDINATOR"] },
