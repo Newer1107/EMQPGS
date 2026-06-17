@@ -453,50 +453,50 @@ The full lifecycle from academic structure setup to final export.
 ```mermaid
 flowchart TD
     subgraph Setup["Phase 0: Academic Structure"]
-        A1[COE: Create AcademicYear] --> A2[Auto-generates 8 Semesters]
-        A2 --> A3[COE: Create Departments<br/>(one-time setup)]
+        A1["COE: Create AcademicYear"] --> A2["Auto-generates 8 Semesters"]
+        A2 --> A3["COE: Create Departments<br/>one-time setup"]
     end
 
     subgraph Init["Phase 1: Exam Cycle Setup"]
-        B1[COE: Create ExamCycle<br/>(semester + examType + department)] --> B2[COE: Activate Cycle]
-        B2 --> B3[Coordinator: Create Subjects<br/>(with semesterNumber)]
-        B3 --> B4[Coordinator: Link Subject<br/>to ExamCycle]
-        B4 --> B5[Coordinator: Initialize<br/>QuestionBank]
-        B5 --> B6[126 Slots Created]
+        B1["COE: Create ExamCycle<br/>semester + examType + department"] --> B2["COE: Activate Cycle"]
+        B2 --> B3["Coordinator: Create Subjects<br/>with semesterNumber"]
+        B3 --> B4["Coordinator: Link Subject<br/>to ExamCycle"]
+        B4 --> B5["Coordinator: Initialize<br/>QuestionBank"]
+        B5 --> B6["126 Slots Created"]
     end
 
     subgraph Contribution["Phase 2: Question Contribution"]
-        C1[Contributor: Create Question<br/>in library] --> C2[Contributor: Assign to<br/>empty slot]
-        C2 --> C3[Contributor: Submit<br/>for moderation]
-        C3 --> C4{All 126 slots<br/>filled?}
-        C4 -->|No| C1
-        C4 -->|Yes| D1
+        C1["Contributor: Create Question<br/>in library"] --> C2["Contributor: Assign to<br/>empty slot"]
+        C2 --> C3["Contributor: Submit<br/>for moderation"]
+        C3 --> C4{"All 126 slots<br/>filled?"}
+        C4 -->|"No"| C1
+        C4 -->|"Yes"| D1
     end
 
     subgraph Moderation["Phase 3: Moderation"]
-        D1[Coordinator: Advance bank<br/>to MODERATION] --> D2[Moderator: Review<br/>each question]
-        D2 --> D3{Moderator decision}
-        D3 -->|APPROVE| D4[Question APPROVED]
-        D3 -->|REJECT| D5[Question REJECTED]
-        D3 -->|REVISION<br/>REQUEST| D6[Contributor revises]
+        D1["Coordinator: Advance bank<br/>to MODERATION"] --> D2["Moderator: Review<br/>each question"]
+        D2 --> D3{"Moderator decision"}
+        D3 -->|"APPROVE"| D4["Question APPROVED"]
+        D3 -->|"REJECT"| D5["Question REJECTED"]
+        D3 -->|"REVISION REQUEST"| D6["Contributor revises"]
         D6 --> D2
         D5 --> C1
         D4 --> E1
     end
 
     subgraph Approval["Phase 4: Approval"]
-        E1[Coordinator: Advance bank<br/>to APPROVAL] --> E2[Coordinator: Trigger<br/>AI Analysis]
-        E2 --> E3[Coordinator: Generate<br/>3 Paper Variants]
-        E3 --> E4{Coordinator<br/>Decision}
-        E4 -->|APPROVED| E5[Phase → COMPLETE]
-        E4 -->|REJECTED| D1
+        E1["Coordinator: Advance bank<br/>to APPROVAL"] --> E2["Coordinator: Trigger<br/>AI Analysis"]
+        E2 --> E3["Coordinator: Generate<br/>3 Paper Variants"]
+        E3 --> E4{"Coordinator<br/>Decision"}
+        E4 -->|"APPROVED"| E5["Phase to COMPLETE"]
+        E4 -->|"REJECTED"| D1
     end
 
     subgraph Final["Phase 5: Finalization"]
-        F1[Coordinator: Lock Bank<br/>(creates Snapshot)] --> F2[Dean: Review 3 Variants]
-        F2 --> F3[Dean: Select Variants<br/>for regular/suppl/KT]
-        F3 --> F4[COE: Export Papers<br/>(PDF/DOCX/ZIP)]
-        F4 --> F5[COE: Trigger Backup]
+        F1["Coordinator: Lock Bank<br/>creates Snapshot"] --> F2["Dean: Review 3 Variants"]
+        F2 --> F3["Dean: Select Variants<br/>regular/suppl/KT"]
+        F3 --> F4["COE: Export Papers<br/>PDF/DOCX/ZIP"]
+        F4 --> F5["COE: Trigger Backup"]
     end
 
     Setup --> Init
@@ -551,50 +551,50 @@ Who does what in the workflow.
 ```mermaid
 flowchart TD
     subgraph COE
-        coe1[Create AcademicYears]
-        coe2[Create ExamCycles]
-        coe3[Manage Departments]
-        coe4[Manage Users]
-        coe5[Export Papers]
-        coe6[Trigger Backups]
-        coe7[View Audit Logs]
+        coe1["Create AcademicYears"]
+        coe2["Create ExamCycles"]
+        coe3["Manage Departments"]
+        coe4["Manage Users"]
+        coe5["Export Papers"]
+        coe6["Trigger Backups"]
+        coe7["View Audit Logs"]
     end
 
     subgraph Coordinator
-        coord1[Create Subjects]
-        coord2[Link Subjects to Cycles]
-        coord3[Initialize QuestionBanks]
-        coord4[Assign Moderators]
-        coord5[Fill Slots / Assign Questions]
-        coord6[Advance Bank Phases]
-        coord7[Trigger AI Analysis]
-        coord8[Generate Papers]
-        coord9[Approve / Reject Bank]
-        coord10[Lock / Unlock Bank]
+        coord1["Create Subjects"]
+        coord2["Link Subjects to Cycles"]
+        coord3["Initialize QuestionBanks"]
+        coord4["Assign Moderators"]
+        coord5["Fill Slots / Assign Questions"]
+        coord6["Advance Bank Phases"]
+        coord7["Trigger AI Analysis"]
+        coord8["Generate Papers"]
+        coord9["Approve / Reject Bank"]
+        coord10["Lock / Unlock Bank"]
     end
 
     subgraph Contributor
-        cont1[Create Questions]
-        cont2[Assign to Slots]
-        cont3[Submit for Moderation]
-        cont4[Revise on Feedback]
+        cont1["Create Questions"]
+        cont2["Assign to Slots"]
+        cont3["Submit for Moderation"]
+        cont4["Revise on Feedback"]
     end
 
     subgraph Moderator
-        mod1[Review Assigned Questions]
-        mod2[Approve / Reject]
-        mod3[Request Revision]
+        mod1["Review Assigned Questions"]
+        mod2["Approve / Reject"]
+        mod3["Request Revision"]
     end
 
     subgraph Dean
-        dean1[Review Generated Papers]
-        dean2[Select Variants]
+        dean1["Review Generated Papers"]
+        dean2["Select Variants"]
     end
 
-    COE --> |provides structure| Coordinator
-    Coordinator --> |manages banks| Contributor
-    Coordinator --> |assigns| Moderator
-    Coordinator --> |presents for review| Dean
+    COE -->|"provides structure"| Coordinator
+    Coordinator -->|"manages banks"| Contributor
+    Coordinator -->|"assigns"| Moderator
+    Coordinator -->|"presents for review"| Dean
 ```
 
 ---
@@ -605,25 +605,25 @@ How data moves through the system from creation to final output.
 
 ```mermaid
 flowchart LR
-    AY[AcademicYear] --> S[Semester]
-    S --> EC[ExamCycle]
-    D[Department] --> EC
-    D --> SUBJ[Subject]
-    SUBJ --> SV[SubjectVersion]
-    EC --> SEL[SubjectExamCycleLink]
+    AY["AcademicYear"] --> S["Semester"]
+    S --> EC["ExamCycle"]
+    D["Department"] --> EC
+    D --> SUBJ["Subject"]
+    SUBJ --> SV["SubjectVersion"]
+    EC --> SEL["SubjectExamCycleLink"]
     SEL --> SUBJ
-    EC --> QB[QuestionBank]
-    QB --> PP[PaperPattern]
-    QB --> QSLOT[QuestionSlot × 126]
-    SV --> QLI[QuestionLibraryItem]
+    EC --> QB["QuestionBank"]
+    QB --> PP["PaperPattern"]
+    QB --> QSLOT["QuestionSlot x126"]
+    SV --> QLI["QuestionLibraryItem"]
     QLI --> QSLOT
-    QSLOT --> QA{All filled?}
-    QA -->|Yes| MOD[Moderation]
-    MOD --> AI[AI Analysis]
-    MOD --> PG[Paper Generation]
-    PG --> GP[GeneratedPaper × 3]
-    GP --> DR[Dean Review]
-    DR --> EXP[Export]
+    QSLOT --> QA{"All filled?"}
+    QA -->|"Yes"| MOD["Moderation"]
+    MOD --> AI["AI Analysis"]
+    MOD --> PG["Paper Generation"]
+    PG --> GP["GeneratedPaper x3"]
+    GP --> DR["Dean Review"]
+    DR --> EXP["Export"]
 
     style AY fill:#e1f5fe
     style EC fill:#fff3e0
