@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,13 +40,10 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Curriculum</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)] max-w-2xl">
-          This is where you decide which subjects are taught during each semester. Select a programme and scheme,
-          then add subjects to each semester. Choose which academic unit teaches each subject and which teaching group takes it.
-        </p>
-      </div>
+      <PageHeader
+        title="Curriculum"
+        description="This is where you decide which subjects are taught during each semester. Select a programme and scheme, then add subjects to each semester. Choose which academic unit teaches each subject and which teaching group takes it."
+      />
 
       <div className="flex flex-wrap gap-2">
         {programmes.map((p) => (
@@ -98,7 +97,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
                 <TR><TH>Semester</TH><TH>Subject</TH><TH>Credits</TH><TH>Academic Unit</TH><TH>Teaching Group</TH></TR>
               </THead>
               <TBody>
-                {subjects.length === 0 && <TR><TD colSpan={5} className="text-center text-muted-foreground py-8">No subjects placed yet. Add a subject below.</TD></TR>}
+                {subjects.length === 0 && <TR><TD colSpan={5}><EmptyState message="No subjects placed yet" description="Add a subject below." /></TD></TR>}
                 {subjects.map((s) => (
                   <TR key={s.id}>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">Semester {s.semesterNumber}</Badge></TD>

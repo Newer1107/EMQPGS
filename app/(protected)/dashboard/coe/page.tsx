@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { getDashboardSeed } from "@/lib/server-data";
@@ -9,10 +10,10 @@ export default async function CoeDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">COE Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Controller of Examination — govern access, academic structure, and audit controls</p>
-      </div>
+      <PageHeader
+        title="COE Dashboard"
+        description="Controller of Examination — govern access, academic structure, and audit controls"
+      />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {data.stats.map((stat) => <StatCard key={stat.label} {...stat} />)}
       </div>

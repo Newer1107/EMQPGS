@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -29,13 +30,10 @@ export default async function AcademicSetupPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Academic Setup</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)] max-w-2xl">
-          Set up the foundation for question paper generation. Define who teaches, what degrees are offered,
-          which subjects belong in each semester, and which cohorts of students are progressing through the programme.
-        </p>
-      </div>
+      <PageHeader
+        title="Academic Setup"
+        description="Set up the foundation for question paper generation. Define who teaches, what degrees are offered, which subjects belong in each semester, and which cohorts of students are progressing through the programme."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/dashboard/coe/academic-units" className="group">
@@ -106,7 +104,7 @@ export default async function AcademicSetupPage() {
                   </div>
                   <p className="text-sm text-[var(--muted-foreground)]">{step.desc}</p>
                 </div>
-                <Badge className={step.done ? 'bg-green-100 text-green-800 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}>
+                <Badge variant={step.done ? "success" : "default"}>
                   {step.done ? 'Done' : 'Start'}
                 </Badge>
               </Link>

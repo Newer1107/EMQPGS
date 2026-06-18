@@ -485,7 +485,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
         </div>
         <div className="flex items-center gap-2">
           <Badge>{questionBankPhaseLabels[props.phase as keyof typeof questionBankPhaseLabels] ?? props.phase}</Badge>
-          <Badge className={props.recordStatus === "LOCKED" ? "bg-red-100 text-red-800 border-red-300" : ""}>
+          <Badge variant={props.recordStatus === "LOCKED" ? "danger" : props.recordStatus === "ACTIVE" ? "success" : "default"}>
             {recordStatusLabels[props.recordStatus as keyof typeof recordStatusLabels] ?? props.recordStatus}
           </Badge>
         </div>

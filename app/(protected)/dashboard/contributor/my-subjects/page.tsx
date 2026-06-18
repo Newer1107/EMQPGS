@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getQuestionContributionWorkspace } from "@/lib/server-data";
@@ -9,10 +10,10 @@ export default async function ContributorMySubjectsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">My Subjects</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review the current subject and exam cycle available for contribution.</p>
-      </div>
+      <PageHeader
+        title="My Subjects"
+        description="Review the current subject and exam cycle available for contribution."
+      />
       <DataTableCard title="Assigned Subject">
         <Table>
           <THead><TR><TH>Subject Code</TH><TH>Subject Name</TH><TH>Academic Year</TH><TH>Semester</TH></TR></THead>

@@ -2,11 +2,18 @@ import { QuestionStatus } from "@prisma/client";
 import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ModeratorService } from "@/modules/moderation/service";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
+
+const statusVariants: Record<string, "success" | "warning" | "danger" | "default" | "info"> = {
+  APPROVED: "success",
+  PENDING: "warning",
+  REVISION_SUBMITTED: "info",
+};
 
 export default async function ModerationQuestionsPage() {
   const actor = await getCurrentUserFromCookies();
@@ -18,10 +25,10 @@ export default async function ModerationQuestionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Moderation Queue</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate questions from the question library.</p>
-      </div>
+      <PageHeader
+        title="Moderation Queue"
+        description="Review and moderate questions from the question library."
+      />
       <DataTableCard title={`Pending Review (${questions.length})`}>
         <Table>
           <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Actions</TH></TR></THead>
@@ -31,7 +38,7 @@ export default async function ModerationQuestionsPage() {
                 <TD className="font-medium">{question.subjectVersion.subject.subjectCode}</TD>
                 <TD>{question.moduleNumber}</TD>
                 <TD>{question.marks}</TD>
-                <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
+                <TD><Badge variant={statusVariants[question.status] ?? "default"}>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
                 <TD>
                   <Link href={`/dashboard/moderator/questions/${question.id}`}>

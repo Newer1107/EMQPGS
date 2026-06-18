@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
@@ -7,6 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
+
+const statusVariants: Record<string, "success" | "warning" | "danger" | "default" | "info"> = {
+  APPROVED: "success",
+  REJECTED: "danger",
+  PENDING: "warning",
+  DRAFT: "warning",
+  REVISION_REQUESTED: "info",
+  REVISION_SUBMITTED: "info",
+};
 
 export default async function CoordinatorQuestionsPage() {
   const actor = await getCurrentUserFromCookies();
@@ -30,10 +40,10 @@ export default async function CoordinatorQuestionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Contribution Monitor</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Read-only view of question contribution progress across all banks.</p>
-      </div>
+      <PageHeader
+        title="Contribution Monitor"
+        description="Read-only view of question contribution progress across all banks."
+      />
       <DataTableCard title="Question Library">
         <Table>
           <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Linked Banks</TH><TH>Actions</TH></TR></THead>
@@ -43,7 +53,7 @@ export default async function CoordinatorQuestionsPage() {
                 <TD className="font-medium">{question.subjectVersion.subject.subjectCode}</TD>
                 <TD>{question.moduleNumber}</TD>
                 <TD>{question.marks}</TD>
-                <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
+                <TD><Badge variant={statusVariants[question.status] ?? "default"}>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
                 <TD>{question.slotAssignments.map((s) => s.questionBank.examCycle.examType).join(", ") || "None"}</TD>
                 <TD>

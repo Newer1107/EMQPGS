@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDeanReviewData } from "@/lib/server-data";
 
@@ -5,12 +6,11 @@ export default async function DeanReportsPage() {
   const data = await getDeanReviewData();
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">Dean</p>
-        <h1 className="page-display mt-4">REPORTS</h1>
-        <p className="page-lead mt-6">Review summaries from completed dean reviews.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Reports"
+        description="Review summaries from completed dean reviews."
+      />
 
       <Card>
         <CardHeader><CardTitle>Completed Review Summaries</CardTitle></CardHeader>

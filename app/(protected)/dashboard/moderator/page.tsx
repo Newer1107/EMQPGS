@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { NotificationInbox } from "@/components/moderator/notification-inbox";
@@ -11,10 +12,10 @@ export default async function ModeratorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Moderator Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Review and moderate question submissions</p>
-      </div>
+      <PageHeader
+        title="Moderator Dashboard"
+        description="Review and moderate question submissions"
+      />
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Summary Counts</CardTitle></CardHeader>

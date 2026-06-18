@@ -1,5 +1,7 @@
 import { Role, UserStatus } from "@prisma/client";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -31,10 +33,10 @@ export default async function CoordinatorAssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Coordinator Department Assignments</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Assign coordinators to academic departments</p>
-      </div>
+      <PageHeader
+        title="Coordinator Assignments"
+        description="Assign coordinators to academic departments"
+      />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="Current Assignments">
           <Table>
@@ -48,6 +50,9 @@ export default async function CoordinatorAssignmentsPage() {
               </TR>
             </THead>
             <TBody>
+              {assignments.length === 0 && (
+                <TR><TD colSpan={5}><EmptyState message="No assignments found" description="Assign a coordinator to get started." /></TD></TR>
+              )}
               {assignments.map((assignment) => (
                 <TR key={assignment.id}>
                   <TD className="font-medium">{assignment.coordinator.name}</TD>
@@ -63,9 +68,6 @@ export default async function CoordinatorAssignmentsPage() {
                   </TD>
                 </TR>
               ))}
-              {assignments.length === 0 && (
-                <TR><TD colSpan={5} className="text-center text-[var(--muted-foreground)] py-8">No assignments found</TD></TR>
-              )}
             </TBody>
           </Table>
         </DataTableCard>

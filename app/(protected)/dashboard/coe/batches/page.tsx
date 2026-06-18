@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -18,13 +20,10 @@ export default async function BatchesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Batches</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          A batch is one intake of students. For example, BE Computer Engineering (2025–2029).
-          Each batch follows a curriculum scheme and progresses through semesters.
-        </p>
-      </div>
+      <PageHeader
+        title="Batches"
+        description="A batch is one intake of students. For example, BE Computer Engineering (2025–2029). Each batch follows a curriculum scheme and progresses through semesters."
+      />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Batches">
           <Table>
@@ -32,7 +31,9 @@ export default async function BatchesPage() {
               <TR><TH>Name</TH><TH>Programme</TH><TH>Scheme</TH><TH>Current Sem</TH><TH>Period</TH><TH>Status</TH><TH>Semesters</TH></TR>
             </THead>
             <TBody>
-              {batches.length === 0 && <TR><TD colSpan={7} className="text-center text-muted-foreground py-8">No batches found.</TD></TR>}
+              {batches.length === 0 && (
+                <TR><TD colSpan={7}><EmptyState message="No batches found" description="Create a batch to get started." /></TD></TR>
+              )}
               {batches.map((b) => (
                 <TR key={b.id}>
                   <TD className="font-medium"><Link href={`/dashboard/coe/batches/${b.id}`} className="underline">{b.name}</Link></TD>
@@ -40,7 +41,7 @@ export default async function BatchesPage() {
                   <TD>{b.curriculumScheme?.name} ({b.curriculumScheme?.year})</TD>
                   <TD>{b.currentSemesterNumber ? <Badge>Semester {b.currentSemesterNumber}</Badge> : '-'}</TD>
                   <TD>{b.admissionYear}–{b.graduationYear}</TD>
-                  <TD>{b.status === "GRADUATED" ? <Badge className="bg-red-100 text-red-800 border-red-200">Graduated</Badge> : <Badge>Active</Badge>}</TD>
+                  <TD><Badge variant={b.status === "GRADUATED" ? "info" : "success"}>{b.status === "GRADUATED" ? "Graduated" : "Active"}</Badge></TD>
                   <TD><Link href={`/dashboard/coe/batches/${b.id}/semesters`} className="text-sm underline">{b._count.batchSemesters} semesters</Link></TD>
                 </TR>
               ))}
@@ -54,8 +55,8 @@ export default async function BatchesPage() {
           fields={[
             { name: "name", label: "Name", type: "text" },
             { name: "code", label: "Code", type: "text" },
-            { name: "programmeId", label: "Programme ID", type: "text" },
-            { name: "curriculumSchemeId", label: "Curriculum Scheme ID", type: "text" },
+            { name: "programmeId", label: "Programme", type: "select", options: programmes.map((p) => ({ value: p.id, label: p.name })) },
+            { name: "curriculumSchemeId", label: "Curriculum Scheme", type: "select", options: schemes.map((s) => ({ value: s.id, label: `${s.name} (${s.year})` })) },
             { name: "admissionYear", label: "Admission Year", type: "number" },
             { name: "graduationYear", label: "Graduation Year", type: "number" },
           ]}

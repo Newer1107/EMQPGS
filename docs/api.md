@@ -1,6 +1,6 @@
 # API Reference
 
-> 59 route files, ~85 endpoints.
+> 70 route files, ~100 endpoints.
 > All endpoints return `{ success: boolean, data?: T, error?: { code, message, details? }, correlationId: string }`.
 > CSRF header `x-csrf-token` required on all non-GET requests.
 
@@ -28,6 +28,79 @@
 ```
 
 Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_token`.
+
+---
+
+## Academic domain
+
+### Academic units
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/academic-units` | COE, COORDINATOR | List all |
+| POST | `/api/academic-units` | COE | Create |
+| GET | `/api/academic-units/[id]` | COE, COORDINATOR | Get by ID |
+| PATCH | `/api/academic-units/[id]` | COE | Update |
+| DELETE | `/api/academic-units/[id]` | COE | Deactivate |
+
+### Programmes
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/programmes` | COE, COORDINATOR | List all |
+| POST | `/api/programmes` | COE | Create |
+| GET | `/api/programmes/[id]` | COE, COORDINATOR | Get detail |
+| PATCH | `/api/programmes/[id]` | COE | Update |
+| DELETE | `/api/programmes/[id]` | COE | Delete (if no references) |
+
+### Curriculum schemes
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/curriculum-schemes` | COE, COORDINATOR | List (filter by `?programmeId=`) |
+| POST | `/api/curriculum-schemes` | COE | Create |
+| GET | `/api/curriculum-schemes/[id]` | COE, COORDINATOR | Get detail with subjects |
+| PATCH | `/api/curriculum-schemes/[id]` | COE | Update |
+| DELETE | `/api/curriculum-schemes/[id]` | COE | Delete (if no references) |
+
+### Curriculum subjects
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/curriculum-subjects` | COE, COORDINATOR | List (filter by `?curriculumSchemeId=`, `?semesterNumber=`, etc.) |
+| POST | `/api/curriculum-subjects` | COE | Create |
+| GET | `/api/curriculum-subjects/[id]` | COE, COORDINATOR | Get detail |
+| PATCH | `/api/curriculum-subjects/[id]` | COE | Update |
+| DELETE | `/api/curriculum-subjects/[id]` | COE | Delete |
+
+### Batches
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/batches` | COE, COORDINATOR | List (filter by `?programmeId=`) |
+| POST | `/api/batches` | COE | Create (auto-creates BatchSemesters) |
+| GET | `/api/batches/[id]` | COE, COORDINATOR | Get detail with semesters and groups |
+| PATCH | `/api/batches/[id]` | COE | Update |
+| DELETE | `/api/batches/[id]` | COE | Delete |
+
+### Batch semesters
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/batch-semesters` | COE, COORDINATOR | List by `?batchId=` or active by `?academicUnitId=` |
+| GET | `/api/batch-semesters/[id]` | COE, COORDINATOR | Get detail |
+| PATCH | `/api/batch-semesters/[id]` | COE | Update dates/status/unit |
+| POST | `/api/batch-semesters/[id]?action=activate` | COE | Activate semester |
+| POST | `/api/batch-semesters/[id]?action=complete` | COE | Complete semester |
+
+### Teaching groups
+
+| Method | Path | Roles | Purpose |
+|---|---|---|---|
+| GET | `/api/teaching-groups?batchId=` | COE, COORDINATOR | List groups for a batch |
+| POST | `/api/teaching-groups` | COE | Create one or both groups |
+| GET | `/api/teaching-groups/[id]` | COE, COORDINATOR | Get detail |
+| DELETE | `/api/teaching-groups/[id]` | COE | Delete |
 
 ---
 

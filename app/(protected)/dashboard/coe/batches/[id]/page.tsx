@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -17,17 +18,19 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/coe/batches" className="text-sm text-[var(--muted-foreground)] underline">← Batches</Link>
-        <h1 className="text-2xl font-semibold">{batch.name}</h1>
-        <Badge>{batch.status}</Badge>
-      </div>
-
-      <div className="flex gap-1 border-b">
-        <Link href={`/dashboard/coe/batches/${id}`} className="border-b-2 border-black px-4 py-2 text-sm font-medium">Overview</Link>
+      <PageHeader
+        title={batch.name}
+        description="Batch overview and details"
+        className="!flex-row !items-center !gap-3"
+      />
+      <div className="-mt-4 flex gap-1 border-b">
+        <span className="border-b-2 border-black px-4 py-2 text-sm font-medium">Overview</span>
         <Link href={`/dashboard/coe/batches/${id}/semesters`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Semesters</Link>
         <Link href={`/dashboard/coe/batches/${id}/teaching-groups`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Teaching Groups</Link>
         <Link href={`/dashboard/coe/batches/${id}/history`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">History</Link>
+        <Badge variant={batch.status === "GRADUATED" ? "info" : "success"} className="self-center ml-2">
+          {batch.status === "GRADUATED" ? "Graduated" : "Active"}
+        </Badge>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

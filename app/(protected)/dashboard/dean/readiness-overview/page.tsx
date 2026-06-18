@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getDeanReviewData } from "@/lib/server-data";
@@ -6,12 +7,11 @@ export default async function DeanReadinessOverviewPage() {
   const data = await getDeanReviewData();
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">Dean</p>
-        <h1 className="page-display mt-4">READINESS OVERVIEW</h1>
-        <p className="page-lead mt-6">Overview of all question banks awaiting dean review.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Readiness Overview"
+        description="Overview of all question banks awaiting dean review."
+      />
 
       <section className="grid gap-6 md:grid-cols-2">
         <Card>
@@ -23,7 +23,7 @@ export default async function DeanReadinessOverviewPage() {
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="text-sm font-semibold">{item.subjectCode} · {item.subjectName}</p>
                 <p className="text-xs text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
-                <Badge className="mt-2">Pending</Badge>
+                <Badge variant="warning" className="mt-2">Pending</Badge>
               </div>
             ))}
           </CardContent>
@@ -38,7 +38,7 @@ export default async function DeanReadinessOverviewPage() {
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="text-sm font-semibold">{item.subjectCode} · {item.subjectName}</p>
                 <p className="text-xs text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
-                <Badge className="mt-2">Completed</Badge>
+                <Badge variant="success" className="mt-2">Completed</Badge>
               </div>
             ))}
           </CardContent>

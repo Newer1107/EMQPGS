@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getMonitoringData } from "@/lib/server-data";
 
@@ -5,12 +6,11 @@ export default async function CoeMonitoringPage() {
   const data = await getMonitoringData();
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">COE</p>
-        <h1 className="page-display mt-4">OBSERVABILITY</h1>
-        <p className="page-lead mt-6">Track platform health, active document workflows, storage inventory, and backup readiness.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Monitoring"
+        description="Track platform health, active document workflows, storage inventory, and backup readiness."
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>

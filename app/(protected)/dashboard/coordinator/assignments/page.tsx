@@ -1,4 +1,5 @@
 import { Role } from "@prisma/client";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ModeratorAssignmentForm } from "@/components/forms/moderator-assignment-form";
@@ -32,10 +33,10 @@ export default async function AssignmentsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Moderator Assignments</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Assign moderators to question banks for question review and approval.</p>
-      </div>
+      <PageHeader
+        title="Moderator Assignments"
+        description="Assign moderators to question banks for question review and approval."
+      />
       <ModeratorAssignmentForm
         questionBanks={questionBanks}
         moderators={moderators}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -98,10 +99,10 @@ export default async function ContributorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Contributor Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Contribute questions and track your submissions</p>
-      </div>
+      <PageHeader
+        title="Contributor Dashboard"
+        description="Contribute questions and track your submissions"
+      />
 
       {banks.length > 0 && (
         <Card>
@@ -149,8 +150,8 @@ export default async function ContributorDashboardPage() {
                             ).join("")})
                           </span>
                         </div>
-                        {sm.biggest && sm.empty > 0 && (
-                          <Badge className="bg-red-100 text-red-800 border-red-300 text-xs">Gap</Badge>
+                    {sm.biggest && sm.empty > 0 && (
+                          <Badge variant="danger" className="text-xs">Gap</Badge>
                         )}
                       </div>
                     ))}

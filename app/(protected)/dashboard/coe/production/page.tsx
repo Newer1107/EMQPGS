@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/dashboard/page-header";
 import { ExportConsole } from "@/components/production/export-console";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,17 +9,15 @@ export default async function CoeProductionPage() {
   const banks = await getCoeProductionData();
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">COE</p>
-        <h1 className="page-display mt-4">PRODUCTION CONTROL</h1>
-        <p className="page-lead mt-6">Review generated papers, AI reports, dean selections, and export final printable exam packets.</p>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Production Control"
+        description="Review generated papers, AI reports, dean selections, and export final printable exam packets."
+      />
 
       <Card>
         <CardHeader>
-          <p className="page-kicker">Overview</p>
-          <CardTitle className="mt-2 text-4xl">Generated Papers and Dean Selections</CardTitle>
+          <CardTitle>Generated Papers and Dean Selections</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>

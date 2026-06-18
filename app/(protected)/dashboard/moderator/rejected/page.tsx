@@ -2,6 +2,7 @@ import { QuestionStatus } from "@prisma/client";
 import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ModeratorService } from "@/modules/moderation/service";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,10 +17,10 @@ export default async function ModeratorRejectedPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Rejected Questions</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Questions that have been rejected.</p>
-      </div>
+      <PageHeader
+        title="Rejected Questions"
+        description="Questions that have been rejected by moderators."
+      />
       <DataTableCard title={`Rejected (${questions.length})`}>
         <Table>
           <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Actions</TH></TR></THead>
@@ -29,7 +30,7 @@ export default async function ModeratorRejectedPage() {
                 <TD className="font-medium">{question.subjectVersion.subject.subjectCode}</TD>
                 <TD>{question.moduleNumber}</TD>
                 <TD>{question.marks}</TD>
-                <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
+                <TD><Badge variant="danger">{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
                 <TD>
                   <Link href={`/dashboard/moderator/questions/${question.id}`}>

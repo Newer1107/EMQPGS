@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 
 interface NavItem {
   label: string;
@@ -143,6 +144,7 @@ export function AppShell({
       </aside>
       <main id="main-content" className="flex-1 bg-[var(--muted)]">
         <div className="mx-auto max-w-7xl px-6 py-8">
+          <Breadcrumbs />
           {children}
         </div>
       </main>

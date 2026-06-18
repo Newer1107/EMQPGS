@@ -45,7 +45,7 @@ export default async function BatchTeachingGroupsPage({ params }: { params: Prom
                   <h3 className="font-semibold">{g.name}</h3>
                   <p className="text-xs text-[var(--muted-foreground)]">Group {g.groupNumber}</p>
                 </div>
-                <Badge className={g.isActive ? 'bg-green-100 text-green-800 border-green-200' : ''}>{g.isActive ? 'Active' : 'Inactive'}</Badge>
+                <Badge variant={g.isActive ? "success" : "default"}>{g.isActive ? 'Active' : 'Inactive'}</Badge>
               </div>
               {g.description && <p className="text-sm text-[var(--muted-foreground)]">{g.description}</p>}
               {!g.description && <p className="text-sm text-[var(--muted-foreground)] italic">No description</p>}

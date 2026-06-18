@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/db";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Programmes — EMQPGS" };
 
@@ -15,13 +18,10 @@ export default async function ProgrammesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Programmes</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-          A programme is the degree students graduate with. For example, BE Computer Engineering or BE Information Technology.
-        </p>
-      </div>
-
+      <PageHeader
+        title="Programmes"
+        description="A programme is the degree students graduate with. For example, BE Computer Engineering or BE Information Technology."
+      />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Programmes">
           <Table>
@@ -29,7 +29,9 @@ export default async function ProgrammesPage() {
               <TR><TH>Name</TH><TH>Code</TH><TH>Degree</TH><TH>Duration</TH><TH>Home Unit</TH><TH>First Year Unit</TH><TH>Status</TH></TR>
             </THead>
             <TBody>
-              {programmes.length === 0 && <TR><TD colSpan={7} className="text-center text-muted-foreground py-8">No programmes found.</TD></TR>}
+              {programmes.length === 0 && (
+                <TR><TD colSpan={7}><EmptyState message="No programmes found" /></TD></TR>
+              )}
               {programmes.map((p) => (
                 <TR key={p.id}>
                   <TD className="font-medium">{p.name}</TD>
@@ -38,7 +40,7 @@ export default async function ProgrammesPage() {
                   <TD>{p.durationYears} yr / {p.durationSemesters} sem</TD>
                   <TD>{p.homeAcademicUnit?.name ?? '-'}</TD>
                   <TD>{p.firstYearAcademicUnit?.name ?? '-'}</TD>
-                  <TD>{p.isActive ? <Badge>Active</Badge> : <Badge className="bg-red-100 text-red-800 border-red-200">Inactive</Badge>}</TD>
+                  <TD><Badge variant={p.isActive ? "success" : "danger"}>{p.isActive ? "Active" : "Inactive"}</Badge></TD>
                 </TR>
               ))}
             </TBody>
@@ -63,7 +65,7 @@ export default async function ProgrammesPage() {
 
       <div className="flex items-center gap-4 rounded-lg border bg-gray-50 p-4">
         <span className="text-sm text-[var(--muted-foreground)]">Next step:</span>
-        <a href="/dashboard/coe/curriculum" className="text-sm font-medium underline">Go to Curriculum</a>
+        <Link href="/dashboard/coe/curriculum" className="text-sm font-medium underline">Go to Curriculum</Link>
       </div>
     </div>
   );

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
+import { PageHeader } from "@/components/dashboard/page-header";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -14,10 +16,10 @@ export default async function DepartmentsManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Departments</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Manage academic departments</p>
-      </div>
+      <PageHeader
+        title="Departments"
+        description="Manage academic departments"
+      />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Departments">
           <Table>
@@ -26,17 +28,28 @@ export default async function DepartmentsManagementPage() {
                 <TH>Name</TH>
                 <TH>Code</TH>
                 <TH>HOD</TH>
-                <TH>Active</TH>
+                <TH>Status</TH>
                 <TH>Actions</TH>
               </TR>
             </THead>
             <TBody>
+              {departments.length === 0 && (
+                <TR>
+                  <TD colSpan={5}>
+                    <EmptyState message="No departments found" description="Create a department to get started." />
+                  </TD>
+                </TR>
+              )}
               {departments.map((department) => (
                 <TR key={department.id}>
                   <TD className="font-medium">{department.name}</TD>
                   <TD><Badge>{department.code}</Badge></TD>
                   <TD>{department.hodName}</TD>
-                  <TD>{department.isActive ? "Yes" : "No"}</TD>
+                  <TD>
+                    <Badge variant={department.isActive ? "success" : "danger"}>
+                      {department.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TD>
                   <TD>
                     <div className="flex gap-2">
                       <EditDepartmentButton department={department} />

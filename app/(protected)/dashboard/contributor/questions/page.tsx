@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
@@ -8,6 +9,15 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
 import { ActionButton } from "@/components/forms/action-button";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
+
+const statusVariants: Record<string, "success" | "warning" | "danger" | "default" | "info"> = {
+  APPROVED: "success",
+  REJECTED: "danger",
+  PENDING: "warning",
+  DRAFT: "warning",
+  REVISION_REQUESTED: "info",
+  REVISION_SUBMITTED: "info",
+};
 
 export default async function ContributorQuestionsPage() {
   const actor = await getCurrentUserFromCookies();
@@ -28,15 +38,15 @@ export default async function ContributorQuestionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">My Questions</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">Questions you have created in the question library.</p>
-        </div>
-        <Link href="/dashboard/contributor/submit-question">
-          <Button>Create Question</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="My Questions"
+        description="Questions you have created in the question library."
+        actions={
+          <Link href="/dashboard/contributor/submit-question">
+            <Button>Create Question</Button>
+          </Link>
+        }
+      />
 
       {latestQuestion && (latestQuestion.status === "DRAFT" || latestQuestion.status === "REVISION_SUBMITTED") && (
         <NextStepGuidance context="question_submitted" />
@@ -51,7 +61,7 @@ export default async function ContributorQuestionsPage() {
                 <TD className="font-medium">{question.subjectVersion.subject.subjectCode}</TD>
                 <TD>{question.moduleNumber}</TD>
                 <TD>{question.marks}</TD>
-                <TD><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
+                <TD><Badge variant={statusVariants[question.status] ?? "default"}>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
                 <TD>{question.slotAssignments.map((s) => s.questionBank.examCycle.examType).join(", ") || "None"}</TD>
                 <TD>
                   <div className="flex gap-2">

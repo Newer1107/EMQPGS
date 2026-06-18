@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -74,7 +75,7 @@ function BankRow({ bank }: { bank: BankStatusItem }) {
         )}
       </TD>
       <TD>
-        <Badge className={bank.recordStatus === "LOCKED" ? "bg-red-100 text-red-800 border-red-300" : ""}>
+        <Badge variant={bank.recordStatus === "LOCKED" ? "danger" : bank.recordStatus === "ACTIVE" ? "success" : "default"}>
           {recordStatusLabels[bank.recordStatus as keyof typeof recordStatusLabels] ?? bank.recordStatus}
         </Badge>
       </TD>
@@ -90,10 +91,10 @@ export default async function CoordinatorDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Coordinator Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Department-scoped operations overview for your assigned departments only.</p>
-      </div>
+      <PageHeader
+        title="Coordinator Dashboard"
+        description="Department-scoped operations overview for your assigned departments only."
+      />
 
       {data.attentionItems.length > 0 && (
         <Card>

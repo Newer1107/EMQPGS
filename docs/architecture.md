@@ -1,314 +1,162 @@
 # Architecture
 
-> **Last updated:** 2026-06-15
-> **Architecture baseline:** QuestionBankPhase + RecordStatus, QuestionSlot linkage, ReadinessEngine, snapshot immutability
+> System architecture, domain model, core concepts, roles, and invariants.
 
 ---
 
-## 1. Domain model
+## 1. System Purpose
 
-```mermaid
-erDiagram
-    AcademicYear ||--o{ Semester : contains
-    AcademicYear ||--o{ ExamCycle : "has cycles"
-    AcademicYear ||--o{ SubjectVersion : "version for"
-    Semester ||--o{ Subject : "offers"
-    Semester ||--o{ ExamCycle : "has cycle"
-    Department ||--o{ Subject : "offers"
-    Department ||--o{ User : employs
-    Department ||--o{ CoordinatorDepartmentAssignment : "assigns coordinator"
-    Department ||--o{ ExamCycle : "scopes cycles"
-    User ||--o{ CoordinatorDepartmentAssignment : "assigned as"
-    User ||--o{ ModeratorBankAssignment : "assigned as"
-    Subject ||--o{ SubjectVersion : versioned
-    Subject ||--o{ QuestionBank : "has bank"
-    Subject ||--o{ SubjectExamCycleLink : "linked to cycle"
-    ExamCycle ||--o{ QuestionBank : contains
-    ExamCycle ||--o{ SubjectExamCycleLink : links
-    SubjectVersion ||--o{ QuestionLibraryItem : contains
-    QuestionLibraryItem ||--o{ QuestionSlot : "assigned to"
-    QuestionBank ||--o{ QuestionSlot : "has slots"
-    QuestionBank ||--o{ QuestionBankSnapshot : snapshots
-    QuestionBank ||--o{ PaperSnapshot : snapshots
-    QuestionBank ||--o{ ApprovalDecision : "approval records"
-    QuestionBank ||--o{ AiReport : "AI analysis"
-    QuestionBank ||--o{ GeneratedPaper : "generated papers"
-    QuestionBank ||--o{ ModeratorBankAssignment : "moderator assignments"
-    QuestionBank ||--o{ DeanReview : "dean review"
-    QuestionBank ||--o{ ExportArtifact : exports
-    QuestionBank ||--o{ PaperPattern : "has pattern"
-    GeneratedPaper ||--o{ GeneratedPaperItem : contains
-    QuestionLibraryItem ||--o{ GeneratedPaperItem : selected
-    QuestionLibraryItem ||--o{ QuestionRevision : versioned
-    QuestionLibraryItem ||--o{ QuestionOwnershipHistory : transferred
-    QuestionLibraryItem ||--o{ QuestionUsageHistory : used
-    QuestionLibraryItem ||--o{ ModerationEvent : moderated
-    User ||--o{ ModerationEvent : performs
-    User ||--o{ ApprovalDecision : decides
-    User ||--o{ QuestionLibraryItem : owns
-```
+EMQPGS (Examination Management & Question Paper Generation System) manages the complete lifecycle of academic examination question papers — from subject setup and question contribution through moderation, AI analysis, paper generation, dean review, and export.
+
+**Stack:** Next.js 16 (App Router) · Prisma ORM · MySQL 8 · MinIO object storage · Auth.js v5 credentials + custom JWT · Ollama (optional)
 
 ---
 
-## 2. Question bank state model
+## 2. Five User Roles
 
-Two orthogonal state axes: **phase** (what the bank is doing) and **record status** (operational immutability).
-
-```mermaid
-stateDiagram-v2
-    [*] --> DRAFTING : Initialize bank
-    DRAFTING --> MODERATION : Advance
-    MODERATION --> APPROVAL : Advance
-    APPROVAL --> COMPLETE : Coordinator approves
-    APPROVAL --> MODERATION : Coordinator rejects (loopback)
-    COMPLETE --> [*] : Workflow ends
-
-    note right of DRAFTING
-        RecordStatus can be ACTIVE or LOCKED
-        at any phase. Locking creates a
-        QuestionBankSnapshot.
-    end note
-```
-
-The transition table in `src/modules/question-banks/transitions.ts`:
-
-```
-DRAFTING  → [MODERATION]
-MODERATION → [APPROVAL]
-APPROVAL   → [COMPLETE, MODERATION]
-COMPLETE   → []
-```
-
-All transition requests go through `QuestionBankService.advancePhase()` which validates against this table and uses optimistic locking.
-
-### RecordStatus
-
-| Status | Meaning |
+| Role | Key Responsibilities |
 |---|---|
-| `ACTIVE` | Bank is mutable. Slots can be assigned/unassigned. Phases can be advanced. |
-| `LOCKED` | Bank is frozen. All modifications rejected by `ensureQuestionBankMutable()`. Unlock via `unlock` API (reversible). |
-| `ARCHIVED` | Hidden from active workflows. For long-term retention. |
+| **COE** | System admin: departments, users, academic years, exam cycles, exports, backups, audit logs |
+| **COORDINATOR** | Academic management: subjects, question banks, slot assignments, moderator assignments, phase transitions, AI reports, paper generation, final approval |
+| **CONTRIBUTOR** | Question creation: create/edit questions, assign to slots, submit for moderation, revise on feedback |
+| **MODERATOR** | Quality assurance: review assigned questions, approve/reject/request revision |
+| **DEAN** | Final review: review generated paper variants, select for regular/supplementary/KT exams |
 
-`ensureQuestionBankMutable()` in `src/modules/question-banks/mutable-guard.ts` throws HTTP 409 on any mutation attempt if `recordStatus === LOCKED`.
+### RBAC Matrix
+
+| Capability | COE | Coordinator | Moderator | Contributor | Dean |
+|---|---|---|---|---|---|
+| Users, departments, exam cycles | Manage | — | — | — | — |
+| Subjects, question banks | Read | Manage | Review | Own work | Read |
+| Slot assignments | — | Manage | — | Own work | — |
+| Moderator assignment | — | Manage | — | — | — |
+| Question moderation | — | — | Review | — | — |
+| AI reports, paper generation | — | Manage | — | — | — |
+| Coordinator approval | — | Manage | — | — | — |
+| Dean review | — | — | — | — | Manage |
+| Exports, backups, audit | Manage | — | — | — | — |
 
 ---
 
-## 3. Question linking via QuestionSlot
+## 3. Core Entity Model
 
-`QuestionSlot` is the **sole** mechanism linking `QuestionLibraryItem` to `QuestionBank`. No join table exists.
+### Primary entities
 
-```mermaid
-erDiagram
-    QuestionBank ||--o{ QuestionSlot : has
-    QuestionSlot }o--|| QuestionLibraryItem : "assigned to"
-    SubjectVersion ||--o{ QuestionLibraryItem : contains
+```
+AcademicYear 1─N Semester 1─N ExamCycle
+Department 1─N Subject 1─N SubjectVersion 1─N QuestionLibraryItem
+Department 1─N ExamCycle
+Subject 1─N QuestionBank
+QuestionBank 1─N QuestionSlot N─1 QuestionLibraryItem
+ExamCycle 1─N QuestionBank
 ```
 
-Slot uniqueness: `@@unique([questionBankId, moduleNumber, marks, slotNumber])`. Each slot represents exactly one position in the bank's grid. A question can occupy only one slot per bank (application-enforced in `QuestionSlotService.assignToSlot()`), but can be in slots of multiple banks simultaneously.
+### Key entity: QuestionSlot
 
-Slots are created when `QuestionBankWorkflowService.initializeQuestionBank()` runs, based on the `PaperPattern` for the exam type.
+`QuestionSlot` is the **sole** linkage between `QuestionBank` and `QuestionLibraryItem`. No join table exists. Each slot represents a position defined by `(moduleNumber, marks, slotNumber)` within a bank. A question can occupy at most one slot per bank but can be in multiple banks simultaneously.
 
----
+### Academic domain (June 2026)
 
-## 4. ReadinessEngine
+Added for curriculum and batch management, independent of the existing QuestionBank pipeline:
 
-`src/modules/readiness/engine.ts` | `ReadinessEngine.isReady(questionBankId, targetPhase)`
+- **AcademicUnit** — curriculum ownership body (ES&H, COMP, IT). Distinct from Department (faculty HR).
+- **Programme** — degree definition (BE, BTECH, etc.). Belongs to an AcademicUnit.
+- **CurriculumScheme** — named curriculum plan per programme (e.g. "2025 Scheme").
+- **CurriculumSubject** — authoritative mapping: Subject → (Semester, Scheme, AcademicUnit, Group).
+- **Batch** — cohort descriptor (no student table). Links to Programme + CurriculumScheme.
+- **BatchSemester** — per-batch semester with independent dates, status (UPCOMING/ACTIVE/COMPLETED).
+- **TeachingGroup** — records groups (1 or 2) per batch.
 
-Evaluates if a bank is ready to enter a target phase. Returns `ReadinessAssessment { ready, issues, warnings }`.
-
-| Target Phase | Checks |
-|---|---|
-| `MODERATION` | All slots filled (no empty slots) |
-| `APPROVAL` | ≥1 filled slot, all filled slots have moderation decisions, AI report completed. Coverage warnings for CO/RBT spread. |
-| `COMPLETE` | No checks (gated by coordinator decision) |
-
-**Readiness does NOT auto-advance phases.** The coordinator must explicitly call `advancePhase()`.
+The bridge between the two domains is `CurriculumSubject.subjectId` → `Subject.id`.
 
 ---
 
-## 5. Paper generation architecture
+## 4. Question Bank State Model
 
-```mermaid
-flowchart LR
-    subgraph Inputs
-        QB[QuestionBank] --> PG[PaperGenerator.generate]
-        QB --> AI[AiReportService]
-        Pattern[PaperPattern] --> PG
-    end
+Two orthogonal state axes:
 
-    PG --> Variants[Generated 3 variants: A, B, C]
-    Variants --> PDF[PdfService.createPaperPdf]
-    PDF --> Upload[StorageService.uploadServerFile → generated-papers bucket]
-    Upload --> Record[GeneratedPaper record]
-    Record --> Snapshot[PaperSnapshot upsert]
-    Record --> Usage[QuestionUsageService.recordUsage]
-
-    AI --> Report[AiReport record]
-    Report --> Analysis[AnalysisEngine: coverage, RBT, difficulty, duplicates]
-```
-
-Generation flow:
-1. `PaperGenerationService.generatePapers()` called by coordinator
-2. Validates bank is in `APPROVAL` or `COMPLETE` phase
-3. `PaperGenerator.generate()` selects questions from filled slots, respecting CO/RBT/difficulty distribution
-4. PDF created via `PdfService`, uploaded to MinIO `generated-papers` bucket
-5. `GeneratedPaper` record created/upserted per variant
-6. `PaperSnapshot` upserted for each variant (immutable record)
-7. Usage history recorded for each selected question
-8. Coordinators notified
-
-### PaperSnapshots
-
-Created via `prisma.paperSnapshot.upsert()` in `PaperGenerationService`. Unique per `(questionBankId, variant)`. Stores paper JSON, coverage/difficulty/quality scores. Immutable after creation — subsequent generation runs overwrite the same key (upsert), but the previous values are still in the `GeneratedPaper` table.
-
-### QuestionBankSnapshots
-
-Created when `QuestionBankWorkflowService.lockQuestionBank()` runs. Captures the full slot array at lock time. Type: `SnapshotType.LOCKED`. Includes phase, status, and version. Serves as the authoritative record of what was in the bank when it was frozen.
-
----
-
-## 6. Approval architecture
-
-```mermaid
-flowchart LR
-    QB[Bank in APPROVAL phase] --> Readiness[ReadinessEngine]
-    Readiness --> Decision[Coordinator Decision]
-    Decision -->|APPROVED| Approval[ApprovalDecision created]
-    Decision -->|REJECTED| Rejection[ApprovalDecision created]
-    Approval --> Complete[Phase → COMPLETE]
-    Rejection --> Moderation[Phase → MODERATION]
-```
-
-`ApprovalDecision` is created in the same transaction as the phase update (`prisma.$transaction` in `ReportService.coordinatorDecision()`):
-
-```typescript
-const [approvalDecision] = await prisma.$transaction([
-  prisma.approvalDecision.create({ data: { questionBankId, decision, remark, decidedById } }),
-  prisma.questionBank.update({ where: { id: questionBankId }, data: { phase: targetPhase } }),
-]);
-```
-
-The decision is immutable — no update or delete path exists.
-
----
-
-## 7. Request flow
-
-```mermaid
-flowchart LR
-    Browser --> proxy[proxy.ts middleware]
-    proxy --> Route[route.ts handler]
-    Route --> Wrapper[withApiHandler]
-    Wrapper --> CSRF[assertCsrfProtection]
-    Wrapper --> Rate[enforceRateLimit]
-    Wrapper --> Auth[getCurrentUserFromCookies]
-    Wrapper --> Service[Service class]
-    Service --> Repo[Repository]
-    Repo --> DB[(MySQL)]
-    Service --> MinIO[(MinIO)]
-    Wrapper --> Audit[logAudit]
-```
-
-1. `proxy.ts` middleware runs first — route-level role gating
-2. `withApiHandler` wraps the handler — CSRF check, rate limit, auth, RBAC
-3. Handler calls a service method
-4. Service owns business logic and calls repository
-5. Repository owns raw Prisma queries
-6. `withApiHandler` automatically logs audit entry if `audit:` option provided
-
----
-
-## 8. Infrastructure
-
-| Component | Tech | Purpose |
+| Axis | States | Purpose |
 |---|---|---|
-| App server | Next.js 16 | SSR, API routes, middleware |
-| Database | MySQL 8 | Primary data store |
-| ORM | Prisma (local engine) | Type-safe queries + migrations |
-| Object storage | MinIO | File assets (papers, exports, backups) |
-| Auth | Auth.js v5 + custom JWT | Credentials provider, custom cookie management |
-| AI | Ollama (optional) | Natural-language summary overlay |
-| PDF | Custom PdfService | Server-side paper PDF generation |
-| Email | Nodemailer + SMTP | Notifications |
+| **Phase** (workflow) | DRAFTING → MODERATION → APPROVAL → COMPLETE | Workflow progression |
+| **RecordStatus** (mutability) | ACTIVE, LOCKED, ARCHIVED | Operational mutability |
 
-### MinIO buckets
+A bank can be in APPROVAL phase and LOCKED simultaneously. Phase advancement is **manual** (coordinator action). The ReadinessEngine reports readiness but does not auto-advance.
 
-| Bucket | Access |
+### Phase transitions
+
+| Current | Allowed Next |
 |---|---|
-| `question-bank-attachments` | Question file uploads |
-| `generated-papers` | Generated paper PDFs |
-| `exports` | Export artifacts |
-| `audit-files` | Audit log dumps |
-| `system-backups` | Database backups |
+| DRAFTING | MODERATION |
+| MODERATION | APPROVAL |
+| APPROVAL | COMPLETE, MODERATION (rejection loopback) |
+| COMPLETE | (none) |
 
-### Audit model
-
-- Append-only `AuditLog` table
-- SHA-256 integrity hash chain (each record's `integrityHash` = hash of previous record's hash + current record fields)
-- No request body auto-capture
-- Accessed via `GET /api/audit-logs` (COE only)
+See `docs/workflow.md` for detailed walkthrough.
 
 ---
 
-## 9. Service dependency graph
+## 5. Key Architecture Decisions
+
+| Decision | Implementation |
+|---|---|
+| **QuestionSlot linkage** | No `QuestionBankQuestion` table. Slots are first-class positional entities with `@@unique([questionBankId, moduleNumber, marks, slotNumber])`. |
+| **Two-axis bank state** | 4-phase + 3-record-status model. `QuestionBankPhase` is orthogonal to `RecordStatus`. |
+| **ReadinessEngine is advisory** | Reports readiness with issues/warnings. Does not auto-advance. Coordinators always advance manually. |
+| **ApprovalDecision is write-once** | Created in same transaction as phase update. No update or delete path. |
+| **Snapshots** | `QuestionBankSnapshot` on lock (immutable). `PaperSnapshot` on paper generation (upsert per variant). |
+| **RBAC is two-layer** | `proxy.ts` middleware gates route access by role. `withApiHandler` gates operations. Object-level checks in services. |
+| **Append-only audit** | SHA-256 hash chain linking each `AuditLog` record to the previous record's integrity hash. |
+
+---
+
+## 6. Request Flow
 
 ```
-QuestionLibraryService
-├── QuestionLibraryRepository
-
-QuestionBankService
-├── QuestionBankRepository
-└── Transition table (function)
-
-QuestionSlotService
-├── QuestionSlotRepository
-└── Mutable guard (function)
-
-QuestionBankWorkflowService (coordinator/)
-├── DepartmentAccessUtils
-└── Direct Prisma calls
-
-ReportService
-├── AiReportService
-├── PaperGenerationService
-│   ├── PaperGenerator
-│   ├── PdfService
-│   ├── StorageService
-│   └── QuestionUsageService
-└── Direct Prisma calls
-
-ReadinessEngine → Direct Prisma calls
-
-QuestionBankMetricsService → Direct Prisma calls
+Browser → proxy.ts middleware (route-level role gate)
+        → route.ts handler
+        → withApiHandler (CSRF, rate limit, auth, role gate, audit)
+        → Service (business logic)
+        → Repository (Prisma queries)
+        → MySQL / MinIO
 ```
 
 ---
 
-## 10. Invariants
+## 7. Key Invariants
 
-1. **ExamCycle is department-scoped** — `@@unique([semesterId, examType, departmentId])` allows each department to have its own cycle per (semester, examType). Cross-department cycles are prevented.
-2. **One bank per (subject, exam cycle)** — `@@unique([subjectId, examCycleId])`
-3. **One slot position per bank** — `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
-4. **No duplicate questions per bank** — application-enforced, not schema-level
-5. **ApprovalDecision is write-once** — created in transaction, no update path
-6. **QuestionBankSnapshot is immutable** — created on lock, never modified
-7. **Phase transitions are validated** — via `isValidPhaseTransition()` in `transitions.ts`
-8. **LOCKED banks reject mutations** — via `ensureQuestionBankMutable()` guard
-9. **ReadinessEngine is advisory only** — does not block or auto-advance
-10. **Question status lifecycle** — DRAFT→PENDING→APPROVED|REJECTED|REVISION_REQUESTED→REVISION_SUBMITTED
-11. **QuestionLibraryItem is SubjectVersion-scoped** — cannot exist outside a subject version
+1. One bank per (subject, exam cycle) — `@@unique([subjectId, examCycleId])`
+2. One slot position per bank — `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
+3. No duplicate questions per bank (application-enforced)
+4. QuestionSlot is the sole linkage (no QuestionBankQuestion table)
+5. LOCKED banks reject all mutations via `ensureQuestionBankMutable()`
+6. Phase transitions validated via `isValidPhaseTransition()` in `transitions.ts`
+7. ReadinessEngine is advisory only
+8. Question marks: 2, 5, or 10. Module: 1-6. RBT: L1-L6. CO: CO1-CO6.
+9. MinIO buckets: exactly 5 (`question-bank-attachments`, `generated-papers`, `exports`, `audit-files`, `system-backups`)
+10. ExamCycle is department-scoped — `@@unique([semesterId, examType, departmentId])`
+11. ApprovalDecision is write-once — no update or delete path
 
 ---
 
-## 11. Cross-References
+## 8. Current Limitations
+
+1. **Synchronous long operations** — AI analysis, paper generation, exports, backups run inside the HTTP request. Timeouts possible for large banks.
+2. **In-memory rate limiter** — resets on restart; not multi-instance safe.
+3. **No background workers** — `workers/` directory exists but is empty. No BullMQ, no Redis.
+4. **No scheduled backups** — API/manual-trigger only.
+5. **QuestionLibraryItem is SubjectVersion-scoped** — no cross-cycle shared question pool.
+6. **Concurrency gaps** — some operations use last-writer-wins semantics.
+7. **No dean review update/delete** — write-once selection, no undo path.
+
+---
+
+## Cross-References
 
 | Topic | Document |
 |---|---|
-| Single-page system overview | `docs/architecture/current-system.md` |
+| Workflow guide | `docs/workflow.md` |
 | Database schema | `docs/database.md` |
 | API reference | `docs/api.md` |
-| Workflow guide | `docs/workflow.md` |
-| Operations manual | `docs/operations-manual.md` |
-| RBAC matrix | `docs/rbac-matrix.md` |
-| Onboarding | `docs/onboarding.md` |
-| Architectural decisions | `docs/adr/ADR-001` through `005` |
+| Developer guide | `docs/developer-guide.md` |
+| Deployment guide | `docs/deployment.md` |
+| Glossary | `docs/glossary.md` |

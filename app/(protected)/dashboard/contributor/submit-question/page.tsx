@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { QuestionForm } from "@/components/forms/question-form";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
@@ -27,10 +28,10 @@ export default async function ContributorSubmitQuestionPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Create Question</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create a new question in the question library.</p>
-      </div>
+      <PageHeader
+        title="Submit Question"
+        description="Create a new question for a subject version."
+      />
       {initialValues && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
           Creating question for Module {initialValues.moduleNumber}, {initialValues.marks} marks.

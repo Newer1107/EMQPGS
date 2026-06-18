@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Button } from "@/components/ui/button";
@@ -12,15 +13,15 @@ export default async function SubjectsManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Subjects</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create and view subjects limited to your assigned departments.</p>
-        </div>
-        <Link href="/dashboard/coordinator/subjects/create">
-          <Button>Create Subject</Button>
-        </Link>
-      </div>
+      <PageHeader
+        title="Subjects"
+        description="Create and view subjects limited to your assigned departments."
+        actions={
+          <Link href="/dashboard/coordinator/subjects/create">
+            <Button>Create Subject</Button>
+          </Link>
+        }
+      />
       <DataTableCard title="Department Subjects">
         <Table>
           <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH><TH>Actions</TH></TR></THead>

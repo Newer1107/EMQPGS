@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeanNotificationsInbox } from "@/components/production/dean-notifications-inbox";
@@ -8,17 +9,12 @@ export default async function DeanDashboardPage() {
   const data = await getDeanReviewData();
 
   return (
-    <div className="space-y-8">
-      <div className="section-frame">
-        <p className="page-kicker">Dean</p>
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="page-display">FINAL PAPER REVIEW</h1>
-            <p className="page-lead mt-6">Review AI-scored candidate papers and assign the regular, supplementary, and KT slots.</p>
-          </div>
-          <Badge className="shrink-0">{data.unreadNotificationCount} unread</Badge>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Final Paper Review"
+        description="Review AI-scored candidate papers and assign the regular, supplementary, and KT slots."
+        actions={<Badge variant="info">{data.unreadNotificationCount} unread</Badge>}
+      />
 
       <section className="grid gap-6 xl:grid-cols-[1.25fr,0.95fr]">
         <Card>

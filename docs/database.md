@@ -1,11 +1,111 @@
 # Database Schema
 
-> 26 models, 19 enums. MySQL 8 via Prisma ORM.
+> 36 models, 28 enums. MySQL 8 via Prisma ORM.
 > Source of truth: `prisma/schema.prisma`
 
 ---
 
 ## 1. Academic domain
+
+### AcademicUnit
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| name | String | Full name |
+| code | String | Unique short code |
+| type | AcademicUnitType | ES_H or DEPARTMENT |
+| hodName | String | Head of unit |
+| isActive | Boolean | Default true |
+
+**Purpose:** Represents a curriculum-offering body (ES&H, COMP, IT). Distinct from `Department` (faculty HR).
+
+### Programme
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| name | String | e.g. "BE Computer Engineering" |
+| code | String | Unique |
+| degreeType | DegreeType | BE, BTECH, MTECH, PHD, DIPLOMA |
+| durationYears | Int | Default 4 |
+| durationSemesters | Int | Default 8 |
+| homeAcademicUnitId | String | FK → AcademicUnit |
+| firstYearAcademicUnitId | String? | FK → AcademicUnit (optional) |
+| isActive | Boolean | Default true |
+
+### CurriculumScheme
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| programmeId | String | FK → Programme |
+| name | String | e.g. "2025 Scheme" |
+| year | Int | |
+| isActive | Boolean | Default true |
+
+**Unique:** `@@unique([programmeId, year])` — one scheme per programme per year.
+
+### CurriculumSubject
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| curriculumSchemeId | String | FK → CurriculumScheme |
+| subjectId | String | FK → Subject |
+| semesterNumber | Int | 1-8. Authoritative semester placement. |
+| academicUnitId | String | FK → AcademicUnit |
+| groupAssignment | GroupAssignment | ALL, GROUP_1, or GROUP_2 |
+
+**Unique:** `@@unique([curriculumSchemeId, subjectId, semesterNumber, groupAssignment])`
+
+**Purpose:** Authoritative mapping: "Subject X is in Semester N, offered by Unit Y, for Group Z." This entity connects the academic domain to the existing operational pipeline via `subjectId`.
+
+### Batch
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| name | String | e.g. "2024-28" |
+| code | String | Unique |
+| programmeId | String | FK → Programme |
+| curriculumSchemeId | String | FK → CurriculumScheme |
+| admissionYear | Int | |
+| graduationYear | Int | |
+| status | BatchStatus | ACTIVE or GRADUATED |
+
+**Auto-creation:** When a Batch is created, `n` BatchSemester records are auto-generated (where `n = programme.durationSemesters`).
+
+### BatchSemester
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| batchId | String | FK → Batch |
+| semesterNumber | Int | 1-8 |
+| academicYearId | String | FK → AcademicYear |
+| academicUnitId | String | FK → AcademicUnit |
+| startDate | DateTime? | Nullable — COE sets dates manually |
+| endDate | DateTime? | Nullable |
+| status | BatchSemesterStatus | UPCOMING, ACTIVE, or COMPLETED |
+
+**Unique:** `@@unique([batchId, semesterNumber])`
+**Status lifecycle:** UPCOMING → ACTIVE → COMPLETED (sequential).
+
+### TeachingGroup
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| batchId | String | FK → Batch |
+| groupNumber | Int | 1 or 2 |
+| name | String | e.g. "Physics Group" |
+| description | String? | Optional |
+| isActive | Boolean | Default true |
+
+**Unique:** `@@unique([batchId, groupNumber])`
+
+**Purpose:** Records that a batch has up to two teaching groups. The actual subject-to-group mapping is on `CurriculumSubject.groupAssignment`.
 
 ### AcademicYear
 
@@ -18,7 +118,7 @@
 | status | AcademicYearStatus | ACTIVE or CLOSED |
 | activeSemesterType | SemesterType | ODD or EVEN. Determines default operational semester filter. |
 
-**Relationships:** Has many Semesters, ExamCycles, SubjectVersions.
+**Relationships:** Has many Semesters, ExamCycles, SubjectVersions, BatchSemesters.
 
 Invariant: Only one ACTIVE academic year at a time (application-enforced).
 
@@ -60,9 +160,9 @@ When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The
 | subjectName | String | |
 | credits | Int | |
 | status | SubjectStatus | ACTIVE or INACTIVE |
-| questionBankDueDate | DateTime | Deadline for bank completion |
-| departmentId | String | FK → Department |
-| semesterNumber | Int | 1-8. Static — not a FK. Subject is year-agnostic. |
+| questionBankDueDate | DateTime | Legacy — will be replaced by CurriculumSubject placement |
+| departmentId | String | FK → Department (legacy HR field) |
+| semesterNumber | Int | 1-8. Legacy — authoritative placement is now `CurriculumSubject.semesterNumber`. |
 
 **Unique:** `@@unique([subjectCode, departmentId])` — same code can exist in different departments.
 
@@ -515,6 +615,11 @@ Invariant: One dean review per bank. Write-once (no update path).
 | QuestionStatus | DRAFT, PENDING, APPROVED, REJECTED, REVISION_REQUESTED, REVISION_SUBMITTED | QuestionLibraryItem |
 | AcademicYearStatus | ACTIVE, CLOSED | AcademicYear |
 | SubjectVersionStatus | ACTIVE, ARCHIVED | SubjectVersion |
+| AcademicUnitType | ES_H, DEPARTMENT | AcademicUnit |
+| DegreeType | BE, BTECH, MTECH, PHD, DIPLOMA | Programme |
+| GroupAssignment | ALL, GROUP_1, GROUP_2 | CurriculumSubject |
+| BatchStatus | ACTIVE, GRADUATED | Batch |
+| BatchSemesterStatus | UPCOMING, ACTIVE, COMPLETED | BatchSemester |
 
 ---
 
@@ -522,10 +627,9 @@ Invariant: One dean review per bank. Write-once (no update path).
 
 | Topic | Document |
 |---|---|
-| Single-page system overview | `docs/architecture/current-system.md` |
 | Architecture & domain model | `docs/architecture.md` |
-| API reference | `docs/api.md` |
 | Workflow guide | `docs/workflow.md` |
-| Operations manual | `docs/operations-manual.md` |
-| Domain deep-dives | `docs/archive/{academic,exam,question,production}-domain.md` |
-| Onboarding | `docs/onboarding.md` |
+| API reference | `docs/api.md` |
+| Developer guide | `docs/developer-guide.md` |
+| Deployment guide | `docs/deployment.md` |
+| Glossary | `docs/glossary.md` |

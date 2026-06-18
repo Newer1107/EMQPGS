@@ -6,7 +6,11 @@ import Link from "next/link";
 
 export const metadata: Metadata = { title: "Batch Semesters — EMQPGS" };
 
-const statusStyles: Record<string, string> = { UPCOMING: 'bg-gray-100 text-gray-700 border-gray-200', ACTIVE: 'bg-green-100 text-green-800 border-green-200', COMPLETED: 'bg-blue-100 text-blue-800 border-blue-200' };
+const statusVariants: Record<string, "success" | "warning" | "info" | "default"> = {
+  UPCOMING: "warning",
+  ACTIVE: "success",
+  COMPLETED: "info",
+};
 const statusLabels: Record<string, string> = { UPCOMING: 'Upcoming', ACTIVE: 'Active', COMPLETED: 'Completed' };
 
 export default async function BatchSemestersPage({ params }: { params: Promise<{ id: string }> }) {
@@ -56,7 +60,7 @@ export default async function BatchSemestersPage({ params }: { params: Promise<{
                     <p>End: {sem.endDate ? new Date(sem.endDate).toLocaleDateString() : 'Not set'}</p>
                   </div>
                 </div>
-                <Badge className={statusStyles[sem.status]}>{statusLabels[sem.status]}</Badge>
+                <Badge variant={statusVariants[sem.status] ?? "default"}>{statusLabels[sem.status]}</Badge>
               </div>
             </div>
           );

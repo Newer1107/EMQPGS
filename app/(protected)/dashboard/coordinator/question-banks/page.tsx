@@ -1,16 +1,24 @@
 import Link from "next/link";
 import { ExamCycleStatus } from "@prisma/client";
+import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
-import { questionBankPhaseLabels, recordStatusLabels } from "@/lib/constants";
+import { questionBankPhaseLabels } from "@/lib/constants";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { SimpleForm } from "@/components/dashboard/simple-form";
+
+const phaseVariants: Record<string, "success" | "warning" | "info" | "default"> = {
+  COMPLETE: "success",
+  DRAFTING: "warning",
+  MODERATION: "info",
+  APPROVAL: "info",
+};
 
 export default async function QuestionBanksManagementPage() {
   const actor = await getCurrentUserFromCookies();
@@ -30,10 +38,10 @@ export default async function QuestionBanksManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Question Banks</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Manage question banks for each subject and exam cycle</p>
-      </div>
+      <PageHeader
+        title="Question Banks"
+        description="Manage question banks for each subject and exam cycle"
+      />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Question Banks">
           <Table>
@@ -43,7 +51,7 @@ export default async function QuestionBanksManagementPage() {
                 <TR key={bank.id}>
                   <TD className="font-medium">{bank.subject?.subjectCode ?? '-'}</TD>
                   <TD>Sem {bank.examCycle?.batchSemester?.semesterNumber ?? '-'} · {bank.examCycle?.batchSemester?.academicYear?.code ?? '-'}</TD>
-                  <TD><Badge>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge></TD>
+                  <TD><Badge variant={phaseVariants[bank.phase] ?? "default"}>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge></TD>
                   <TD>
                     <Link href={`/dashboard/coordinator/question-banks/${bank.id}`}>
                       <Button variant="outline" size="sm">Manage</Button>
