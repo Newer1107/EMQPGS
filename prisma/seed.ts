@@ -726,7 +726,13 @@ async function main() {
   }
 
   // ── Notify dean & coe about locked banks ──
-  const lockedBanks = await prisma.questionBank.findMany({ where: { recordStatus: RecordStatus.LOCKED }, take: 5 });
+  const lockedBanks = await prisma.questionBank.findMany({
+    where: {
+      recordStatus: RecordStatus.LOCKED,
+      generatedPapers: { some: { status: PaperGenerationStatus.COMPLETED } },
+    },
+    take: 3,
+  });
   for (const bank of lockedBanks) {
     await prisma.notification.create({
       data: {
