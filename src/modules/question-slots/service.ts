@@ -23,6 +23,15 @@ export class QuestionSlotService {
     if (!bank) throw new NotFoundError("Question bank not found");
     ensureQuestionBankMutable(bank.recordStatus);
 
+    if (actor.role !== "COORDINATOR") {
+      const assignment = await prisma.contributorBankAssignment.findUnique({
+        where: { contributorId_questionBankId: { contributorId: actor.id, questionBankId: slot.questionBankId } },
+      });
+      if (!assignment) {
+        throw new AppError("You are no longer assigned to contribute to this question bank.", 403);
+      }
+    }
+
     if (slot.isLocked) {
       throw new AppError("Slot is locked and cannot be modified.", 409);
     }
