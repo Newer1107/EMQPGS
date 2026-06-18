@@ -13,19 +13,6 @@ import { apiFetch } from "@/lib/client-fetch";
 import type { CoeOverviewItem } from "@/modules/production/export.service";
 
 export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
-  const normalizedBanks = banks as Array<{
-    id: string;
-    subject: { subjectCode: string };
-    examCycle: { academicYear: { code: string; id: string }; examType: string; semester: { name: string; number: number } };
-    deanReview: object | null;
-    exportArtifacts: Array<{
-      id: string;
-      format: string;
-      status: string;
-      expiresAt: Date | string;
-      fileAssetId: string | null;
-    }>;
-  }>;
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -85,9 +72,9 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
             <div className="space-y-2">
               <Label htmlFor="questionBankId">Question Bank</Label>
               <Select id="questionBankId" name="questionBankId">
-                {normalizedBanks.filter((bank) => bank.deanReview).map((bank) => (
+                {banks.filter((bank) => bank.deanReview).map((bank) => (
                   <option key={bank.id} value={bank.id}>
-                    {bank.subject.subjectCode} · {bank.examCycle.academicYear.code} · {bank.examCycle.examType}
+                    {bank.subject.subjectCode} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType}
                   </option>
                 ))}
               </Select>
@@ -145,7 +132,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
               </TR>
             </THead>
             <TBody>
-              {normalizedBanks.flatMap((bank) =>
+              {banks.flatMap((bank) =>
                 bank.exportArtifacts.map((artifact) => (
                   <TR key={artifact.id}>
                     <TD>{bank.subject.subjectCode}</TD>

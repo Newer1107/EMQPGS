@@ -22,11 +22,8 @@ export default async function QuestionBanksManagementPage() {
     bankService.listQuestionBanks(actor),
     subjectService.listSubjects(actor, { status: "ACTIVE" }),
     prisma.examCycle.findMany({
-      where: {
-        departmentId: { in: departmentIds },
-        status: ExamCycleStatus.ACTIVE,
-      },
-      include: { academicYear: true, semester: true },
+      where: { status: ExamCycleStatus.ACTIVE },
+      include: { batchSemester: { include: { academicYear: true } } },
       orderBy: { createdAt: "desc" },
     }),
   ]);
@@ -42,10 +39,10 @@ export default async function QuestionBanksManagementPage() {
           <Table>
             <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH><TH>Actions</TH></TR></THead>
             <TBody>
-              {(questionBanks as unknown as Array<{ id: string; phase: string; recordStatus: string; subject: { subjectCode: string }; examCycle: { semester: { name: string }; academicYear: { code: string } } }>).map((bank) => (
+              {(questionBanks).map((bank) => (
                 <TR key={bank.id}>
-                  <TD className="font-medium">{bank.subject.subjectCode}</TD>
-                  <TD>{bank.examCycle.semester.name} · {bank.examCycle.academicYear.code}</TD>
+                  <TD className="font-medium">{bank.subject?.subjectCode ?? '-'}</TD>
+                  <TD>Sem {bank.examCycle?.batchSemester?.semesterNumber ?? '-'} · {bank.examCycle?.batchSemester?.academicYear?.code ?? '-'}</TD>
                   <TD><Badge>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge></TD>
                   <TD>
                     <Link href={`/dashboard/coordinator/question-banks/${bank.id}`}>
@@ -62,10 +59,12 @@ export default async function QuestionBanksManagementPage() {
           endpoint="/api/question-banks"
           fields={[
             { name: "subjectId", label: "Subject", type: "select", options: (subjects as Array<{ id: string; subjectCode: string; subjectName: string }>).map((subject) => ({ value: subject.id, label: `${subject.subjectCode} - ${subject.subjectName}` })) },
-            { name: "examCycleId", label: "Exam Cycle", type: "select", options: (examCycles as Array<{ id: string; semester: { name: string }; academicYear: { code: string }; examType: string }>).map((cycle) => ({ value: cycle.id, label: `${cycle.semester.name} · ${cycle.academicYear.code} / ${cycle.examType}` })) },
+            { name: "examCycleId", label: "Exam Cycle", type: "select", options: (examCycles).map((cycle) => ({ value: cycle.id, label: `Sem ${cycle.batchSemester?.semesterNumber ?? '-'} · ${cycle.batchSemester?.academicYear?.code ?? '-'} / ${cycle.examType}` })) },
           ]}
         />
       </div>
     </div>
   );
 }
+
+

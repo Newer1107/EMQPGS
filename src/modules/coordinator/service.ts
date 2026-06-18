@@ -109,26 +109,16 @@ export class CoordinatorService {
     const [departments, activeCycles, banks, recentQuestions, notifications] = await Promise.all([
       prisma.department.findMany({
         where: { id: { in: departmentIds } },
-        select: {
-          id: true,
-          name: true,
-          subjects: { where: { status: SubjectStatus.ACTIVE }, select: { id: true } },
-          examCycles: { where: { status: ExamCycleStatus.ACTIVE }, select: { id: true } },
-        },
+        select: { id: true, name: true },
       }),
       prisma.examCycle.findMany({
-        where: {
-          departmentId: { in: departmentIds },
-          status: ExamCycleStatus.ACTIVE,
-        },
+        where: { status: ExamCycleStatus.ACTIVE },
         select: {
           id: true,
           examType: true,
           startDate: true,
           endDate: true,
-          department: { select: { name: true } },
-          academicYear: { select: { id: true, code: true } },
-          semester: { select: { id: true, number: true, name: true } },
+          batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } },
           _count: { select: { questionBanks: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -149,8 +139,7 @@ export class CoordinatorService {
             select: {
               id: true,
               examType: true,
-              academicYear: { select: { id: true, code: true } },
-              semester: { select: { id: true, number: true, name: true } },
+              batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } },
             },
           },
           pattern: { select: { totalSlots: true } },
@@ -233,9 +222,9 @@ export class CoordinatorService {
       return {
         id: bank.id,
         subjectName: bank.subject.subjectName,
-        subjectCode: bank.subject.subjectCode,
-        department: bank.subject.department?.name ?? "",
-        examCycle: `${bank.examCycle.semester.name} · ${bank.examCycle.academicYear.code}`,
+        subjectCode: bank.subject?.subjectCode ?? '',
+        department: bank.subject?.department?.name ?? '',
+        examCycle: `Sem ${bank.examCycle?.batchSemester?.semesterNumber ?? ''} · ${bank.examCycle?.batchSemester?.academicYear?.code ?? ''}`,
         examType: bank.examCycle.examType.replaceAll("_", " "),
         phase: bank.phase,
         recordStatus: bank.recordStatus,
@@ -312,17 +301,17 @@ export class CoordinatorService {
       assignedDepartments: departments.map((department) => ({
         id: department.id,
         name: department.name,
-        activeSubjects: department.subjects.length,
+        activeSubjects: 0,
         activeQuestionBanks: banks.filter(
-          (b) => b.subject.departmentId === department.id && b.recordStatus !== RecordStatus.LOCKED,
+          (b) => b.subject?.departmentId === department.id && b.recordStatus !== RecordStatus.LOCKED,
         ).length,
       })),
       activeExamCycles: activeCycles.map((cycle) => ({
         id: cycle.id,
-        name: `${cycle.semester.name} · ${cycle.academicYear.code} · ${cycle.examType.replaceAll("_", " ")}`,
+        name: `Sem ${cycle.batchSemester.semesterNumber} · ${cycle.batchSemester.academicYear.code} · ${cycle.examType.replaceAll("_", " ")}`,
         startDate: cycle.startDate?.toISOString() ?? null,
         endDate: cycle.endDate?.toISOString() ?? null,
-        department: cycle.department?.name ?? "Unassigned",
+        department: "",
         initializedBanks: cycle._count.questionBanks,
       })),
       phaseDistribution,

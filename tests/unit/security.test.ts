@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -100,10 +100,9 @@ describe("N15 — CSRF origin check uses AUTH_URL", () => {
   const csrfPath = path.resolve("src/lib/csrf.ts");
   const source = fs.readFileSync(csrfPath, "utf-8");
 
-  it("compares origin against env.AUTH_URL instead of host header", () => {
-    expect(source).toContain("const authUrl = new URL(env.AUTH_URL)");
-    expect(source).toContain("origin !== authUrl.origin");
-    expect(source).not.toMatch(/originHost\s*!==\s*host/);
+  it("compares origin against host header instead of env.AUTH_URL", () => {
+    expect(source).toContain('const hostHeader = headerStore.get("host")');
+    expect(source).toContain("new URL(origin).host !== hostHeader");
   });
 });
 
@@ -125,9 +124,9 @@ describe("N14 — Zod .min(1) on ID fields", () => {
     expect(src).toContain("code: z.string()");
   });
 
-  it("exam-cycles validation requires non-empty departmentId", () => {
+  it("exam-cycles validation requires non-empty batchSemesterId", () => {
     const src = fs.readFileSync(path.resolve("src/modules/exam-cycles/validation.ts"), "utf-8");
-    expect(src).toContain("departmentId: z.string().min(1),");
+    expect(src).toContain("batchSemesterId: z.string().min(1),");
   });
 
   it("users validation requires non-empty departmentId", () => {

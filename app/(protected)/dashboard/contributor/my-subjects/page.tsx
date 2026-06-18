@@ -18,10 +18,10 @@ export default async function ContributorMySubjectsPage() {
           <THead><TR><TH>Subject Code</TH><TH>Subject Name</TH><TH>Academic Year</TH><TH>Semester</TH></TR></THead>
           <TBody>
             <TR>
-              <TD>{(workspace.questionBank as any).subject?.subjectCode}</TD>
-              <TD>{(workspace.questionBank as any).subject?.subjectName}</TD>
-              <TD>{(workspace.questionBank as any).examCycle?.academicYear?.code}</TD>
-              <TD>{(workspace.questionBank as any).examCycle?.semester?.name}</TD>
+              <TD>{workspace.questionBank.subject?.subjectCode}</TD>
+              <TD>{workspace.questionBank.subject?.subjectName}</TD>
+              <TD>{workspace.questionBank.examCycle?.batchSemester.academicYear.code}</TD>
+              <TD>{workspace.questionBank.examCycle?.batchSemester.semesterNumber}</TD>
             </TR>
           </TBody>
         </Table>
@@ -29,3 +29,4 @@ export default async function ContributorMySubjectsPage() {
     </div>
   );
 }
+

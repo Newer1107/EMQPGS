@@ -3,6 +3,7 @@ import { NotFoundError, AppError } from "@/lib/errors";
 import { withUniqueCheck } from "@/lib/db-helpers";
 import { CurriculumSubjectRepository } from "@/modules/curriculum-subjects/repository";
 import type { CurriculumSubjectInput, CurriculumSubjectUpdateInput } from "@/modules/curriculum-subjects/validation";
+import type { Prisma } from "@prisma/client";
 
 export class CurriculumSubjectService {
   constructor(private readonly repository = new CurriculumSubjectRepository()) {}
@@ -13,7 +14,7 @@ export class CurriculumSubjectService {
     if (filters?.semesterNumber) where.semesterNumber = filters.semesterNumber;
     if (filters?.academicUnitId) where.academicUnitId = filters.academicUnitId;
     if (filters?.subjectId) where.subjectId = filters.subjectId;
-    return this.repository.list(where as any);
+    return this.repository.list(where as Prisma.CurriculumSubjectWhereInput);
   }
 
   async findById(id: string) {
@@ -28,7 +29,7 @@ export class CurriculumSubjectService {
       subjectId: data.subjectId,
       semesterNumber: data.semesterNumber,
       groupAssignment: data.groupAssignment,
-    } as any);
+    } as Prisma.CurriculumSubjectWhereInput);
 
     if (duplicate.length > 0) {
       throw new AppError("This subject is already placed in this semester with the same group assignment", 409);

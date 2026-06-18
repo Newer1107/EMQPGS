@@ -42,7 +42,7 @@ export class PaperGenerationService {
     for (const payload of generatedPayloads) {
       const pdfBytes = await this.pdfService.createPaperPdf({
         title: `${questionBank.subject.subjectCode} ${payload.variant.replace("_", " ")}`,
-        subtitle: `${questionBank.examCycle.semester.name} · ${questionBank.examCycle.academicYear.code} · ${questionBank.examCycle.examType}`,
+        subtitle: `Semester ${questionBank.examCycle.batchSemester.semesterNumber} · ${questionBank.examCycle.batchSemester.academicYear.code} · ${questionBank.examCycle.examType}`,
         questions: payload.selectedQuestions.map((question) => ({
           moduleNumber: question.moduleNumber,
           marks: question.marks,
@@ -181,7 +181,7 @@ export class PaperGenerationService {
       where: { id: questionBankId },
       include: {
         subject: true,
-        examCycle: { include: { academicYear: true, semester: true } },
+        examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
         aiReports: {
           where: { status: AiReportStatus.COMPLETED },
         },

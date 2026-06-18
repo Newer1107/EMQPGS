@@ -17,7 +17,7 @@ export const GET = withApiHandler(async (request, context) => {
   const take = parseInt(request.nextUrl.searchParams.get("take") ?? "50", 10);
   const skip = parseInt(request.nextUrl.searchParams.get("skip") ?? "0", 10);
   return service.listQuestionBanks(context.user!, {
-    departmentId,
+    
     examCycleId,
     status: status ?? undefined,
   }, take, skip);
@@ -30,3 +30,4 @@ export const POST = withApiHandler(
   },
   { roles: [Role.COORDINATOR], successStatus: 201, audit: { action: "QUESTION_BANK_CREATED", entityType: "QUESTION_BANK", getEntityId: (result) => (result as { id?: string }).id } },
 );
+

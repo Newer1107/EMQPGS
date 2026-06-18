@@ -62,7 +62,7 @@ export default async function ContributorDashboardPage() {
         : { phase: "DRAFTING" },
       include: {
         subject: true,
-        examCycle: { include: { academicYear: true, semester: true } },
+        examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
         pattern: true,
         slots: {
           where: { assignedQuestionId: { not: null } },
@@ -125,7 +125,7 @@ export default async function ContributorDashboardPage() {
                     <div>
                       <p className="font-medium">{bank.subject.subjectName}</p>
                       <p className="text-sm text-[var(--muted-foreground)]">
-                        {bank.subject.subjectCode} · {bank.examCycle.semester.name} · {bank.examCycle.academicYear.code} · {bank.examCycle.examType.replaceAll("_", " ")}
+                        {bank.subject.subjectCode} · Sem {bank.examCycle.batchSemester.semesterNumber} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType.replaceAll("_", " ")}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -244,4 +244,5 @@ function StatItem({ label, value }: { label: string; value: number }) {
     </div>
   );
 }
+
 

@@ -11,7 +11,7 @@ type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 const analysisInclude = {
   subject: true,
-  examCycle: { include: { academicYear: true, semester: true } },
+  examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
   slots: {
     include: { assignedQuestion: true },
     where: { assignedQuestionId: { not: null } },
@@ -116,8 +116,8 @@ export class AiReportService {
 You are analyzing a university question bank. Return strict JSON only.
 Context:
 - Subject: ${questionBank.subject.subjectCode} ${questionBank.subject.subjectName}
-- Academic Year: ${questionBank.examCycle.academicYear.code}
-- Semester: ${questionBank.examCycle.semester.name}
+- Academic Year: ${questionBank.examCycle.batchSemester.academicYear.code}
+- Semester: ${questionBank.examCycle.batchSemester.semesterNumber}
 - Exam Type: ${questionBank.examCycle.examType}
 - Approved Questions: ${report.inventory.approvedQuestions}
 

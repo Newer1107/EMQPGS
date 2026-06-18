@@ -136,7 +136,7 @@ export class DeanReviewService {
       bankId: questionBank.id,
       subjectName: questionBank.subject.subjectName,
       subjectCode: questionBank.subject.subjectCode,
-      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.academicYear.code, questionBank.examCycle.semester.number, questionBank.examCycle.examType),
+      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.batchSemester.academicYear.code, questionBank.examCycle.batchSemester.semesterNumber, questionBank.examCycle.examType),
       generationTimestamp: getGenerationTimestamp(questionBank.generatedPapers),
       papers: questionBank.generatedPapers.map((paper) => ({
         paperId: paper.variant,
@@ -324,7 +324,7 @@ export class DeanReviewService {
       id: questionBank.id,
       subjectName: questionBank.subject.subjectName,
       subjectCode: questionBank.subject.subjectCode,
-      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.academicYear.code, questionBank.examCycle.semester.number, questionBank.examCycle.examType),
+      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.batchSemester.academicYear.code, questionBank.examCycle.batchSemester.semesterNumber, questionBank.examCycle.examType),
       generationTimestamp: getGenerationTimestamp(questionBank.generatedPapers),
       reviewSubmitted: Boolean(questionBank.deanReview),
       reviewSummary: questionBank.deanReview ? {
@@ -387,7 +387,7 @@ export class DeanReviewService {
 
 const deanDashboardInclude = {
   subject: true,
-  examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
+  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
   generatedPapers: {
     orderBy: [{ generatedAt: "desc" as const }, { createdAt: "desc" as const }],
   },
@@ -400,7 +400,7 @@ const deanDashboardInclude = {
 
 const deanWorkspaceInclude = {
   subject: true,
-  examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
+  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
   aiReports: { orderBy: { createdAt: "desc" as const }, take: 1 },
   generatedPapers: {
     orderBy: { variant: "asc" as const },

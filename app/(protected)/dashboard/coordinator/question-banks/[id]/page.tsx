@@ -16,7 +16,7 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
   const slotsPerModule = bank.pattern?.slotsPerModule ?? 7;
   const totalSlots = bank.pattern?.totalSlots ?? 126;
 
-  const slots: SlotItem[] = bank.slots.map((s) => ({
+  const slots: SlotItem[] = (bank.slots ?? []).map((s) => ({
     slotNumber: s.slotNumber,
     moduleNumber: s.moduleNumber,
     marks: s.marks,
@@ -56,24 +56,24 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
   }));
 
   let deanReview: DeanReviewItem | null = null;
-  if (bank.deanReview) {
+  if ((bank.deanReview)) {
     deanReview = {
-      id: bank.deanReview.id,
-      regularPaper: bank.deanReview.regularPaper,
-      supplementaryPaper: bank.deanReview.supplementaryPaper,
-      ktPaper: bank.deanReview.ktPaper,
-      reviewedBy: bank.deanReview.reviewedBy.name,
-      reviewedAt: bank.deanReview.reviewedAt.toISOString(),
-      status: bank.deanReview.status,
+      id: (bank.deanReview).id,
+      regularPaper: (bank.deanReview).regularPaper,
+      supplementaryPaper: (bank.deanReview).supplementaryPaper,
+      ktPaper: (bank.deanReview).ktPaper,
+      reviewedBy: (bank.deanReview).reviewedBy.name,
+      reviewedAt: (bank.deanReview).reviewedAt.toISOString(),
+      status: (bank.deanReview).status,
     };
   }
 
   return (
     <BankDetailClient
       bankId={bank.id}
-      subjectName={bank.subject.subjectName}
-      subjectCode={bank.subject.subjectCode}
-      examCycleLabel={`${bank.examCycle.academicYear.code} · Sem ${bank.examCycle.semester.number} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}`}
+      subjectName={(bank.subject).subjectName}
+      subjectCode={(bank.subject).subjectCode}
+      examCycleLabel={`${bank.examCycle.batchSemester.academicYear.code} · Sem ${bank.examCycle.batchSemester.semesterNumber} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}`}
       phase={bank.phase}
       recordStatus={bank.recordStatus}
       totalSlots={totalSlots}

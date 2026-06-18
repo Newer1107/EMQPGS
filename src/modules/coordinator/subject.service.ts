@@ -59,7 +59,6 @@ export class SubjectManagementService {
         status: true,
         questionBankDueDate: true,
         departmentId: true,
-        semesterNumber: true,
         createdAt: true,
         updatedAt: true,
         department: { select: { id: true, name: true, code: true } },
@@ -77,7 +76,7 @@ export class SubjectManagementService {
         examCycleLinks: {
           select: {
             id: true,
-            examCycle: { select: { id: true, examType: true, status: true, academicYear: { select: { id: true, code: true } }, semester: { select: { id: true, number: true, name: true } } } },
+            examCycle: { select: { id: true, examType: true, status: true, batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } } } },
           },
         },
         questionBanks: {
@@ -89,7 +88,7 @@ export class SubjectManagementService {
           },
         },
       },
-      orderBy: [{ departmentId: "asc" }, { semesterNumber: "asc" }, { subjectCode: "asc" }],
+      orderBy: [{ departmentId: "asc" }, { subjectCode: "asc" }],
     });
   }
 
@@ -128,7 +127,6 @@ export class SubjectManagementService {
               status: SubjectStatus.ACTIVE,
               questionBankDueDate: addDays(30),
               departmentId: payload.departmentId,
-              semesterNumber: payload.semesterNumber,
             },
             include: { department: true },
           }),
@@ -188,9 +186,6 @@ export class SubjectManagementService {
     if (!subject) throw new NotFoundError("Subject not found");
     if (!examCycle) throw new NotFoundError("Exam cycle not found");
     await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
-    if (examCycle.departmentId !== subject.departmentId) {
-      throw new AppError("Exam cycle must belong to the same department as the subject.", 400);
-    }
     if (examCycle.status !== "ACTIVE") {
       throw new AppError("Only active exam cycles can be linked.", 400);
     }

@@ -3,6 +3,7 @@ import { NotFoundError, AppError } from "@/lib/errors";
 import { BatchSemesterRepository } from "@/modules/batch-semesters/repository";
 import type { BatchSemesterUpdateInput, BatchSemesterActivateInput } from "@/modules/batch-semesters/validation";
 import { BatchSemesterStatus } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 
 export class BatchSemesterService {
   constructor(private readonly repository = new BatchSemesterRepository()) {}
@@ -88,7 +89,7 @@ export class BatchSemesterService {
 
     await prisma.batch.update({
       where: { id: entity.batchId },
-      data: updateData as any,
+      data: updateData as Prisma.BatchUpdateInput,
     });
 
     return result;

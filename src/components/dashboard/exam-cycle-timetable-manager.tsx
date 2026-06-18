@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { SemesterType } from "@prisma/client";
+
 import { apiFetch } from "@/lib/client-fetch";
-import { isSemesterActive } from "@/lib/semester-utils";
+
 
 type ExamType = "ISE_1" | "ISE_2" | "ENDSEM" | "SUPPLEMENTARY" | "KT";
 type ExamCycleStatus = "DRAFT" | "ACTIVE" | "CLOSED";
@@ -22,7 +22,7 @@ type DepartmentOption = {
 type AcademicYearOption = {
   id: string;
   code: string;
-  activeSemesterType?: string;
+  
 };
 
 type SemesterOption = {
@@ -191,8 +191,8 @@ export function ExamCycleTimetableManager({
     updateField("semesterId", "");
     const loaded = await loadSemesters(value);
     const ay = academicYears.find((a) => a.id === value);
-    if (ay?.activeSemesterType && loaded.length > 0) {
-      const first = loaded.find((s) => isSemesterActive(s.number, ay.activeSemesterType as SemesterType));
+    if (loaded.length > 0) {
+      const first = loaded[0];
       if (first) updateField("semesterId", first.id);
     }
   }

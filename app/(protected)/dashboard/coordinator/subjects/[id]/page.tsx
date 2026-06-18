@@ -20,7 +20,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
     include: {
       department: true,
       versions: { orderBy: { versionNumber: "desc" }, include: { effectiveFromAcademicYear: true } },
-      examCycleLinks: { include: { examCycle: { include: { academicYear: true, semester: true } } } },
+      examCycleLinks: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } },
       questionBanks: { include: { examCycle: true } },
     },
   });
@@ -28,18 +28,24 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
 
   await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
 
-  const examCycles = await prisma.examCycle.findMany({
-    where: { departmentId: subject.departmentId, status: ExamCycleStatus.ACTIVE },
-    include: { academicYear: true, semester: true },
+  const rawCycles = await prisma.examCycle.findMany({
+    where: { status: ExamCycleStatus.ACTIVE },
+    include: { batchSemester: { include: { academicYear: true } } },
     orderBy: { createdAt: "desc" },
   });
+  const examCycles = rawCycles.map((c) => ({
+    id: c.id,
+    examType: c.examType,
+    semester: { name: `Semester ${c.batchSemester?.semesterNumber ?? ''}` },
+    academicYear: { code: c.batchSemester?.academicYear?.code ?? '' },
+  }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{subject.subjectName}</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode} · {subject.department.name} · Semester {subject.semesterNumber}</p>
+          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode}</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/dashboard/coordinator/subjects/${id}/edit`}>
@@ -68,28 +74,27 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Code</span><span>{subject.subjectCode}</span></div>
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Credits</span><span>{subject.credits}</span></div>
             <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><span>{subject.status}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Department</span><span>{subject.department.name}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span>{subject.semesterNumber}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Department</span><span>{subject.department?.name ?? '-'}</span></div>
           </CardContent>
         </Card>
 
-        <LinkCycleForm subjectId={id} examCycles={examCycles} existingLinks={subject.examCycleLinks} />
+        <LinkCycleForm subjectId={id} examCycles={examCycles} existingLinks={subject.examCycleLinks ?? []} />
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Linked Exam Cycles ({subject.examCycleLinks.length})</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Linked Exam Cycles ({(subject.examCycleLinks ?? []).length})</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <THead><TR><TH>Exam Type</TH><TH>Semester</TH><TH>Academic Year</TH></TR></THead>
             <TBody>
-              {subject.examCycleLinks.map((link) => (
+              {(subject.examCycleLinks ?? []).map((link) => (
                 <TR key={link.id}>
                   <TD>{link.examCycle.examType}</TD>
-                  <TD>{link.examCycle.semester.name}</TD>
-                  <TD>{link.examCycle.academicYear.code}</TD>
+                  <TD>Sem {link.examCycle?.batchSemester?.semesterNumber ?? '-'}</TD>
+                  <TD>{link.examCycle?.batchSemester?.academicYear?.code ?? '-'}</TD>
                 </TR>
               ))}
-              {subject.examCycleLinks.length === 0 && (
+              {subject.examCycleLinks?.length === 0 && (
                 <TR><TD colSpan={3} className="text-center text-sm text-[var(--muted-foreground)]">No exam cycles linked</TD></TR>
               )}
             </TBody>

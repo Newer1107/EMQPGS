@@ -8,9 +8,6 @@ export class ExamCycleRepository extends BaseRepository {
       skip,
       orderBy: { createdAt: "desc" },
       include: {
-        department: true,
-        academicYear: true,
-        semester: true,
         batchSemester: {
           include: {
             batch: { select: { id: true, name: true, code: true } },
@@ -26,8 +23,6 @@ export class ExamCycleRepository extends BaseRepository {
     return this.prisma.examCycle.findUnique({
       where: { id },
       include: {
-        academicYear: true,
-        semester: true,
         batchSemester: {
           include: {
             batch: { include: { programme: true } },

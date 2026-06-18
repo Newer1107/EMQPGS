@@ -31,7 +31,7 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ id
           name: subject.subjectName,
           code: subject.subjectCode,
           departmentId: subject.departmentId,
-          semesterNumber: subject.semesterNumber,
+
           credits: subject.credits,
         }}
         endpoint={`/api/subjects/${id}`}

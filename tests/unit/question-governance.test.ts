@@ -28,7 +28,7 @@ vi.mock("@/lib/db", () => {
 
 import { prisma } from "@/lib/db";
 
-const mockActor: User = { id: "user-1", name: "Test User", email: "test@test.com", role: Role.CONTRIBUTOR, status: "ACTIVE" as any, lastLoginAt: null, departmentId: null, resetTokenHash: null, resetTokenExpiry: null, createdAt: new Date(), updatedAt: new Date() };
+const mockActor: User = { id: "user-1", name: "Test User", email: "test@test.com", role: Role.CONTRIBUTOR, status: "ACTIVE" as any, lastLoginAt: null, departmentId: null, resetTokenHash: null, resetTokenExpiry: null, createdAt: new Date(), updatedAt: new Date(), passwordHash: "hash" };
 const mockCoordinator: User = { ...mockActor, id: "coord-1", role: Role.COORDINATOR };
 const mockQuestion: QuestionLibraryItem = {
   id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5,

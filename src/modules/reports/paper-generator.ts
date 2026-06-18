@@ -5,7 +5,7 @@ import { AppError } from "@/lib/errors";
 type QuestionBankForPaper = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: { include: { academicYear: true, semester: true } };
+    examCycle: { include: { batchSemester: { include: { academicYear: true } } } };
     slots: {
       include: { assignedQuestion: true };
       where: { assignedQuestionId: { not: null } };
@@ -83,3 +83,4 @@ export class PaperGenerator {
     return warnings;
   }
 }
+

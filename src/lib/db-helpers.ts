@@ -5,8 +5,8 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   Department_code_key: "A department with this code already exists.",
   User_email_key: "A user with this email already exists.",
   Subject_subjectCode_departmentId_key: "This subject code already exists in this department.",
-  ExamCycle_semesterId_examType_departmentId_key:
-    "An exam cycle with this semester, exam type, and department already exists.",
+  ExamCycle_batchSemesterId_examType_key:
+    "An exam cycle already exists for this batch semester and exam type.",
   QuestionBank_subjectId_examCycleId_key:
     "A question bank already exists for this subject and exam cycle.",
   ModeratorBankAssignment_moderatorId_questionBankId_key:
@@ -16,7 +16,6 @@ const UNIQUE_CONSTRAINT_MESSAGES: Record<string, string> = {
   SubjectExamCycleLink_subjectId_examCycleId_key:
     "This subject is already linked to this exam cycle.",
   AcademicYear_code_key: "An academic year with this code already exists.",
-  Semester_academicYearId_number_key: "This semester number already exists in this academic year.",
   SubjectVersion_subjectId_versionNumber_key: "This version number already exists for this subject.",
   CurriculumSubject_curriculumSchemeId_subjectId_semesterNumbe_key:
     "This subject is already placed in this semester with the same group assignment.",

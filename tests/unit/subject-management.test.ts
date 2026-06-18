@@ -48,7 +48,7 @@ vi.mock("@prisma/client", () => ({
 describe("SubjectManagementService.createSubject", () => {
   it("throws when no active academic year exists", async () => {
     const { prisma } = await import("@/lib/db");
-    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" });
+    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" } as any);
     vi.mocked(prisma.academicYear.findFirst).mockResolvedValue(null);
 
     const service = new SubjectManagementService();
@@ -65,9 +65,9 @@ describe("SubjectManagementService.createSubject", () => {
 
   it("succeeds when active academic year exists", async () => {
     const { prisma } = await import("@/lib/db");
-    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" });
-    vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" });
-    vi.mocked(prisma.subject.create).mockResolvedValue({ id: "sub-1" });
+    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" } as any);
+    vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" } as any);
+    vi.mocked(prisma.subject.create).mockResolvedValue({ id: "sub-1" } as any);
     vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
 
     const service = new SubjectManagementService();

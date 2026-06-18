@@ -51,12 +51,11 @@ export class QuestionBankWorkflowService {
             id: true,
             subjectName: true,
             subjectCode: true,
-            semesterNumber: true,
             department: { select: { id: true, name: true } },
           },
         },
         examCycle: {
-          select: { id: true, examType: true, academicYear: { select: { id: true, code: true } }, semester: { select: { id: true, number: true, name: true } } },
+          select: { id: true, examType: true, batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } } },
         },
         _count: { select: { slots: true } },
       },
@@ -74,7 +73,7 @@ export class QuestionBankWorkflowService {
       where: { id: questionBankId },
       include: {
         subject: { include: { department: true } },
-        examCycle: { include: { academicYear: true, semester: true, batchSemester: { include: { batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
+        examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
         slots: {
           include: {
             assignedQuestion: {
@@ -122,10 +121,6 @@ export class QuestionBankWorkflowService {
 
     const examCycle = await prisma.examCycle.findUnique({ where: { id: examCycleId } });
     if (!examCycle) throw new NotFoundError("Exam cycle not found");
-    // Legacy check: skip for batch-aware cycles (subject match is via CurriculumSubject → SubjectExamCycleLink)
-    if (!examCycle.batchSemesterId && examCycle.departmentId !== subject.departmentId) {
-      throw new AppError("Exam cycle must belong to the same department as the subject.", 400);
-    }
 
     const pattern = DEFAULT_PATTERNS[examCycle.examType];
     const slotData = buildSlotsFromPattern(pattern);

@@ -17,7 +17,6 @@ vi.mock("@/lib/db", () => {
     coordinatorDepartmentAssignment: { findMany: vi.fn() },
     subject: { findUnique: vi.fn(), create: vi.fn() },
     subjectVersion: { create: vi.fn() },
-    semester: { findUnique: vi.fn() },
     department: { findUnique: vi.fn() },
     moderatorBankAssignment: { findMany: vi.fn(), findUnique: vi.fn() },
     notification: { create: vi.fn() },
@@ -42,7 +41,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
       id: "bank-1",
       phase: "DRAFTING",
       version: 1,
-    });
+    } as any);
 
     vi.mocked(prisma.questionBank.update).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("n/a", {
@@ -66,15 +65,10 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     const { SubjectManagementService } = await import("@/modules/coordinator/subject.service");
     const { prisma } = await import("@/lib/db");
 
-    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" });
-    vi.mocked(prisma.semester.findUnique).mockResolvedValue({
-      id: "sem-1",
-      academicYear: { id: "ay-1", code: "2026-2027" },
-      academicYearId: "ay-1",
-    });
-    vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" });
+    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" } as any);
+    vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" } as any);
     vi.mocked(prisma.coordinatorDepartmentAssignment.findMany).mockResolvedValue([
-      { departmentId: "dept-1" },
+      { id: "cda-1", departmentId: "dept-1", coordinatorId: "coord-1", assignedAt: new Date() },
     ]);
     vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
     vi.mocked(prisma.subject.create).mockRejectedValue(
@@ -90,7 +84,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     try {
       await service.createSubject(
         { id: "coord-1", role: "COORDINATOR" } as never,
-        { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-1", semesterId: "sem-1", creditLoad: 4 },
+        { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-1", semesterNumber: 5, creditLoad: 4 },
       );
     } catch (e) {
       thrown = e;
@@ -103,7 +97,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     const { prisma } = await import("@/lib/db");
 
     vi.mocked(prisma.$transaction).mockImplementation(
-      async (cb: (tx: unknown) => Promise<unknown>) => {
+      async (cb: any) => {
         const mockTx = {
           auditLog: {
             findFirst: vi.fn().mockResolvedValue({ integrityHash: "abc123" }),

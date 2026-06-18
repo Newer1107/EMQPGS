@@ -20,7 +20,6 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/departments", label: "Departments", roles: ["COE"] },
   { href: "/dashboard/coe/exam-cycles", label: "Exam Cycles", roles: ["COE"] },
   { href: "/dashboard/coe/academic-years", label: "Academic Years", roles: ["COE"] },
-  { href: "/dashboard/coe/semesters", label: "Semesters", roles: ["COE"] },
   { href: "/dashboard/coe/monitoring", label: "Monitoring", roles: ["COE"] },
   { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },

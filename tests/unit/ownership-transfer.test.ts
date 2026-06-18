@@ -57,7 +57,7 @@ describe("QuestionLibraryService.transferOwnership", () => {
 
   it("throws when target user is disabled", async () => {
     const { prisma } = await import("@/lib/db");
-    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "disabled-user", status: "DISABLED", role: "CONTRIBUTOR" });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "disabled-user", status: "DISABLED", role: "CONTRIBUTOR" } as any);
 
     const service = new QuestionLibraryService();
     await expect(
@@ -67,7 +67,7 @@ describe("QuestionLibraryService.transferOwnership", () => {
 
   it("throws when target user is not a CONTRIBUTOR", async () => {
     const { prisma } = await import("@/lib/db");
-    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "coord-user", status: "ACTIVE", role: "COORDINATOR" });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "coord-user", status: "ACTIVE", role: "COORDINATOR" } as any);
 
     const service = new QuestionLibraryService();
     await expect(
@@ -77,9 +77,9 @@ describe("QuestionLibraryService.transferOwnership", () => {
 
   it("succeeds when target user is a valid contributor", async () => {
     const { prisma } = await import("@/lib/db");
-    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "contrib-user", status: "ACTIVE", role: "CONTRIBUTOR" });
+    vi.mocked(prisma.user.findUnique).mockResolvedValue({ id: "contrib-user", status: "ACTIVE", role: "CONTRIBUTOR" } as any);
     vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
-    vi.mocked(prisma.questionLibraryItem.update).mockResolvedValue({ id: "q-1", ownerId: "contrib-user" });
+    vi.mocked(prisma.questionLibraryItem.update).mockResolvedValue({ id: "q-1", ownerId: "contrib-user" } as any);
 
     const service = new QuestionLibraryService();
     const result = await service.transferOwnership("q-1", "contrib-user", "reason", mockActor);

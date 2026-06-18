@@ -2,7 +2,7 @@ import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { parseJson } from "@/lib/parse-body";
 import { ExamCycleService } from "@/modules/exam-cycles/service";
-import { examCycleSchema, batchExamCycleSchema } from "@/modules/exam-cycles/validation";
+import { examCycleSchema } from "@/modules/exam-cycles/validation";
 
 const service = new ExamCycleService();
 
@@ -16,12 +16,7 @@ export const GET = withApiHandler(async (request) => {
 
 export const POST = withApiHandler(
   async (request) => {
-    const raw: Record<string, unknown> = await parseJson(request);
-    if ("batchSemesterId" in raw) {
-      const payload = batchExamCycleSchema.parse(raw);
-      return service.createFromBatch(payload);
-    }
-    const payload = examCycleSchema.parse(raw);
+    const payload = examCycleSchema.parse(await parseJson(request));
     return service.create(payload);
   },
   { roles: [Role.COE], audit: { action: "EXAM_CYCLE_CREATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },

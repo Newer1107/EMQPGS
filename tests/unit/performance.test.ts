@@ -23,8 +23,8 @@ describe("M2 - Query optimization with select", () => {
 
     vi.mocked(prisma.moderatorBankAssignment.findMany).mockResolvedValue([]);
     vi.mocked(prisma.questionLibraryItem.groupBy).mockResolvedValue([
-      { status: "PENDING" as never, _count: { _all: 5 } },
-      { status: "APPROVED" as never, _count: { _all: 10 } },
+      { status: "PENDING", _count: { _all: 5 } } as any,
+      { status: "APPROVED", _count: { _all: 10 } } as any,
     ]);
     vi.mocked(prisma.questionLibraryItem.findMany).mockResolvedValue([]);
     vi.mocked(prisma.questionBank.findMany).mockResolvedValue([]);
@@ -32,7 +32,7 @@ describe("M2 - Query optimization with select", () => {
     vi.mocked(prisma.notification.findMany).mockResolvedValue([]);
 
     const service = new ModeratorDashboardService();
-    const dashboard = await service.getDashboard({ id: "mod-1", role: "MODERATOR" as never });
+    const dashboard = await service.getDashboard({ id: "mod-1", role: "MODERATOR" } as any);
 
     expect(prisma.questionLibraryItem.groupBy).toHaveBeenCalled();
     expect(dashboard.summary.pending).toBe(5);

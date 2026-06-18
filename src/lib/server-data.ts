@@ -19,7 +19,7 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
   const [departments, users, examCycles, subjects, questionBanks, auditLogs, departmentCount, userCount, questionBankCount] = await Promise.all([
     prisma.department.findMany({ orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
-    prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
+    prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { batchSemester: { include: { academicYear: true } } } }),
     prisma.subject.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, examCycle: true } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, include: { actor: true }, take: 25 }),
@@ -56,7 +56,7 @@ export async function getQuestionContributionWorkspace(role: Role) {
     orderBy: { createdAt: "asc" },
     include: {
       subject: true,
-      examCycle: { include: { academicYear: true, semester: true } },
+      examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
       slots: {
         include: {
           assignedQuestion: {

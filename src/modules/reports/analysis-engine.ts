@@ -87,8 +87,8 @@ export class AnalysisEngine {
     difficultyDistribution: DistributionMetric[],
   ): string[] {
     const missing: string[] = [];
-    for (const module of moduleCoverage) {
-      if (module.missing === module.total) missing.push(`Module ${module.label} has no approved questions.`);
+    for (const mod of moduleCoverage) {
+      if (mod.missing === mod.total) missing.push(`Module ${mod.label} has no approved questions.`);
     }
     for (const outcome of coDistribution) {
       if (outcome.count === 0) missing.push(`${outcome.key} has no questions.`);
