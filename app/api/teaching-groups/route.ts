@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { TeachingGroupService } from "@/modules/teaching-groups/service";
 import { teachingGroupSchema, teachingGroupBulkSchema } from "@/modules/teaching-groups/validation";
 
@@ -21,7 +21,7 @@ function isBulkPayload(p: unknown): p is { batchId: string; groups: Array<{ grou
 
 export const POST = withApiHandler(
   async (request) => {
-    const raw = await parseJson(request);
+    const raw = await request.json();
     const singleResult = teachingGroupSchema.safeParse(raw);
     if (singleResult.success) {
       return service.create(singleResult.data);

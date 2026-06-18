@@ -1,26 +1,26 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 
-export class AcademicYearRepository extends BaseRepository {
+export class AcademicYearRepository {
   list() {
-    return this.prisma.academicYear.findMany({
+    return prisma.academicYear.findMany({
       orderBy: { startDate: "desc" },
     });
   }
 
   findById(id: string) {
-    return this.prisma.academicYear.findUnique({
+    return prisma.academicYear.findUnique({
       where: { id },
     });
   }
 
   findByCode(code: string) {
-    return this.prisma.academicYear.findUnique({
+    return prisma.academicYear.findUnique({
       where: { code },
     });
   }
 
   create(data: { code: string; startDate: Date; endDate: Date; status?: import("@prisma/client").AcademicYearStatus }) {
-    return this.prisma.academicYear.create({
+    return prisma.academicYear.create({
       data: {
         code: data.code,
         startDate: data.startDate,
@@ -31,7 +31,7 @@ export class AcademicYearRepository extends BaseRepository {
   }
 
   update(id: string, data: Partial<{ code: string; startDate: Date; endDate: Date; status: import("@prisma/client").AcademicYearStatus }>) {
-    return this.prisma.academicYear.update({
+    return prisma.academicYear.update({
       where: { id },
       data,
     });

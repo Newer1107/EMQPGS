@@ -1,9 +1,9 @@
-import { QuestionStatus, type User } from "@prisma/client";
+import { QuestionStatus } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { NotificationService } from "@/modules/notifications/service";
 import { ModeratorService } from "@/modules/moderation/service";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 export class ModeratorDashboardService {
   constructor(

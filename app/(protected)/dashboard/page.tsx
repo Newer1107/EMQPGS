@@ -35,7 +35,7 @@ export default async function DashboardIndexPage({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {userDashboard ? (
           <Link key={userDashboard.href} href={userDashboard.href}>
-            <Card className="h-full transition-colors hover:bg-[var(--muted)]">
+            <Card className="h-full transition-colors hover:bg-[var(--surface-hover)]">
               <CardHeader>
                 <CardTitle className="text-lg">{userDashboard.title}</CardTitle>
                 <CardDescription>{userDashboard.description}</CardDescription>

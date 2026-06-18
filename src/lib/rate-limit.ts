@@ -7,10 +7,7 @@ declare global {
 }
 
 const rateLimitStore = global.rateLimitStore ?? new Map<string, { count: number; expiresAt: number }>();
-
-if (process.env.NODE_ENV !== "production") {
-  global.rateLimitStore = rateLimitStore;
-}
+global.rateLimitStore = rateLimitStore;
 
 export async function enforceRateLimit(keyParts: string[]) {
   const digest = createHash("sha256").update(keyParts.join(":")).digest("hex");

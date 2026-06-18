@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ProgrammeService } from "@/modules/programmes/service";
 import { programmeSchema } from "@/modules/programmes/validation";
 
@@ -10,7 +10,7 @@ export const GET = withApiHandler(() => service.list(), { roles: [Role.COE, Role
 
 export const POST = withApiHandler(
   async (request) => {
-    const payload = programmeSchema.parse(await parseJson(request));
+    const payload = programmeSchema.parse(await request.json());
     return service.create(payload);
   },
   { roles: [Role.COE], audit: { action: "PROGRAMME_CREATED", entityType: "PROGRAMME", getEntityId: (r) => (r as { id?: string }).id } },

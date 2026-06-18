@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { authCookieNames, signAccessToken, signRefreshToken } from "@/lib/jwt";
 import { UserService } from "@/modules/users/service";
 import { z } from "zod";
@@ -16,7 +16,7 @@ const loginSchema = z.object({
 });
 
 export const POST = withApiHandler(async (request) => {
-  const payload = loginSchema.parse(await parseJson(request));
+  const payload = loginSchema.parse(await request.json());
   const user = await new UserService().verifyCredentials(payload.email, payload.password);
 
   const tokenPayload = {

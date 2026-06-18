@@ -1,9 +1,9 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { TeachingGroupInput, TeachingGroupUpdateInput } from "@/modules/teaching-groups/validation";
 
-export class TeachingGroupRepository extends BaseRepository {
+export class TeachingGroupRepository {
   findByBatch(batchId: string) {
-    return this.prisma.teachingGroup.findMany({
+    return prisma.teachingGroup.findMany({
       where: { batchId },
       orderBy: { groupNumber: "asc" },
       include: { batch: { select: { id: true, name: true, code: true } } },
@@ -11,27 +11,27 @@ export class TeachingGroupRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.teachingGroup.findUnique({
+    return prisma.teachingGroup.findUnique({
       where: { id },
       include: { batch: true },
     });
   }
 
   findByBatchAndGroup(batchId: string, groupNumber: number) {
-    return this.prisma.teachingGroup.findUnique({
+    return prisma.teachingGroup.findUnique({
       where: { batchId_groupNumber: { batchId, groupNumber } },
     });
   }
 
   create(data: TeachingGroupInput) {
-    return this.prisma.teachingGroup.create({
+    return prisma.teachingGroup.create({
       data,
       include: { batch: { select: { id: true, name: true, code: true } } },
     });
   }
 
   update(id: string, data: TeachingGroupUpdateInput) {
-    return this.prisma.teachingGroup.update({
+    return prisma.teachingGroup.update({
       where: { id },
       data,
       include: { batch: { select: { id: true, name: true, code: true } } },
@@ -39,10 +39,10 @@ export class TeachingGroupRepository extends BaseRepository {
   }
 
   delete(id: string) {
-    return this.prisma.teachingGroup.delete({ where: { id } });
+    return prisma.teachingGroup.delete({ where: { id } });
   }
 
   deleteByBatch(batchId: string) {
-    return this.prisma.teachingGroup.deleteMany({ where: { batchId } });
+    return prisma.teachingGroup.deleteMany({ where: { batchId } });
   }
 }

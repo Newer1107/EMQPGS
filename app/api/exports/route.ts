@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ExportService } from "@/modules/production/export.service";
 import { exportRequestSchema } from "@/modules/production/validation";
 
@@ -16,7 +16,7 @@ export const GET = withApiHandler(
 
 export const POST = withApiHandler(
   async (request, context) => {
-    const payload = exportRequestSchema.parse(await parseJson(request));
+    const payload = exportRequestSchema.parse(await request.json());
     return service.createExport(payload, context.user!);
   },
   { roles: [Role.COE], audit: { action: "EXPORT_REQUESTED", entityType: "EXPORT_ARTIFACT" } },

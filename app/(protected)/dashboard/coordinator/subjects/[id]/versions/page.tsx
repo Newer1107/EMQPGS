@@ -32,7 +32,7 @@ export default async function SubjectVersionsPage({ params }: { params: Promise<
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">{subject.subjectName} — Versions</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode} · {subject.department.name}</p>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">{subject.subjectCode} · {subject.department.name}</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -66,7 +66,7 @@ export default async function SubjectVersionsPage({ params }: { params: Promise<
                   </TR>
                 ))}
                 {versions.length === 0 && (
-                  <TR><TD colSpan={5} className="text-center text-sm text-[var(--muted-foreground)]">No versions yet</TD></TR>
+                  <TR><TD colSpan={5} className="text-center text-sm text-[var(--text-tertiary)]">No versions yet</TD></TR>
                 )}
               </TBody>
             </Table>

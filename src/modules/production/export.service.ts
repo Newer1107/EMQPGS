@@ -3,8 +3,8 @@ import {
   ExportFormat,
   Role,
   type Prisma,
-  type User,
 } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
@@ -12,7 +12,7 @@ import { StorageService } from "@/lib/storage/storage-service";
 import { DocumentService } from "@/modules/production/document-service";
 import { ENTITY_TYPES } from "@/lib/constants";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name" | "departmentId">;
+
 
 type ExportInput = {
   questionBankId: string;

@@ -77,7 +77,7 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
       <Card>
         <CardHeader><CardTitle>Moderation Actions</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-sm text-[var(--muted-foreground)]">{statusMessages[status] ?? `Status: ${status}`}</p>
+          <p className="text-sm text-[var(--text-tertiary)]">{statusMessages[status] ?? `Status: ${status}`}</p>
           <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/moderator/questions")} className="mt-3 w-full">
             Back to Queue
           </Button>
@@ -92,7 +92,7 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
         <CardTitle>Moderation Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-xs text-[var(--muted-foreground)]">
+        <p className="text-xs text-[var(--text-tertiary)]">
           Question {queueIds.indexOf(questionId) + 1} of {queueIds.length}
         </p>
         <Button variant="default" size="sm" onClick={() => handleAction("approve")} disabled={loading !== null} className="w-full">

@@ -24,7 +24,7 @@ export default async function AuditPage() {
                 <TD>{log.action}</TD>
                 <TD>{log.entityType}</TD>
                 <TD>{log.actor?.name ?? "System"}</TD>
-                <TD className="text-[var(--muted-foreground)]">{new Date(log.createdAt).toLocaleString()}</TD>
+                <TD className="text-[var(--text-tertiary)]">{new Date(log.createdAt).toLocaleString()}</TD>
               </TR>
             ))}
           </TBody>

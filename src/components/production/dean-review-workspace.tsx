@@ -168,7 +168,7 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
   }
 
   if (loading) {
-    return <Card><CardContent className="py-10 text-sm text-[var(--muted-foreground)]">Loading review workspace...</CardContent></Card>;
+    return <Card><CardContent className="py-10 text-sm text-[var(--text-tertiary)]">Loading review workspace...</CardContent></Card>;
   }
 
   if (!data) {
@@ -181,11 +181,11 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
         <CardHeader>
           <CardTitle>{data.subjectCode} · {data.subjectName}</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-[var(--muted-foreground)]">
+        <CardContent className="space-y-2 text-sm text-[var(--text-tertiary)]">
           <p>{data.examCycleLabel}</p>
           <p>Generated {data.generationTimestamp ? new Date(data.generationTimestamp).toLocaleString() : "Unavailable"}</p>
           {data.deanReview ? (
-            <p className="text-[var(--foreground)]">
+            <p className="text-[var(--text-primary)]">
               Selection locked on {new Date(data.deanReview.reviewedAt).toLocaleString()} by {data.deanReview.reviewedBy.name}.
             </p>
           ) : null}
@@ -226,7 +226,7 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
                 </div>
 
                 <div className="rounded-xl border border-[var(--border)] p-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">AI Recommendation</p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-tertiary)]">AI Recommendation</p>
                   <p className="mt-2 text-sm leading-6">{paper.aiRecommendation}</p>
                 </div>
 
@@ -242,13 +242,13 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
                   {expanded ? (
                     <div className="mt-4 space-y-4">
                       {Object.entries(groupedQuestions).map(([moduleNumber, questions]) => (
-                        <div key={moduleNumber} className="rounded-lg bg-[var(--muted)] p-3">
-                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">Module {moduleNumber}</p>
+                                                  <div key={moduleNumber} className="rounded-lg bg-[var(--surface-hover)] p-3">
+                          <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Module {moduleNumber}</p>
                           <div className="mt-3 space-y-3">
                             {questions.map((question, index) => (
                               <div key={`${paper.paperId}-${moduleNumber}-${index}`} className="rounded-lg bg-white p-3 text-sm shadow-sm">
                                 <p className="leading-6">{question.questionText}</p>
-                                <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+                                <p className="mt-2 text-xs text-[var(--text-tertiary)]">
                                   {question.markType} marks · {question.co} · {question.rbtLevel} · {question.difficultyLevel ? difficultyLabels[question.difficultyLevel] : "Unspecified"}
                                 </p>
                               </div>
@@ -305,7 +305,7 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
               {submitting ? "Submitting..." : "Submit Selection"}
             </Button>
           ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">This review is read-only. Dean selections cannot be changed after submission.</p>
+            <p className="text-sm text-[var(--text-tertiary)]">This review is read-only. Dean selections cannot be changed after submission.</p>
           )}
         </CardContent>
       </Card>
@@ -358,7 +358,7 @@ function MetricRow({
 }) {
   return (
     <tr className={className}>
-      <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--muted-foreground)]">{label}</td>
+      <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text-tertiary)]">{label}</td>
       <td className="border-b border-[var(--border)] px-4 py-3 text-right font-semibold">{value == null ? "N/A" : `${value}${suffix}`}</td>
     </tr>
   );

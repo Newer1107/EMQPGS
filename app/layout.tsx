@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono, Playfair_Display, Source_Serif_4 } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { APP_NAME } from "@/lib/constants";
 import { Toaster } from "sonner";
 
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-const sourceSerif = Source_Serif_4({
-  variable: "--font-source-serif",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -33,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${playfair.variable} ${sourceSerif.variable} ${mono.variable} h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${mono.variable} h-full antialiased`}>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         {children}
         <Toaster richColors position="top-right" />

@@ -125,7 +125,7 @@ export default async function ContributorDashboardPage() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="font-medium">{bank.subject.subjectName}</p>
-                      <p className="text-sm text-[var(--muted-foreground)]">
+                      <p className="text-sm text-[var(--text-tertiary)]">
                         {bank.subject.subjectCode} · Sem {bank.examCycle.batchSemester.semesterNumber} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType.replaceAll("_", " ")}
                       </p>
                     </div>
@@ -138,13 +138,13 @@ export default async function ContributorDashboardPage() {
                   <div className="space-y-1.5">
                     {summary.map((sm) => (
                       <div key={`${sm.moduleNumber}-${sm.marks}`} className={`flex items-center gap-3 text-sm ${sm.biggest && sm.empty > 0 ? "font-medium" : ""}`}>
-                        <span className="w-20 shrink-0 text-[var(--muted-foreground)]">Module {sm.moduleNumber}</span>
-                        <span className="w-16 text-[var(--muted-foreground)]">{sm.marks} marks</span>
+                        <span className="w-20 shrink-0 text-[var(--text-tertiary)]">Module {sm.moduleNumber}</span>
+                        <span className="w-16 text-[var(--text-tertiary)]">{sm.marks} marks</span>
                         <div className="flex items-center gap-1">
                           <span className="text-green-600">{sm.filled}</span>
-                          <span className="text-[var(--muted-foreground)]">/</span>
-                          <span className={sm.empty > 0 ? "text-red-600" : "text-[var(--muted-foreground)]"}>{sm.total}</span>
-                          <span className="text-xs text-[var(--muted-foreground)] ml-1">
+                          <span className="text-[var(--text-tertiary)]">/</span>
+                          <span className={sm.empty > 0 ? "text-red-600" : "text-[var(--text-tertiary)]"}>{sm.total}</span>
+                          <span className="text-xs text-[var(--text-tertiary)] ml-1">
                             ({new Array(sm.total).fill(null).map((_, i) =>
                               i < sm.filled ? "■" : "□"
                             ).join("")})
@@ -177,7 +177,7 @@ export default async function ContributorDashboardPage() {
 
       {banks.length === 0 && (
         <Card>
-          <CardContent className="py-8 text-center text-sm text-[var(--muted-foreground)]">
+          <CardContent className="py-8 text-center text-sm text-[var(--text-tertiary)]">
             No active banks found in your department.
           </CardContent>
         </Card>
@@ -211,7 +211,7 @@ export default async function ContributorDashboardPage() {
                   <p className="text-sm font-medium">{q.subjectVersion.subject.subjectName}</p>
                   <Badge>{questionStatusLabels[q.status as keyof typeof questionStatusLabels] ?? q.status}</Badge>
                 </div>
-                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                <p className="mt-1 text-sm text-[var(--text-tertiary)]">
                   Module {q.moduleNumber} · {q.marks} marks
                 </p>
                 {q.moderationEvents[0]?.note && (
@@ -241,7 +241,7 @@ function StatItem({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-lg border border-[var(--border)] p-3 text-center">
       <p className="text-xl font-bold">{value}</p>
-      <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{label}</p>
+      <p className="text-xs text-[var(--text-tertiary)] mt-0.5">{label}</p>
     </div>
   );
 }

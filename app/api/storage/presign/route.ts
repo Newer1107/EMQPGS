@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ForbiddenError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
 import { z } from "zod";
@@ -15,7 +15,7 @@ const schema = z.object({
 
 export const POST = withApiHandler(
   async (request, context) => {
-    const payload = schema.parse(await parseJson(request));
+    const payload = schema.parse(await request.json());
     if ((payload.bucket === "exports" || payload.bucket === "system-backups") && context.user?.role !== Role.COE) {
       throw new ForbiddenError("Only COE can create export or backup storage links");
     }

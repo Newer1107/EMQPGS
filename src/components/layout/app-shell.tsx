@@ -105,7 +105,7 @@ export function AppShell({
           </div>
           <div>
             <p className="text-sm font-semibold">{APP_NAME}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">{roleLabels[role] ?? role}</p>
+            <p className="text-xs text-[var(--text-tertiary)]">{roleLabels[role] ?? role}</p>
           </div>
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
@@ -116,10 +116,10 @@ export function AppShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] focus-visible:ring-offset-2",
-                    isActive
-                    ? "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
-                    : "bg-transparent text-gray-800 hover:bg-gray-100 hover:text-gray-900",
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+                  isActive
+                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]",
                 )}
               >
                 {item.label}
@@ -128,21 +128,21 @@ export function AppShell({
           })}
         </nav>
         <div className="border-t border-[var(--border)] p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-xl bg-[var(--muted)] px-3 py-3">
+          <div className="mb-3 flex items-center gap-3 rounded-xl bg-[var(--surface-elevated)] px-3 py-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--foreground)]">{userName}</p>
-              <p className="truncate text-xs text-[var(--muted-foreground)]">{userEmail}</p>
+              <p className="truncate text-sm font-medium text-[var(--text-primary)]">{userName}</p>
+              <p className="truncate text-xs text-[var(--text-tertiary)]">{userEmail}</p>
             </div>
           </div>
-          <Button variant="ghost" className="w-full justify-start text-sm text-[var(--foreground)] hover:bg-gray-100" onClick={handleLogout}>
+          <Button variant="ghost" className="w-full justify-start text-sm text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]" onClick={handleLogout}>
             Sign out
           </Button>
         </div>
       </aside>
-      <main id="main-content" className="flex-1 bg-[var(--muted)]">
+      <main id="main-content" className="flex-1 bg-[var(--surface-hover)]">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <Breadcrumbs />
           {children}

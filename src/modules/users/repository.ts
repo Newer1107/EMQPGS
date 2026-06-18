@@ -1,4 +1,4 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import { UserInput } from "@/modules/users/validation";
 
 const publicUserSelect = {
@@ -21,9 +21,9 @@ const authUserSelect = {
   resetTokenHash: true,
 } as const;
 
-export class UserRepository extends BaseRepository {
+export class UserRepository {
   list(take = 50, skip = 0) {
-    return this.prisma.user.findMany({
+    return prisma.user.findMany({
       take: Math.min(take, 500),
       skip,
       orderBy: { createdAt: "desc" },
@@ -32,22 +32,22 @@ export class UserRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.user.findUnique({ where: { id }, select: publicUserSelect });
+    return prisma.user.findUnique({ where: { id }, select: publicUserSelect });
   }
 
   findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, select: publicUserSelect });
+    return prisma.user.findUnique({ where: { email }, select: publicUserSelect });
   }
 
   findByEmailWithPassword(email: string) {
-    return this.prisma.user.findUnique({ where: { email }, select: authUserSelect });
+    return prisma.user.findUnique({ where: { email }, select: authUserSelect });
   }
 
   create(data: Omit<UserInput, "password"> & { passwordHash: string }) {
-    return this.prisma.user.create({ data, select: publicUserSelect });
+    return prisma.user.create({ data, select: publicUserSelect });
   }
 
   update(id: string, data: Partial<Omit<UserInput, "password"> & { passwordHash?: string }>) {
-    return this.prisma.user.update({ where: { id }, data, select: publicUserSelect });
+    return prisma.user.update({ where: { id }, data, select: publicUserSelect });
   }
 }

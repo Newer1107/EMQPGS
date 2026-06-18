@@ -14,7 +14,7 @@ export function SearchInput({ value, onChange, placeholder = "Search...", classN
   return (
     <div className={cn("relative", className)}>
       <svg
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

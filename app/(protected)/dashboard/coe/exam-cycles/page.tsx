@@ -42,19 +42,19 @@ export default async function CoeExamCyclesPage() {
       {cycles.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-4">
           <div className="rounded-lg border bg-white p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total</p>
             <p className="mt-1 text-2xl font-bold">{cycles.length}</p>
           </div>
           <div className="rounded-lg border bg-white p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
             <p className="mt-1 text-2xl font-bold text-green-600">{cycles.filter((c) => c.status === "ACTIVE").length}</p>
           </div>
           <div className="rounded-lg border bg-white p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Draft</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Draft</p>
             <p className="mt-1 text-2xl font-bold text-amber-600">{cycles.filter((c) => c.status === "DRAFT").length}</p>
           </div>
           <div className="rounded-lg border bg-white p-4">
-            <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Closed</p>
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Closed</p>
             <p className="mt-1 text-2xl font-bold text-gray-600">{cycles.filter((c) => c.status === "CLOSED").length}</p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export default async function CoeExamCyclesPage() {
                 </TR>
               ) : (
                 cycles.map((c) => (
-                  <TR key={c.id} className="cursor-pointer hover:bg-[var(--muted)]">
+                  <TR key={c.id} className="cursor-pointer hover:bg-[var(--surface-hover)]">
                     <TD className="font-medium">
                       <Link href={`/dashboard/coe/exam-cycles/${c.id}`} className="hover:underline">
                         {c.batchSemester?.batch?.name ?? '-'}
@@ -104,7 +104,7 @@ export default async function CoeExamCyclesPage() {
                     <TD><Badge variant="info">{examTypeLabels[c.examType as keyof typeof examTypeLabels] ?? c.examType.replace('_', ' ')}</Badge></TD>
                     <TD>{c._count.subjectLinks}</TD>
                     <TD><Badge variant={statusVariants[c.status] ?? "default"}>{examCycleStatusLabels[c.status as keyof typeof examCycleStatusLabels] ?? c.status}</Badge></TD>
-                    <TD className="text-[var(--muted-foreground)] text-xs">{new Date(c.createdAt).toLocaleDateString()}</TD>
+                    <TD className="text-[var(--text-tertiary)] text-xs">{new Date(c.createdAt).toLocaleDateString()}</TD>
                   </TR>
                 ))
               )}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DeanNotificationsInbox } from "@/components/production/dean-notifications-inbox";
+import { NotificationInbox } from "@/components/moderator/notification-inbox";
 import { getDeanReviewData } from "@/lib/server-data";
 
 export default async function DeanDashboardPage() {
@@ -23,14 +23,14 @@ export default async function DeanDashboardPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             {data.pendingReviews.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No pending dean reviews.</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No pending dean reviews.</p>
             ) : data.pendingReviews.map((item) => (
               <div key={item.id} className="rounded-xl border border-[var(--border)] p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-base font-semibold">{item.subjectCode} · {item.subjectName}</p>
-                    <p className="mt-1 text-sm text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
-                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                    <p className="mt-1 text-sm text-[var(--text-tertiary)]">{item.examCycleLabel}</p>
+                    <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
                       Generated {item.generationTimestamp ? new Date(item.generationTimestamp).toLocaleString() : "Unavailable"}
                     </p>
                   </div>
@@ -43,7 +43,7 @@ export default async function DeanDashboardPage() {
           </CardContent>
         </Card>
 
-        <DeanNotificationsInbox initialNotifications={data.notifications} />
+        <NotificationInbox initialNotifications={data.notifications} variant="card" onError="silent" />
       </section>
 
       <Card>
@@ -52,14 +52,14 @@ export default async function DeanDashboardPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {data.completedReviews.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">No completed dean reviews yet.</p>
+            <p className="text-sm text-[var(--text-tertiary)]">No completed dean reviews yet.</p>
           ) : data.completedReviews.map((item) => (
             <div key={item.id} className="rounded-xl border border-[var(--border)] p-4">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-base font-semibold">{item.subjectCode} · {item.subjectName}</p>
-                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
-                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--muted-foreground)]">
+                  <p className="mt-1 text-sm text-[var(--text-tertiary)]">{item.examCycleLabel}</p>
+                  <p className="mt-2 text-xs uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
                     Generated {item.generationTimestamp ? new Date(item.generationTimestamp).toLocaleString() : "Unavailable"}
                   </p>
                 </div>
@@ -84,8 +84,8 @@ export default async function DeanDashboardPage() {
 
 function ReviewSummary({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg bg-[var(--muted)] p-3">
-      <p className="text-xs uppercase tracking-[0.16em] text-[var(--muted-foreground)]">{label}</p>
+    <div className="rounded-lg bg-[var(--surface-hover)] p-3">
+      <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{label}</p>
       <p className="mt-1 text-sm font-semibold">{value}</p>
     </div>
   );

@@ -21,10 +21,10 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-[var(--muted-foreground)]">{label}</span>
+        <span className="text-[var(--text-tertiary)]">{label}</span>
         <span className="font-medium">{value}/{max} ({pct}%)</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-hover)]">
         <div
           className={`h-full rounded-full transition-all ${
             pct >= 100 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500"
@@ -103,16 +103,16 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-            <Link href="/dashboard/coordinator" className="hover:text-[var(--foreground)] transition-colors">Dashboard</Link>
+          <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+            <Link href="/dashboard/coordinator" className="hover:text-[var(--text-primary)] transition-colors">Dashboard</Link>
             <span>/</span>
-            <span className="text-[var(--foreground)]">Exam Workspace</span>
+            <span className="text-[var(--text-primary)]">Exam Workspace</span>
           </div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">
             {examTypeLabels[examCycle.examType as keyof typeof examTypeLabels] ?? examCycle.examType}
-            <span className="text-[var(--muted-foreground)] font-normal"> — {batch?.name}</span>
+            <span className="text-[var(--text-tertiary)] font-normal"> — {batch?.name}</span>
           </h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             Semester {bs?.semesterNumber} · {bs?.academicYear?.code} · {bs?.academicUnit?.name}
           </p>
         </div>
@@ -123,19 +123,19 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Subjects</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Subjects</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold">{totalSubjects}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Banks Initialized</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Banks Initialized</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-green-600">{initializedBanks}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Not Started</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Not Started</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-amber-600">{noBanks}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Completed</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Completed</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-green-600">{completeBanks}</p></CardContent>
         </Card>
       </div>
@@ -158,7 +158,7 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Subjects ({totalSubjects})</CardTitle>
-                <div className="flex gap-1 text-xs text-[var(--muted-foreground)]">
+                <div className="flex gap-1 text-xs text-[var(--text-tertiary)]">
                   <span className="rounded bg-green-100 px-1.5 py-0.5 text-green-700">{completeBanks} done</span>
                   <span className="rounded bg-amber-100 px-1.5 py-0.5 text-amber-700">{draftingBanks} drafting</span>
                   <span className="rounded bg-blue-100 px-1.5 py-0.5 text-blue-700">{moderationBanks + approvalBanks} wip</span>
@@ -168,7 +168,7 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
             <CardContent className="p-0">
               <div className="divide-y divide-[var(--border)]">
                 {subjects.length === 0 && (
-                  <div className="px-6 py-8 text-center text-sm text-[var(--muted-foreground)]">
+                  <div className="px-6 py-8 text-center text-sm text-[var(--text-tertiary)]">
                     No subjects linked to this exam cycle yet.
                   </div>
                 )}
@@ -178,12 +178,12 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
                   const statusColor = qb?.phase === "COMPLETE" ? "success" : qb?.phase === "MODERATION" || qb?.phase === "APPROVAL" ? "info" : qb?.phase === "DRAFTING" ? "warning" : "default";
 
                   return (
-                    <div key={subject.id} className="flex items-center gap-4 px-6 py-3 hover:bg-[var(--muted)] transition-colors">
+                    <div key={subject.id} className="flex items-center gap-4 px-6 py-3 hover:bg-[var(--surface-hover)] transition-colors">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <Badge className="shrink-0">{subject.subjectCode}</Badge>
                           <span className="font-medium text-sm truncate">{subject.subjectName}</span>
-                          <span className="text-xs text-[var(--muted-foreground)] shrink-0">{subject.credits} cr</span>
+                          <span className="text-xs text-[var(--text-tertiary)] shrink-0">{subject.credits} cr</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -193,7 +193,7 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
                             <Button variant="outline" size="sm">Open Bank</Button>
                           </Link>
                         ) : (
-                          <span className="text-xs text-[var(--muted-foreground)]">No bank</span>
+                          <span className="text-xs text-[var(--text-tertiary)]">No bank</span>
                         )}
                       </div>
                     </div>
@@ -212,7 +212,7 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
                 {(() => {
                   const stalled = allBanks.filter((qb) => qb.phase !== "COMPLETE" && qb.recordStatus !== "LOCKED");
                   if (stalled.length === 0) {
-                    return <p className="text-sm text-[var(--muted-foreground)]">All banks are on track.</p>;
+                    return <p className="text-sm text-[var(--text-tertiary)]">All banks are on track.</p>;
                   }
                   return (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -256,14 +256,14 @@ export default async function ExamWorkspacePage({ params }: { params: Promise<{ 
 
         <div className="space-y-6">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Academic Info</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Academic Info</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Programme</span><span className="font-medium text-right">{batch?.programme?.name ?? '-'}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Batch</span><span className="font-medium">{batch?.name}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span className="font-medium">{bs?.semesterNumber}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Academic Unit</span><span className="font-medium">{bs?.academicUnit?.name}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Academic Year</span><span className="font-medium">{bs?.academicYear?.code}</span></div>
-              <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Curriculum</span><span className="font-medium text-right">{batch?.curriculumScheme?.name}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Programme</span><span className="font-medium text-right">{batch?.programme?.name ?? '-'}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Batch</span><span className="font-medium">{batch?.name}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Semester</span><span className="font-medium">{bs?.semesterNumber}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Unit</span><span className="font-medium">{bs?.academicUnit?.name}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Year</span><span className="font-medium">{bs?.academicYear?.code}</span></div>
+              <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Curriculum</span><span className="font-medium text-right">{batch?.curriculumScheme?.name}</span></div>
             </CardContent>
           </Card>
 

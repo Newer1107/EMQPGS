@@ -54,7 +54,7 @@ export function OwnershipTransferForm({ questionId, users, currentOwnerId }: Own
       <Card>
         <CardHeader><CardTitle>Transfer Ownership</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-sm text-[var(--muted-foreground)]">No other users available for transfer.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">No other users available for transfer.</p>
         </CardContent>
       </Card>
     );

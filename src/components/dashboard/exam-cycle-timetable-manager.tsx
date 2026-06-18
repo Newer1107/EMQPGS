@@ -437,7 +437,7 @@ export function ExamCycleTimetableManager({
               </thead>
               <tbody>
                 {cycles.map((cycle) => (
-                  <tr key={cycle.id} className="border-b hover:bg-[var(--muted)]">
+                  <tr key={cycle.id} className="border-b hover:bg-[var(--surface-hover)]">
                     <td className="px-2 py-1">{cycle.academicYear.code}</td>
                     <td className="px-2 py-1">{cycle.semester.name}</td>
                     <td className="px-2 py-1">{cycle.examType}</td>

@@ -97,7 +97,7 @@ export function CoverageDashboardClient({
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Question Coverage Dashboard</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Analytics for approved questions across subject versions
           {coverage && <span> &middot; {coverage.approvedCount} approved / {coverage.totalCount} total</span>}
         </p>
@@ -161,14 +161,14 @@ export function CoverageDashboardClient({
         </CardContent>
       </Card>
 
-      {loading && <p className="text-center text-[var(--muted-foreground)] py-8">Loading coverage data...</p>}
+      {loading && <p className="text-center text-[var(--text-tertiary)] py-8">Loading coverage data...</p>}
 
       {!loading && !coverage && selectedSubjectVersion && (
-        <p className="text-center text-[var(--muted-foreground)] py-8">No coverage data available for this selection.</p>
+        <p className="text-center text-[var(--text-tertiary)] py-8">No coverage data available for this selection.</p>
       )}
 
       {!loading && !selectedSubjectVersion && (
-        <p className="text-center text-[var(--muted-foreground)] py-8">Select a subject version to view coverage analytics.</p>
+        <p className="text-center text-[var(--text-tertiary)] py-8">Select a subject version to view coverage analytics.</p>
       )}
 
       {coverage && !loading && (

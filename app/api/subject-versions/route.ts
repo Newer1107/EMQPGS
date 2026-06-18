@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { SubjectVersionService } from "@/modules/subject-versions/service";
 import { subjectVersionSchema } from "@/modules/subject-versions/validation";
 
@@ -16,7 +16,7 @@ export const GET = withApiHandler(async (request) => {
 
 export const POST = withApiHandler(
   async (request) => {
-    const payload = subjectVersionSchema.parse(await parseJson(request));
+    const payload = subjectVersionSchema.parse(await request.json());
     return service.create(payload);
   },
   { roles: [Role.COORDINATOR], audit: { action: "SUBJECT_VERSION_CREATED", entityType: "SUBJECT_VERSION", getEntityId: (result) => (result as { id?: string }).id } },

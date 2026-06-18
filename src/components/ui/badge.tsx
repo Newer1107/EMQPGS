@@ -6,11 +6,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-[var(--border)] bg-[var(--muted)] text-[var(--foreground)]",
-        success: "border-green-200 bg-green-50 text-green-700",
-        warning: "border-amber-200 bg-amber-50 text-amber-700",
-        danger: "border-red-200 bg-red-50 text-red-700",
-        info: "border-blue-200 bg-blue-50 text-blue-700",
+        default: "border-[var(--border)] bg-[var(--surface-hover)] text-[var(--text-primary)]",
+        success: "border-[var(--success-border)] bg-[var(--success-bg)] text-[var(--success)]",
+        warning: "border-[var(--warning-border)] bg-[var(--warning-bg)] text-[var(--warning)]",
+        danger: "border-[var(--danger-border)] bg-[var(--danger-bg)] text-[var(--danger)]",
+        info: "border-[var(--info-border)] bg-[var(--info-bg)] text-[var(--info)]",
       },
     },
     defaultVariants: {

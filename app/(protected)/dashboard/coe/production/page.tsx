@@ -57,7 +57,7 @@ export default async function CoeProductionPage() {
                             <p>KT: {review.ktPaper}</p>
                           </div>
                         ) : (
-                          <span className="text-sm text-[var(--muted-foreground)]">Pending dean review</span>
+                          <span className="text-sm text-[var(--text-tertiary)]">Pending dean review</span>
                         )}
                       </TD>
                     </TR>

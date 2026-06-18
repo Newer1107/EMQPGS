@@ -4,10 +4,10 @@ export function StatCard({ label, value }: { label: string; value: string | numb
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">{label}</CardTitle>
+        <CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">{value}</div>
+        <div className="text-2xl font-semibold">{value}</div>
       </CardContent>
     </Card>
   );

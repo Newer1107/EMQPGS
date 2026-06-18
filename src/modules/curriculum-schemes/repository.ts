@@ -1,16 +1,16 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { CurriculumSchemeInput, CurriculumSchemeUpdateInput } from "@/modules/curriculum-schemes/validation";
 
-export class CurriculumSchemeRepository extends BaseRepository {
+export class CurriculumSchemeRepository {
   list() {
-    return this.prisma.curriculumScheme.findMany({
+    return prisma.curriculumScheme.findMany({
       orderBy: [{ year: "desc" }, { name: "asc" }],
       include: { programme: { include: { homeAcademicUnit: true } } },
     });
   }
 
   findByProgramme(programmeId: string) {
-    return this.prisma.curriculumScheme.findMany({
+    return prisma.curriculumScheme.findMany({
       where: { programmeId },
       orderBy: { year: "desc" },
       include: { programme: true, _count: { select: { curriculumSubjects: true, batches: true } } },
@@ -18,7 +18,7 @@ export class CurriculumSchemeRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.curriculumScheme.findUnique({
+    return prisma.curriculumScheme.findUnique({
       where: { id },
       include: {
         programme: { include: { homeAcademicUnit: true } },
@@ -31,20 +31,20 @@ export class CurriculumSchemeRepository extends BaseRepository {
   }
 
   findActiveByProgramme(programmeId: string) {
-    return this.prisma.curriculumScheme.findFirst({
+    return prisma.curriculumScheme.findFirst({
       where: { programmeId, isActive: true },
     });
   }
 
   create(data: CurriculumSchemeInput) {
-    return this.prisma.curriculumScheme.create({
+    return prisma.curriculumScheme.create({
       data,
       include: { programme: true },
     });
   }
 
   deactivateAllForProgramme(programmeId: string, excludeId?: string) {
-    return this.prisma.curriculumScheme.updateMany({
+    return prisma.curriculumScheme.updateMany({
       where: {
         programmeId,
         isActive: true,
@@ -55,7 +55,7 @@ export class CurriculumSchemeRepository extends BaseRepository {
   }
 
   update(id: string, data: CurriculumSchemeUpdateInput) {
-    return this.prisma.curriculumScheme.update({
+    return prisma.curriculumScheme.update({
       where: { id },
       data,
       include: { programme: true },
@@ -64,13 +64,13 @@ export class CurriculumSchemeRepository extends BaseRepository {
 
   async hasReferencedData(id: string): Promise<boolean> {
     const [subjects, batches] = await Promise.all([
-      this.prisma.curriculumSubject.count({ where: { curriculumSchemeId: id } }),
-      this.prisma.batch.count({ where: { curriculumSchemeId: id } }),
+      prisma.curriculumSubject.count({ where: { curriculumSchemeId: id } }),
+      prisma.batch.count({ where: { curriculumSchemeId: id } }),
     ]);
     return subjects > 0 || batches > 0;
   }
 
   delete(id: string) {
-    return this.prisma.curriculumScheme.delete({ where: { id } });
+    return prisma.curriculumScheme.delete({ where: { id } });
   }
 }

@@ -52,7 +52,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Question Detail</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{question.subjectVersion.subject.subjectCode} · Module {question.moduleNumber} · {question.marks} marks</p>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">{question.subjectVersion.subject.subjectCode} · Module {question.moduleNumber} · {question.marks} marks</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -68,16 +68,16 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
             <CardHeader><CardTitle>Metadata</CardTitle></CardHeader>
             <CardContent>
               <dl className="grid grid-cols-2 gap-4 text-sm">
-                <div><dt className="text-[var(--muted-foreground)]">Subject</dt><dd className="font-medium">{question.subjectVersion.subject.subjectName}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Department</dt><dd>{question.subjectVersion.subject.department.name}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Module</dt><dd>{question.moduleNumber}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Marks</dt><dd>{question.marks}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Course Outcome</dt><dd>{question.coMapping}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">RBT Level</dt><dd>{question.rbtLevel}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Difficulty</dt><dd>{question.difficultyLevel ? difficultyLabels[question.difficultyLevel as keyof typeof difficultyLabels] : "Not set"}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Status</dt><dd><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Creator</dt><dd>{question.creator.name}</dd></div>
-                <div><dt className="text-[var(--muted-foreground)]">Owner</dt><dd>{question.owner.name}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Subject</dt><dd className="font-medium">{question.subjectVersion.subject.subjectName}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Department</dt><dd>{question.subjectVersion.subject.department.name}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Module</dt><dd>{question.moduleNumber}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Marks</dt><dd>{question.marks}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Course Outcome</dt><dd>{question.coMapping}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">RBT Level</dt><dd>{question.rbtLevel}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Difficulty</dt><dd>{question.difficultyLevel ? difficultyLabels[question.difficultyLevel as keyof typeof difficultyLabels] : "Not set"}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Status</dt><dd><Badge>{questionStatusLabels[question.status] ?? question.status}</Badge></dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Creator</dt><dd>{question.creator.name}</dd></div>
+                <div><dt className="text-[var(--text-tertiary)]">Owner</dt><dd>{question.owner.name}</dd></div>
               </dl>
             </CardContent>
           </Card>
@@ -102,7 +102,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
                     </TBody>
                   </Table>
                 ) : (
-                  <p className="text-sm text-[var(--muted-foreground)]">No ownership changes recorded</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">No ownership changes recorded</p>
                 )}
               </div>
 
@@ -122,7 +122,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
                     </TBody>
                   </Table>
                 ) : (
-                  <p className="text-sm text-[var(--muted-foreground)]">No revisions recorded</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">No revisions recorded</p>
                 )}
               </div>
 
@@ -138,7 +138,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-[var(--muted-foreground)]">Not yet used in any paper</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">Not yet used in any paper</p>
                 )}
               </div>
             </CardContent>

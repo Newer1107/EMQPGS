@@ -1,9 +1,9 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { ExamCycleInput } from "@/modules/exam-cycles/validation";
 
-export class ExamCycleRepository extends BaseRepository {
+export class ExamCycleRepository {
   list(take = 50, skip = 0) {
-    return this.prisma.examCycle.findMany({
+    return prisma.examCycle.findMany({
       take: Math.min(take, 500),
       skip,
       orderBy: { createdAt: "desc" },
@@ -20,7 +20,7 @@ export class ExamCycleRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.examCycle.findUnique({
+    return prisma.examCycle.findUnique({
       where: { id },
       include: {
         batchSemester: {
@@ -35,7 +35,7 @@ export class ExamCycleRepository extends BaseRepository {
   }
 
   findByBatch(batchId: string) {
-    return this.prisma.examCycle.findMany({
+    return prisma.examCycle.findMany({
       where: { batchSemester: { batchId } },
       orderBy: [{ batchSemester: { semesterNumber: "asc" } }, { examType: "asc" }],
       include: {
@@ -51,10 +51,10 @@ export class ExamCycleRepository extends BaseRepository {
   }
 
   create(data: ExamCycleInput) {
-    return this.prisma.examCycle.create({ data });
+    return prisma.examCycle.create({ data });
   }
 
   update(id: string, data: Partial<ExamCycleInput>) {
-    return this.prisma.examCycle.update({ where: { id }, data });
+    return prisma.examCycle.update({ where: { id }, data });
   }
 }

@@ -398,8 +398,8 @@ Invariant: Append-only. Records every time a question is included in a paper or 
 | semesterId | String | FK → Semester |
 | timetable* | various | Timetable data (JSON) |
 
-**Unique:** `@@unique([semesterId, examType, departmentId])`
-* Each department gets its own cycle per (semester, examType). e.g. "Semester V ENDSEM CSE" and "Semester V ENDSEM IT" can coexist.
+**Unique:** `@@unique([batchSemesterId, examType])`
+* Each batch semester gets its own cycle per examType.
 
 Invariant: Only ACTIVE cycles can have question bank initialization or locking.
 

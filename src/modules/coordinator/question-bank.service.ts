@@ -1,4 +1,5 @@
 import {
+  CoordinatorDecision,
   ExamCycleStatus,
   ExamType,
   QuestionBankPhase,
@@ -7,9 +8,13 @@ import {
   SubjectStatus,
 } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { AppError, NotFoundError } from "@/lib/errors";
+import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { logAudit } from "@/lib/audit";
+import { ENTITY_TYPES } from "@/lib/constants";
 import { withOptimisticLock, buildOptimisticUpdate, buildOptimisticWhere } from "@/lib/optimistic-lock";
 import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
+import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
+import { QuestionBankService } from "@/modules/question-banks/service";
 
 type BankFilters = {
   departmentId?: string;
@@ -20,6 +25,7 @@ type BankFilters = {
 export class QuestionBankWorkflowService {
   constructor(
     private readonly deptUtils = new DepartmentAccessUtils(),
+    private readonly questionBankService = new QuestionBankService(),
   ) {}
 
   async listQuestionBanks(actor: Actor, filters: BankFilters = {}, take = 50, skip = 0) {
@@ -187,6 +193,56 @@ export class QuestionBankWorkflowService {
         }),
       "Question bank",
     );
+  }
+
+  async advancePhase(actor: Actor, id: string, targetPhase: QuestionBankPhase) {
+    const bank = await prisma.questionBank.findUnique({
+      where: { id },
+      include: { subject: { select: { departmentId: true } } },
+    });
+    if (!bank) throw new NotFoundError("Question bank not found");
+    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    return this.questionBankService.advancePhase(id, targetPhase);
+  }
+
+  async coordinatorDecision(questionBankId: string, decision: CoordinatorDecision, remark: string | undefined, actor: Actor) {
+    if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can approve or reject reports");
+    const bank = await prisma.questionBank.findUnique({ where: { id: questionBankId } });
+    if (!bank) throw new NotFoundError("Question bank not found");
+    ensureQuestionBankMutable(bank.recordStatus);
+    if (bank.phase !== QuestionBankPhase.APPROVAL) {
+      throw new AppError("Coordinator decision can only be made when the bank is in APPROVAL phase.", 409);
+    }
+
+    const targetPhase =
+      decision === CoordinatorDecision.APPROVED
+        ? QuestionBankPhase.COMPLETE
+        : QuestionBankPhase.MODERATION;
+
+    const [approvalDecision] = await prisma.$transaction([
+      prisma.approvalDecision.create({
+        data: {
+          questionBankId,
+          decision,
+          remark: remark ?? null,
+          decidedById: actor.id,
+        },
+      }),
+      prisma.questionBank.update({
+        where: { id: questionBankId, version: bank.version },
+        data: { phase: targetPhase, version: { increment: 1 } },
+      }),
+    ]);
+
+    await logAudit({
+      actorId: actor.id,
+      action: decision === CoordinatorDecision.APPROVED ? "QUESTION_BANK_APPROVED" : "QUESTION_BANK_REJECTED",
+      entityType: ENTITY_TYPES.QUESTION_BANK,
+      entityId: questionBankId,
+      metadata: { remark, approvalDecisionId: approvalDecision.id },
+    });
+
+    return approvalDecision;
   }
 }
 

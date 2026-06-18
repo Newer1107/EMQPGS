@@ -1,17 +1,17 @@
 import {
   NotificationType,
   Prisma,
+  QuestionBankPhase,
   QuestionStatus,
   RecordStatus,
   Role,
-  type User,
 } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { NotificationService } from "@/modules/notifications/service";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 export class ModeratorService {
   constructor(
@@ -66,6 +66,13 @@ export class ModeratorService {
       include: { creator: true, subjectVersion: { include: { subject: true } } },
     });
     if (!question) throw new NotFoundError("Question not found");
+    const slotWithBank = await prisma.questionSlot.findFirst({
+      where: { assignedQuestionId: questionId },
+      include: { questionBank: { select: { phase: true } } },
+    });
+    if (slotWithBank && slotWithBank.questionBank.phase !== QuestionBankPhase.MODERATION) {
+      throw new AppError("Questions can only be moderated when the bank is in MODERATION phase.", 409);
+    }
     if (question.status !== QuestionStatus.PENDING && question.status !== QuestionStatus.REVISION_SUBMITTED) {
       throw new AppError("Question is not in an actionable moderation status.", 409);
     }

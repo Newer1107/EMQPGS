@@ -13,7 +13,7 @@ export default async function CreateSubjectPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Create Subject</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">Create a new subject and initialize its first version.</p>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Create a new subject and initialize its first version.</p>
       </div>
       <SubjectForm departments={departments} endpoint="/api/subjects" title="Create Subject" />
     </div>

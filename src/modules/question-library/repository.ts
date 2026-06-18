@@ -1,5 +1,5 @@
 import { QuestionStatus } from "@prisma/client";
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
 const listInclude = {
@@ -9,9 +9,9 @@ const listInclude = {
   slotAssignments: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
 } as const;
 
-export class QuestionLibraryRepository extends BaseRepository {
+export class QuestionLibraryRepository {
   findById(id: string) {
-    return this.prisma.questionLibraryItem.findUnique({
+    return prisma.questionLibraryItem.findUnique({
       where: { id },
       include: {
         ...listInclude,
@@ -25,7 +25,7 @@ export class QuestionLibraryRepository extends BaseRepository {
   }
 
   findBySubjectVersion(subjectVersionId: string) {
-    return this.prisma.questionLibraryItem.findMany({
+    return prisma.questionLibraryItem.findMany({
       where: { subjectVersionId },
       orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { createdAt: "desc" }],
       include: listInclude,
@@ -33,7 +33,7 @@ export class QuestionLibraryRepository extends BaseRepository {
   }
 
   findByBank(questionBankId: string) {
-    return this.prisma.questionLibraryItem.findMany({
+    return prisma.questionLibraryItem.findMany({
       where: { slotAssignments: { some: { questionBankId } } },
       orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { createdAt: "desc" }],
       include: listInclude,
@@ -41,7 +41,7 @@ export class QuestionLibraryRepository extends BaseRepository {
   }
 
   search(query: string, subjectVersionId?: string) {
-    return this.prisma.questionLibraryItem.findMany({
+    return prisma.questionLibraryItem.findMany({
       where: { questionText: { contains: query }, ...(subjectVersionId ? { subjectVersionId } : {}) },
       orderBy: { createdAt: "desc" },
       take: 50,
@@ -50,15 +50,15 @@ export class QuestionLibraryRepository extends BaseRepository {
   }
 
   create(data: QuestionLibraryItemInput & { createdById: string; ownerId: string }) {
-    return this.prisma.questionLibraryItem.create({ data, include: listInclude });
+    return prisma.questionLibraryItem.create({ data, include: listInclude });
   }
 
   update(id: string, data: Partial<QuestionLibraryItemInput>) {
-    return this.prisma.questionLibraryItem.update({ where: { id }, data, include: listInclude });
+    return prisma.questionLibraryItem.update({ where: { id }, data, include: listInclude });
   }
 
   updateStatus(id: string, status: QuestionStatus, submittedAt: Date) {
-    return this.prisma.questionLibraryItem.update({
+    return prisma.questionLibraryItem.update({
       where: { id },
       data: { status, submittedAt },
       include: listInclude,
@@ -66,7 +66,7 @@ export class QuestionLibraryRepository extends BaseRepository {
   }
 
   updateOwner(id: string, ownerId: string) {
-    return this.prisma.questionLibraryItem.update({
+    return prisma.questionLibraryItem.update({
       where: { id },
       data: { ownerId },
       include: listInclude,

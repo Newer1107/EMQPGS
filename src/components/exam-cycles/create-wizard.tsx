@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/client-fetch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -129,7 +130,7 @@ export function CreateExamCycleWizard() {
         subjectOverrides: visibleSubjects.map((s) => s.subjectId),
       };
 
-      const res = await fetch("/api/exam-cycles", {
+      const res = await apiFetch("/api/exam-cycles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -160,7 +161,7 @@ export function CreateExamCycleWizard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl font-semibold">Select Academic Context</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">
               Choose which batch and semester this exam cycle belongs to. The system will load the curriculum automatically.
             </p>
           </div>
@@ -169,9 +170,9 @@ export function CreateExamCycleWizard() {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Batch</label>
-                <p className="text-xs text-[var(--muted-foreground)] mb-2">Select the student batch for this examination.</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Select the student batch for this examination.</p>
                 <select
-                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--foreground)]"
+                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--accent)]"
                   value={selectedBatchId}
                   onChange={(e) => handleBatchChange(e.target.value)}
                 >
@@ -184,9 +185,9 @@ export function CreateExamCycleWizard() {
 
               <div>
                 <label className="text-sm font-medium">Semester</label>
-                <p className="text-xs text-[var(--muted-foreground)] mb-2">Which semester is being examined?</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">Which semester is being examined?</p>
                 <select
-                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--foreground)] disabled:opacity-50"
+                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--accent)] disabled:opacity-50"
                   value={selectedSemesterId}
                   onChange={(e) => handleSemesterChange(e.target.value)}
                   disabled={!selectedBatchId || loadingSemesters}
@@ -200,9 +201,9 @@ export function CreateExamCycleWizard() {
 
               <div>
                 <label className="text-sm font-medium">Exam Type</label>
-                <p className="text-xs text-[var(--muted-foreground)] mb-2">What type of examination is this?</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">What type of examination is this?</p>
                 <select
-                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--foreground)] disabled:opacity-50"
+                  className="flex h-10 w-full rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--accent)] disabled:opacity-50"
                   value={selectedExamType}
                   onChange={(e) => setSelectedExamType(e.target.value)}
                   disabled={!selectedSemesterId}
@@ -217,39 +218,39 @@ export function CreateExamCycleWizard() {
 
             {selectedBatch && selectedSemester && (
               <div className="space-y-3">
-                <p className="text-sm font-medium text-[var(--muted-foreground)]">Selection Summary</p>
+                <p className="text-sm font-medium text-[var(--text-tertiary)]">Selection Summary</p>
                 <Card>
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--muted-foreground)]">Programme</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Programme</span>
                       <span className="text-sm font-medium">{selectedBatch.programme?.name ?? '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--muted-foreground)]">Batch</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Batch</span>
                       <span className="text-sm font-medium">{selectedBatch.name}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--muted-foreground)]">Semester</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Semester</span>
                       <span className="text-sm font-medium">Semester {selectedSemester.semesterNumber}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--muted-foreground)]">Academic Unit</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Academic Unit</span>
                       <span className="text-sm font-medium">{selectedSemester.academicUnit?.name ?? '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--muted-foreground)]">Curriculum Scheme</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Curriculum Scheme</span>
                       <span className="text-sm font-medium">{selectedBatch.curriculumScheme?.name ?? '-'} ({selectedBatch.curriculumScheme?.year ?? '-'})</span>
                     </div>
                     {selectedExamType && (
                       <div className="flex justify-between items-center pt-2 border-t border-[var(--border)]">
-                        <span className="text-sm text-[var(--muted-foreground)]">Exam Type</span>
+                        <span className="text-sm text-[var(--text-tertiary)]">Exam Type</span>
                         <Badge variant="info">{examTypeLabels[selectedExamType as keyof typeof examTypeLabels] ?? selectedExamType}</Badge>
                       </div>
                     )}
                   </CardContent>
                 </Card>
 
-                <p className="text-xs text-[var(--muted-foreground)]">
+                <p className="text-xs text-[var(--text-tertiary)]">
                   The curriculum scheme shown is from the batch. Subjects will be loaded from this scheme for the selected semester and academic unit.
                 </p>
               </div>
@@ -269,7 +270,7 @@ export function CreateExamCycleWizard() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Review Subjects</h2>
-              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+              <p className="mt-1 text-sm text-[var(--text-tertiary)]">
                 These subjects from the curriculum will be included in this exam cycle. Remove any that should not appear.
               </p>
             </div>
@@ -291,13 +292,13 @@ export function CreateExamCycleWizard() {
               {loadingSubjects ? (
                 <div className="space-y-3 p-6">
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--muted)]" />
+                    <div key={i} className="h-16 animate-pulse rounded-lg bg-[var(--surface-hover)]" />
                   ))}
                 </div>
               ) : subjects.length === 0 ? (
                 <div className="p-6 text-center">
-                  <p className="text-sm text-[var(--muted-foreground)]">No subjects found for this semester in the curriculum.</p>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">Add subjects to the curriculum first, then create the exam cycle.</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">No subjects found for this semester in the curriculum.</p>
+                  <p className="text-xs text-[var(--text-tertiary)] mt-1">Add subjects to the curriculum first, then create the exam cycle.</p>
                 </div>
               ) : (
                 <div className="divide-y divide-[var(--border)]">
@@ -306,7 +307,7 @@ export function CreateExamCycleWizard() {
                     return (
                       <div
                         key={subject.subjectId}
-                        className={`flex items-center gap-4 px-6 py-3 transition-colors ${removed ? "opacity-40" : "hover:bg-[var(--muted)]"}`}
+                        className={`flex items-center gap-4 px-6 py-3 transition-colors ${removed ? "opacity-40" : "hover:bg-[var(--surface-hover)]"}`}
                       >
                         <button
                           type="button"
@@ -323,12 +324,12 @@ export function CreateExamCycleWizard() {
                         </button>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{subject.subjectName}</p>
-                          <p className="text-xs text-[var(--muted-foreground)]">
+                          <p className="text-xs text-[var(--text-tertiary)]">
                             {subject.subjectCode} · {subject.credits} credits · {subject.academicUnitName}
                             {subject.groupAssignment !== "ALL" && ` · ${subject.groupAssignment.replace("_", " ")}`}
                           </p>
                         </div>
-                        <span className={`text-xs ${removed ? "text-[var(--muted-foreground)]" : "text-green-600 font-medium"}`}>
+                        <span className={`text-xs ${removed ? "text-[var(--text-tertiary)]" : "text-green-600 font-medium"}`}>
                           {removed ? "Removed" : "Included"}
                         </span>
                       </div>
@@ -366,33 +367,33 @@ export function CreateExamCycleWizard() {
         <div className="space-y-6">
           <div>
             <h2 className="text-xl font-semibold">Review & Confirm</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">
               Verify all details before creating the exam cycle.
             </p>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Programme</span><span className="font-medium">{selectedBatch?.programme?.name ?? '-'}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Batch</span><span className="font-medium">{selectedBatch?.name}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span className="font-medium">Semester {selectedSemester?.semesterNumber}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Academic Unit</span><span className="font-medium">{selectedSemester?.academicUnit?.name}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Curriculum</span><span className="font-medium">{selectedBatch?.curriculumScheme?.name} ({selectedBatch?.curriculumScheme?.year})</span></div>
-                <div className="flex justify-between pt-2 border-t border-[var(--border)]"><span className="text-[var(--muted-foreground)]">Exam Type</span><Badge variant="info">{selectedExamType ? examTypeLabels[selectedExamType as keyof typeof examTypeLabels] ?? selectedExamType : '-'}</Badge></div>
-                <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><Badge variant="warning">Draft</Badge></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Programme</span><span className="font-medium">{selectedBatch?.programme?.name ?? '-'}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Batch</span><span className="font-medium">{selectedBatch?.name}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Semester</span><span className="font-medium">Semester {selectedSemester?.semesterNumber}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Unit</span><span className="font-medium">{selectedSemester?.academicUnit?.name}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Curriculum</span><span className="font-medium">{selectedBatch?.curriculumScheme?.name} ({selectedBatch?.curriculumScheme?.year})</span></div>
+                <div className="flex justify-between pt-2 border-t border-[var(--border)]"><span className="text-[var(--text-tertiary)]">Exam Type</span><Badge variant="info">{selectedExamType ? examTypeLabels[selectedExamType as keyof typeof examTypeLabels] ?? selectedExamType : '-'}</Badge></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><Badge variant="warning">Draft</Badge></div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Subjects ({visibleSubjects.length})</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Subjects ({visibleSubjects.length})</CardTitle></CardHeader>
               <CardContent>
                 <div className="max-h-60 space-y-1.5 overflow-y-auto">
                   {visibleSubjects.map((s) => (
-                    <div key={s.subjectId} className="flex items-center justify-between rounded-md bg-[var(--muted)] px-3 py-1.5 text-sm">
+                    <div key={s.subjectId} className="flex items-center justify-between rounded-md bg-[var(--surface-hover)] px-3 py-1.5 text-sm">
                       <span className="font-medium">{s.subjectCode}</span>
-                      <span className="text-xs text-[var(--muted-foreground)]">{s.subjectName}</span>
+                      <span className="text-xs text-[var(--text-tertiary)]">{s.subjectName}</span>
                     </div>
                   ))}
                 </div>

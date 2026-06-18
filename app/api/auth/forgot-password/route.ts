@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { addMinutes } from "date-fns";
@@ -8,7 +8,7 @@ import { addMinutes } from "date-fns";
 const forgotPasswordSchema = z.object({ email: z.email() });
 
 export const POST = withApiHandler(async (request) => {
-  const { email } = forgotPasswordSchema.parse(await parseJson(request));
+  const { email } = forgotPasswordSchema.parse(await request.json());
   const user = await prisma.user.findUnique({ where: { email } });
 
   if (user) {
@@ -22,10 +22,7 @@ export const POST = withApiHandler(async (request) => {
       },
     });
 
-    return {
-      message: "Password reset link generated",
-      ...(process.env.NODE_ENV !== "production" ? { debugToken: rawToken } : {}),
-    };
+    return { message: "Password reset link generated" };
   }
 
   return { message: "If the account exists, a reset link has been generated" };

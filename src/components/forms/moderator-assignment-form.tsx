@@ -108,7 +108,7 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
               </TBody>
             </Table>
           ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">No moderators assigned yet.</p>
+            <p className="text-sm text-[var(--text-tertiary)]">No moderators assigned yet.</p>
           )}
         </CardContent>
       </Card>

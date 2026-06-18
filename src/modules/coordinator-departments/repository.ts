@@ -1,8 +1,8 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 
-export class CoordinatorDepartmentAssignmentRepository extends BaseRepository {
+export class CoordinatorDepartmentAssignmentRepository {
   list() {
-    return this.prisma.coordinatorDepartmentAssignment.findMany({
+    return prisma.coordinatorDepartmentAssignment.findMany({
       include: {
         coordinator: { select: { id: true, name: true, email: true, role: true } },
         department: { select: { id: true, name: true, code: true } },
@@ -12,7 +12,7 @@ export class CoordinatorDepartmentAssignmentRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.coordinatorDepartmentAssignment.findUnique({
+    return prisma.coordinatorDepartmentAssignment.findUnique({
       where: { id },
       include: {
         coordinator: { select: { id: true, name: true, email: true, role: true } },
@@ -22,13 +22,13 @@ export class CoordinatorDepartmentAssignmentRepository extends BaseRepository {
   }
 
   findByCoordinatorAndDepartment(coordinatorId: string, departmentId: string) {
-    return this.prisma.coordinatorDepartmentAssignment.findUnique({
+    return prisma.coordinatorDepartmentAssignment.findUnique({
       where: { coordinatorId_departmentId: { coordinatorId, departmentId } },
     });
   }
 
   create(data: { coordinatorId: string; departmentId: string }) {
-    return this.prisma.coordinatorDepartmentAssignment.create({
+    return prisma.coordinatorDepartmentAssignment.create({
       data,
       include: {
         coordinator: { select: { id: true, name: true, email: true, role: true } },
@@ -38,6 +38,6 @@ export class CoordinatorDepartmentAssignmentRepository extends BaseRepository {
   }
 
   delete(id: string) {
-    return this.prisma.coordinatorDepartmentAssignment.delete({ where: { id } });
+    return prisma.coordinatorDepartmentAssignment.delete({ where: { id } });
   }
 }

@@ -11,8 +11,8 @@ export function PageHeader({ title, description, actions, className }: PageHeade
   return (
     <div className={cn("flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between", className)}>
       <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        {description && <p className="text-sm text-[var(--muted-foreground)]">{description}</p>}
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {description && <p className="text-sm text-[var(--text-tertiary)]">{description}</p>}
       </div>
       {actions && <div className="flex items-center gap-2">{actions}</div>}
     </div>

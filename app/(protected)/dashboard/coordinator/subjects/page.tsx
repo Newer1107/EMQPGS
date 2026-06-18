@@ -31,7 +31,7 @@ export default async function SubjectsManagementPage() {
                 <TD>{subject.department?.name ?? ''}</TD>
                 <TD className="font-medium">{subject.subjectCode}</TD>
                 <TD>
-                  <Link href={`/dashboard/coordinator/subjects/${subject.id}`} className="underline underline-offset-2 hover:text-[var(--muted-foreground)]">
+                  <Link href={`/dashboard/coordinator/subjects/${subject.id}`} className="underline underline-offset-2 hover:text-[var(--text-tertiary)]">
                     {subject.subjectName}
                   </Link>
                 </TD>

@@ -27,19 +27,19 @@ export default async function BatchesPage() {
 
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Batches</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Batches</p>
           <p className="mt-1 text-2xl font-bold">{batches.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
           <p className="mt-1 text-2xl font-bold text-green-600">{batches.filter((b) => b.status === "ACTIVE").length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Graduated</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Graduated</p>
           <p className="mt-1 text-2xl font-bold text-blue-600">{batches.filter((b) => b.status === "GRADUATED").length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Semesters</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Semesters</p>
           <p className="mt-1 text-2xl font-bold">{batches.reduce((sum, b) => sum + b._count.batchSemesters, 0)}</p>
         </div>
       </div>
@@ -85,8 +85,8 @@ export default async function BatchesPage() {
       </div>
 
       <div className="flex items-center gap-4 rounded-lg border bg-gray-50 p-4">
-        <span className="text-sm text-[var(--muted-foreground)]">Done setting up batches?</span>
-        <span className="text-sm text-[var(--muted-foreground)]">The next phase is creating exam cycles and question banks.</span>
+        <span className="text-sm text-[var(--text-tertiary)]">Done setting up batches?</span>
+        <span className="text-sm text-[var(--text-tertiary)]">The next phase is creating exam cycles and question banks.</span>
       </div>
     </div>
   );

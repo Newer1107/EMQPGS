@@ -1,7 +1,7 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
-import { AppError, ForbiddenError } from "@/lib/errors";
+
+import { AppError } from "@/lib/errors";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { z } from "zod";
 
@@ -29,13 +29,10 @@ export const GET = withApiHandler(async (request, context) => {
 
 export const POST = withApiHandler(
   async (request, context) => {
-    const payload = subjectCreateSchema.parse(await parseJson(request));
-    if (!context.user || (context.user.role !== Role.COORDINATOR && context.user.role !== Role.COE)) {
-      throw new ForbiddenError();
-    }
+    const payload = subjectCreateSchema.parse(await request.json());
 
     try {
-      return await service.createSubject(context.user, {
+      return await service.createSubject(context.user!, {
         subjectCode: payload.code,
         subjectName: payload.name,
         departmentId: payload.departmentId,

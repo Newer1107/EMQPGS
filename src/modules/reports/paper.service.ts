@@ -6,8 +6,8 @@ import {
   QuestionBankPhase,
   RecordStatus,
   type Prisma,
-  type User,
 } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { AppError, NotFoundError } from "@/lib/errors";
@@ -16,9 +16,8 @@ import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES } from "@/lib/constants";
 import { PaperGenerator } from "@/modules/reports/paper-generator";
 import { PdfService } from "@/modules/reports/pdf-service";
-import { QuestionUsageService } from "@/modules/question-library/service";
+import { recordUsage } from "@/modules/question-library/service";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 export class PaperGenerationService {
   constructor(
@@ -26,7 +25,6 @@ export class PaperGenerationService {
     private readonly notificationService = new NotificationService(),
     private readonly paperGenerator = new PaperGenerator(),
     private readonly pdfService = new PdfService(),
-    private readonly usageService = new QuestionUsageService(),
   ) {}
 
   async generatePapers(questionBankId: string, actor: Actor, variants: PaperVariant[]) {
@@ -111,7 +109,7 @@ export class PaperGenerationService {
 
       await Promise.all(
         payload.selectedQuestions.map((question) =>
-          this.usageService.recordUsage(question.id, questionBank.examCycle.id, "GENERATED_PAPER", record.id),
+          recordUsage(question.id, questionBank.examCycle.id, "GENERATED_PAPER", record.id),
         ),
       );
 

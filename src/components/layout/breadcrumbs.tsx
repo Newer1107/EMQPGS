@@ -55,7 +55,7 @@ export function Breadcrumbs() {
   });
 
   return (
-    <nav className="mb-6 flex items-center gap-1.5 text-sm text-[var(--muted-foreground)]">
+    <nav className="mb-6 flex items-center gap-1.5 text-sm text-[var(--text-tertiary)]">
       {crumbs.map((crumb, i) => (
         <span key={crumb.href} className="flex items-center gap-1.5">
           {i > 0 && (
@@ -64,9 +64,9 @@ export function Breadcrumbs() {
             </svg>
           )}
           {crumb.isLast ? (
-            <span className="font-medium text-[var(--foreground)]">{crumb.label}</span>
+            <span className="font-medium text-[var(--text-primary)]">{crumb.label}</span>
           ) : (
-            <Link href={crumb.href} className="rounded-sm hover:text-[var(--foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]">
+            <Link href={crumb.href} className="rounded-sm hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]">
               {crumb.label}
             </Link>
           )}

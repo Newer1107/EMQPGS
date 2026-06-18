@@ -40,15 +40,15 @@ export default async function CoordinatorAssignmentsPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Assignments</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Assignments</p>
           <p className="mt-1 text-2xl font-bold">{assignments.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Coordinators Available</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Coordinators Available</p>
           <p className="mt-1 text-2xl font-bold">{coordinators.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Departments Covered</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Departments Covered</p>
           <p className="mt-1 text-2xl font-bold">{departments.length}</p>
         </div>
       </div>

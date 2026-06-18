@@ -45,7 +45,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{subject.subjectName}</h1>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode}</p>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">{subject.subjectCode}</p>
         </div>
         <div className="flex gap-2">
           <Link href={`/dashboard/coordinator/subjects/${id}/edit`}>
@@ -71,10 +71,10 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
         <Card>
           <CardHeader><CardTitle>Subject Details</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Code</span><span>{subject.subjectCode}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Credits</span><span>{subject.credits}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><span>{subject.status}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Department</span><span>{subject.department?.name ?? '-'}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Code</span><span>{subject.subjectCode}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Credits</span><span>{subject.credits}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><span>{subject.status}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Department</span><span>{subject.department?.name ?? '-'}</span></div>
           </CardContent>
         </Card>
 
@@ -95,7 +95,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
                 </TR>
               ))}
               {subject.examCycleLinks?.length === 0 && (
-                <TR><TD colSpan={3} className="text-center text-sm text-[var(--muted-foreground)]">No exam cycles linked</TD></TR>
+                <TR><TD colSpan={3} className="text-center text-sm text-[var(--text-tertiary)]">No exam cycles linked</TD></TR>
               )}
             </TBody>
           </Table>

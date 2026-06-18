@@ -42,9 +42,9 @@ export function ConfirmDialog({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setOpen(false)}>
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold">{title}</h3>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">{message}</p>
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">{message}</p>
             <div className="mt-6 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+              <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>
                 {cancelLabel}
               </Button>
               <Button variant={variant === "danger" ? "danger" : "default"} onClick={handleConfirm} disabled={loading}>

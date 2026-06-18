@@ -23,7 +23,7 @@ export function WizardProgress({ currentStep }: { currentStep: number }) {
                     ? "bg-green-600 text-white"
                     : currentStep === step.number
                       ? "bg-[var(--foreground)] text-[var(--background)]"
-                      : "bg-[var(--muted)] text-[var(--muted-foreground)]"
+                      : "bg-[var(--surface-hover)] text-[var(--text-tertiary)]"
                 }`}
               >
                 {currentStep > step.number ? (
@@ -35,10 +35,10 @@ export function WizardProgress({ currentStep }: { currentStep: number }) {
                 )}
               </div>
               <div className="hidden sm:block">
-                <p className={`text-sm font-medium ${currentStep >= step.number ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
+                <p className={`text-sm font-medium ${currentStep >= step.number ? "text-[var(--text-primary)]" : "text-[var(--text-tertiary)]"}`}>
                   {step.label}
                 </p>
-                <p className="text-xs text-[var(--muted-foreground)]">{step.description}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{step.description}</p>
               </div>
             </div>
             {i < steps.length - 1 && (

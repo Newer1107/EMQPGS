@@ -25,9 +25,9 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
       />
       <div className="-mt-4 flex gap-1 border-b">
         <span className="border-b-2 border-black px-4 py-2 text-sm font-medium">Overview</span>
-        <Link href={`/dashboard/coe/batches/${id}/semesters`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Semesters</Link>
-        <Link href={`/dashboard/coe/batches/${id}/teaching-groups`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Teaching Groups</Link>
-        <Link href={`/dashboard/coe/batches/${id}/history`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">History</Link>
+        <Link href={`/dashboard/coe/batches/${id}/semesters`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Semesters</Link>
+        <Link href={`/dashboard/coe/batches/${id}/teaching-groups`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Teaching Groups</Link>
+        <Link href={`/dashboard/coe/batches/${id}/history`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">History</Link>
         <Badge variant={batch.status === "GRADUATED" ? "info" : "success"} className="self-center ml-2">
           {batch.status === "GRADUATED" ? "Graduated" : "Active"}
         </Badge>
@@ -35,27 +35,27 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Programme</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Programme</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.programme?.name ?? '-'}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Curriculum Scheme</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Curriculum Scheme</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.curriculumScheme?.name} ({batch.curriculumScheme?.year})</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Current Semester</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Current Semester</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.currentSemesterNumber ? `Semester ${batch.currentSemesterNumber}` : 'Not started'}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Current Academic Unit</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Current Academic Unit</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.currentSemesterNumber && batch.currentSemesterNumber <= 2 ? batch.programme?.firstYearAcademicUnitId : batch.programme?.homeAcademicUnit?.name ?? '-'}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Admission Year</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Admission Year</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.admissionYear}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)]">Graduation Year</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Graduation Year</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.graduationYear}</p></CardContent>
         </Card>
       </div>

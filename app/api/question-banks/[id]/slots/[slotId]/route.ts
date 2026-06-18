@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { QuestionSlotService } from "@/modules/question-slots/service";
 import { assignToSlotSchema } from "@/modules/question-slots/validation";
 
@@ -10,7 +10,7 @@ export const PATCH = withApiHandler(
   async (request, context) => {
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
-    const payload = assignToSlotSchema.parse(await parseJson(request));
+    const payload = assignToSlotSchema.parse(await request.json());
     return service.assignToSlot(slotId, payload.questionId, context.user!);
   },
   {

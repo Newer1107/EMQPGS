@@ -51,7 +51,7 @@ export function LinkCycleForm({ subjectId, examCycles, existingLinks }: LinkCycl
       <Card>
         <CardHeader><CardTitle>Link to Exam Cycle</CardTitle></CardHeader>
         <CardContent>
-          <p className="text-sm text-[var(--muted-foreground)]">No unlinked exam cycles available.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">No unlinked exam cycles available.</p>
         </CardContent>
       </Card>
     );

@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ const subjectUpdateSchema = z.object({
 export const PUT = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
-    const payload = subjectUpdateSchema.parse(await parseJson(request));
+    const payload = subjectUpdateSchema.parse(await request.json());
     return service.updateSubject(context.user!, id, {
       ...(payload.name !== undefined ? { subjectName: payload.name } : {}),
       ...(payload.code !== undefined ? { subjectCode: payload.code } : {}),

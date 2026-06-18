@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ProgrammeService } from "@/modules/programmes/service";
 import { programmeSchema, programmeUpdateSchema } from "@/modules/programmes/validation";
 
@@ -17,7 +17,7 @@ export const GET = withApiHandler(
 export const PATCH = withApiHandler(
   async (request) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
-    const payload = programmeUpdateSchema.parse(await parseJson(request));
+    const payload = programmeUpdateSchema.parse(await request.json());
     return service.update(id, payload);
   },
   { roles: [Role.COE], audit: { action: "PROGRAMME_UPDATED", entityType: "PROGRAMME", getEntityId: (r) => (r as { id?: string }).id } },

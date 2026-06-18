@@ -119,7 +119,7 @@ function AdvanceSection({
 
   if (state.loading) {
     return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--muted)] p-3 text-sm text-[var(--muted-foreground)]">
+      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-hover)] p-3 text-sm text-[var(--text-tertiary)]">
         Checking readiness for {nextLabel}...
       </div>
     );

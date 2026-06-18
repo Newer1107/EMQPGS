@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
               {loading ? "Resetting..." : "Reset password"}
             </Button>
             <div className="text-center">
-              <Link href="/login" className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:underline">
+              <Link href="/login" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:underline">
                 Back to sign in
               </Link>
             </div>

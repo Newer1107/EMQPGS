@@ -27,19 +27,19 @@ export default async function UsersManagementPage() {
 
       <div className="grid gap-4 sm:grid-cols-4">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Users</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Users</p>
           <p className="mt-1 text-2xl font-bold">{users.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
           <p className="mt-1 text-2xl font-bold text-green-600">{activeUsers}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Disabled</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Disabled</p>
           <p className="mt-1 text-2xl font-bold text-red-600">{disabledUsers}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Departments</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Departments</p>
           <p className="mt-1 text-2xl font-bold">{departments.length}</p>
         </div>
       </div>

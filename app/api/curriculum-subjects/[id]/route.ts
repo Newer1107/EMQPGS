@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { CurriculumSubjectService } from "@/modules/curriculum-subjects/service";
 import { curriculumSubjectUpdateSchema } from "@/modules/curriculum-subjects/validation";
 
@@ -17,7 +17,7 @@ export const GET = withApiHandler(
 export const PATCH = withApiHandler(
   async (request) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
-    const payload = curriculumSubjectUpdateSchema.parse(await parseJson(request));
+    const payload = curriculumSubjectUpdateSchema.parse(await request.json());
     return service.update(id, payload);
   },
   { roles: [Role.COE], audit: { action: "CURRICULUM_SUBJECT_UPDATED", entityType: "CURRICULUM_SUBJECT", getEntityId: (r) => (r as { id?: string }).id } },

@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { BackupStatus, ExportArtifactStatus, type Prisma, type User } from "@prisma/client";
+import { BackupStatus, ExportArtifactStatus, type Prisma } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { env } from "@/lib/env";
 import { StorageService } from "@/lib/storage/storage-service";
@@ -8,7 +9,6 @@ import { ENTITY_TYPES } from "@/lib/constants";
 
 const execFileAsync = promisify(execFile);
 
-type Actor = Pick<User, "id" | "role" | "email" | "name" | "departmentId">;
 
 export class BackupService {
   constructor(

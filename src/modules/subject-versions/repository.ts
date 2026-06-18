@@ -1,9 +1,9 @@
 import { SubjectVersionStatus } from "@prisma/client";
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 
-export class SubjectVersionRepository extends BaseRepository {
+export class SubjectVersionRepository {
   findBySubject(subjectId: string) {
-    return this.prisma.subjectVersion.findMany({
+    return prisma.subjectVersion.findMany({
       where: { subjectId },
       orderBy: { versionNumber: "desc" },
       include: { effectiveFromAcademicYear: true, subject: true },
@@ -11,14 +11,14 @@ export class SubjectVersionRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.subjectVersion.findUnique({
+    return prisma.subjectVersion.findUnique({
       where: { id },
       include: { effectiveFromAcademicYear: true, subject: true },
     });
   }
 
   findActiveBySubject(subjectId: string) {
-    return this.prisma.subjectVersion.findFirst({
+    return prisma.subjectVersion.findFirst({
       where: { subjectId, status: SubjectVersionStatus.ACTIVE },
       include: { effectiveFromAcademicYear: true, subject: true },
     });
@@ -32,7 +32,7 @@ export class SubjectVersionRepository extends BaseRepository {
     effectiveFromAcademicYearId: string;
     status?: SubjectVersionStatus;
   }) {
-    return this.prisma.subjectVersion.create({
+    return prisma.subjectVersion.create({
       data,
       include: { effectiveFromAcademicYear: true, subject: true },
     });
@@ -44,7 +44,7 @@ export class SubjectVersionRepository extends BaseRepository {
     effectiveFromAcademicYearId: string;
     status: SubjectVersionStatus;
   }>) {
-    return this.prisma.subjectVersion.update({
+    return prisma.subjectVersion.update({
       where: { id },
       data,
       include: { effectiveFromAcademicYear: true, subject: true },

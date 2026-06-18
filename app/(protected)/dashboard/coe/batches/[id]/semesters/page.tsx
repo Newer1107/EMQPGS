@@ -26,27 +26,27 @@ export default async function BatchSemestersPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-        <Link href="/dashboard/coe/batches" className="hover:text-[var(--foreground)] transition-colors">Batches</Link>
+      <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+        <Link href="/dashboard/coe/batches" className="hover:text-[var(--text-primary)] transition-colors">Batches</Link>
         <span>/</span>
-        <Link href={`/dashboard/coe/batches/${id}`} className="hover:text-[var(--foreground)] transition-colors">{batch.name}</Link>
+        <Link href={`/dashboard/coe/batches/${id}`} className="hover:text-[var(--text-primary)] transition-colors">{batch.name}</Link>
         <span>/</span>
-        <span className="font-medium text-[var(--foreground)]">Semesters</span>
+        <span className="font-medium text-[var(--text-primary)]">Semesters</span>
       </div>
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Semesters — {batch.name}</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)] max-w-2xl">
+        <p className="mt-1 text-sm text-[var(--text-tertiary)] max-w-2xl">
           A semester is one teaching period for this batch. Configure start and end dates, activate when teaching begins,
           and mark complete when it ends.
         </p>
       </div>
 
       <div className="flex gap-1 border-b">
-        <Link href={`/dashboard/coe/batches/${id}`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Overview</Link>
+        <Link href={`/dashboard/coe/batches/${id}`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Overview</Link>
         <Link href={`/dashboard/coe/batches/${id}/semesters`} className="border-b-2 border-black px-4 py-2 text-sm font-medium">Semesters</Link>
-        <Link href={`/dashboard/coe/batches/${id}/teaching-groups`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">Teaching Groups</Link>
-        <Link href={`/dashboard/coe/batches/${id}/history`} className="px-4 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]">History</Link>
+        <Link href={`/dashboard/coe/batches/${id}/teaching-groups`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Teaching Groups</Link>
+        <Link href={`/dashboard/coe/batches/${id}/history`} className="px-4 py-2 text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">History</Link>
         <Badge variant={batch.status === "GRADUATED" ? "info" : "success"} className="ml-auto self-center">
           {batch.status === "GRADUATED" ? "Graduated" : "Active"}
         </Badge>
@@ -55,8 +55,8 @@ export default async function BatchSemestersPage({ params }: { params: Promise<{
       <div className="space-y-3">
         {semesters.length === 0 && (
           <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
-            <p className="text-sm font-medium text-[var(--foreground)]">No semesters configured yet</p>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">Semesters are created automatically when this batch activates. Activate the batch from the overview page to generate all semesters at once.</p>
+            <p className="text-sm font-medium text-[var(--text-primary)]">No semesters configured yet</p>
+            <p className="mt-1 text-sm text-[var(--text-tertiary)]">Semesters are created automatically when this batch activates. Activate the batch from the overview page to generate all semesters at once.</p>
           </div>
         )}
         {semesters.map((sem) => {
@@ -67,7 +67,7 @@ export default async function BatchSemestersPage({ params }: { params: Promise<{
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold">Semester {sem.semesterNumber}</h3>
-                  <div className="mt-1 space-y-0.5 text-sm text-[var(--muted-foreground)]">
+                  <div className="mt-1 space-y-0.5 text-sm text-[var(--text-tertiary)]">
                     <p>Academic Year: {sem.academicYear?.code ?? '-'}</p>
                     <p>Academic Unit: {sem.academicUnit?.name ?? '-'}</p>
                     <p>Start: {sem.startDate ? new Date(sem.startDate).toLocaleDateString() : 'Not set'}</p>

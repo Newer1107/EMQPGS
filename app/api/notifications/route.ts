@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { NotificationService } from "@/modules/notifications/service";
 import { z } from "zod";
 
@@ -19,7 +19,7 @@ export const GET = withApiHandler(async (_request, context) => {
 }, { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] });
 
 export const PATCH = withApiHandler(async (request, context) => {
-  const payload = markReadSchema.parse(await parseJson(request));
+    const payload = markReadSchema.parse(await request.json());
   if ("markAll" in payload) {
     return service.markAllAsRead(context.user!.id);
   }

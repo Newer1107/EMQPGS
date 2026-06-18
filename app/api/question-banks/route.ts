@@ -1,6 +1,7 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
+
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { z } from "zod";
 
@@ -25,7 +26,7 @@ export const GET = withApiHandler(async (request, context) => {
 
 export const POST = withApiHandler(
   async (request, context) => {
-    const payload = questionBankCreateSchema.parse(await parseJson(request));
+    const payload = questionBankCreateSchema.parse(await request.json());
     return service.initializeQuestionBank(context.user!, payload.subjectId, payload.examCycleId);
   },
   { roles: [Role.COORDINATOR], successStatus: 201, audit: { action: "QUESTION_BANK_CREATED", entityType: "QUESTION_BANK", getEntityId: (result) => (result as { id?: string }).id } },

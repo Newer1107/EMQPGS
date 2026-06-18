@@ -49,7 +49,7 @@ export function AcademicYearForm() {
           <div className="space-y-2">
             <Label htmlFor="code">Academic Year Code</Label>
             <Input id="code" value={values.code} onChange={(e) => setValues((v) => ({ ...v, code: e.target.value }))} required placeholder="e.g. 2025-2026" pattern="\d{4}-\d{4}" />
-            <p className="text-xs text-[var(--muted-foreground)]">Format: YYYY-YYYY (e.g. 2025-2026)</p>
+            <p className="text-xs text-[var(--text-tertiary)]">Format: YYYY-YYYY (e.g. 2025-2026)</p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

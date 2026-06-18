@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ReportingCoordinatorService } from "@/modules/coordinator/reporting-coordinator.service";
 import { DeanReviewService } from "@/modules/production/dean-review.service";
 import { deanReviewSchema } from "@/modules/production/validation";
@@ -22,7 +22,7 @@ export const GET = withApiHandler(
 export const POST = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    const payload = deanReviewSchema.parse(await parseJson(request));
+    const payload = deanReviewSchema.parse(await request.json());
     return service.submitDeanReview(questionBankId, payload, context.user!);
   },
   { roles: [Role.DEAN], successStatus: 201 },

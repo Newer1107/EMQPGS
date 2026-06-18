@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { ModeratorAssignmentService } from "@/modules/moderator-assignments/service";
 import { assignmentSchema } from "@/modules/moderator-assignments/validation";
 
@@ -9,7 +9,7 @@ const service = new ModeratorAssignmentService();
 export const POST = withApiHandler(
   async (request) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
-    const payload = assignmentSchema.parse(await parseJson(request));
+    const payload = assignmentSchema.parse(await request.json());
     return service.assignModerator(questionBankId, payload);
   },
   {

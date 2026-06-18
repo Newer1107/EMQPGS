@@ -31,7 +31,7 @@ export function WorkflowTimeline({ phase, recordStatus }: WorkflowTimelineProps)
             const isCurrent = index === currentIndex;
             const isNext = index === currentIndex + 1;
 
-            let stateClass = "border-[var(--border)] text-[var(--muted-foreground)]";
+            let stateClass = "border-[var(--border)] text-[var(--text-tertiary)]";
             let indicator = "○";
             if (isCompleted) { stateClass = "border-green-500 text-green-700"; indicator = "●"; }
             if (isCurrent) { stateClass = "border-blue-500 text-blue-700 bg-blue-50"; indicator = "◆"; }

@@ -17,7 +17,7 @@ export default async function DeanReviewWorkspacePage({
           description="Select a question bank to review from the dean dashboard to see paper variants here."
         />
         <div className="rounded-xl border border-[var(--border)] p-8 text-center">
-          <p className="text-[var(--muted-foreground)]">No question bank selected. Go to your <Link href="/dashboard/dean" className="underline underline-offset-4">Dean Dashboard</Link> to find banks awaiting review.</p>
+          <p className="text-[var(--text-tertiary)]">No question bank selected. Go to your <Link href="/dashboard/dean" className="underline underline-offset-4">Dean Dashboard</Link> to find banks awaiting review.</p>
         </div>
       </div>
     );

@@ -1,16 +1,16 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { BatchSemesterUpdateInput } from "@/modules/batch-semesters/validation";
 
-export class BatchSemesterRepository extends BaseRepository {
+export class BatchSemesterRepository {
   findById(id: string) {
-    return this.prisma.batchSemester.findUnique({
+    return prisma.batchSemester.findUnique({
       where: { id },
       include: { batch: true, academicYear: true, academicUnit: true },
     });
   }
 
   findByBatch(batchId: string) {
-    return this.prisma.batchSemester.findMany({
+    return prisma.batchSemester.findMany({
       where: { batchId },
       orderBy: { semesterNumber: "asc" },
       include: { academicYear: true, academicUnit: true },
@@ -18,14 +18,14 @@ export class BatchSemesterRepository extends BaseRepository {
   }
 
   findByBatchAndNumber(batchId: string, semesterNumber: number) {
-    return this.prisma.batchSemester.findUnique({
+    return prisma.batchSemester.findUnique({
       where: { batchId_semesterNumber: { batchId, semesterNumber } },
       include: { batch: true, academicYear: true, academicUnit: true },
     });
   }
 
   findActiveByAcademicUnit(academicUnitId: string) {
-    return this.prisma.batchSemester.findMany({
+    return prisma.batchSemester.findMany({
       where: { academicUnitId, status: "ACTIVE" },
       include: { batch: { include: { programme: true } } },
       orderBy: [{ semesterNumber: "asc" }],
@@ -33,7 +33,7 @@ export class BatchSemesterRepository extends BaseRepository {
   }
 
   findFirst(batchId: string) {
-    return this.prisma.batchSemester.findFirst({
+    return prisma.batchSemester.findFirst({
       where: { batchId },
       orderBy: { semesterNumber: "asc" },
       include: { batch: true, academicYear: true, academicUnit: true },
@@ -41,7 +41,7 @@ export class BatchSemesterRepository extends BaseRepository {
   }
 
   findLast(batchId: string) {
-    return this.prisma.batchSemester.findFirst({
+    return prisma.batchSemester.findFirst({
       where: { batchId },
       orderBy: { semesterNumber: "desc" },
       include: { batch: true, academicYear: true, academicUnit: true },
@@ -49,7 +49,7 @@ export class BatchSemesterRepository extends BaseRepository {
   }
 
   update(id: string, data: BatchSemesterUpdateInput) {
-    return this.prisma.batchSemester.update({
+    return prisma.batchSemester.update({
       where: { id },
       data,
       include: { batch: true, academicYear: true, academicUnit: true },

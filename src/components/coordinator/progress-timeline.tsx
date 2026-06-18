@@ -30,7 +30,7 @@ export function ProgressTimeline({ banks }: { banks: { phase: string }[] }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Timeline</h3>
+      <h3 className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Timeline</h3>
       <div className="space-y-0">
         {stages.map((stage, i) => {
           const isPast = i < currentStage;
@@ -59,7 +59,7 @@ export function ProgressTimeline({ banks }: { banks: { phase: string }[] }) {
                   <div className={`h-6 w-px ${isPast ? "bg-green-500" : "bg-[var(--border)]"}`} />
                 )}
               </div>
-              <div className={`pb-6 text-sm ${isPast ? "text-[var(--muted-foreground)]" : isCurrent ? "font-medium text-[var(--foreground)]" : "text-[var(--muted-foreground)] opacity-50"}`}>
+              <div className={`pb-6 text-sm ${isPast ? "text-[var(--text-tertiary)]" : isCurrent ? "font-medium text-[var(--text-primary)]" : "text-[var(--text-tertiary)] opacity-50"}`}>
                 {stage.label}
               </div>
             </div>

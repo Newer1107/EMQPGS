@@ -56,7 +56,7 @@ export function NextStepGuidance({ phase, recordStatus, context }: NextStepGuida
     return (
       <Card>
         <CardContent className="p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">Bank is locked. Proceed to dean review and export.</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Bank is locked. Proceed to dean review and export.</p>
         </CardContent>
       </Card>
     );
@@ -67,7 +67,7 @@ export function NextStepGuidance({ phase, recordStatus, context }: NextStepGuida
   return (
     <Card>
       <CardContent className="p-4 space-y-3">
-        <p className="text-sm font-medium text-[var(--foreground)]">Next Steps</p>
+        <p className="text-sm font-medium text-[var(--text-primary)]">Next Steps</p>
         {steps.map((step) => (
           <div key={step.label} className="text-sm">
             {step.href ? (
@@ -77,7 +77,7 @@ export function NextStepGuidance({ phase, recordStatus, context }: NextStepGuida
             ) : (
               <span className="font-medium">{step.label}</span>
             )}
-            <p className="text-[var(--muted-foreground)] mt-0.5">{step.description}</p>
+            <p className="text-[var(--text-tertiary)] mt-0.5">{step.description}</p>
           </div>
         ))}
       </CardContent>

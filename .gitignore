@@ -50,3 +50,5 @@ next-env.d.ts
 .opencode
 opencode.json
 
+.omo
+.commandcode

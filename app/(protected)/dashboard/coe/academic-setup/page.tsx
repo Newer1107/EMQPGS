@@ -43,7 +43,7 @@ export default async function AcademicSetupPage() {
               <CardDescription>{unitCount} unit{unitCount !== 1 ? 's' : ''}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-[var(--muted-foreground)]">{unitCount > 0 ? 'ES&H, departments, and more' : 'Not yet configured'}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">{unitCount > 0 ? 'ES&H, departments, and more' : 'Not yet configured'}</p>
             </CardContent>
           </Card>
         </Link>
@@ -55,7 +55,7 @@ export default async function AcademicSetupPage() {
               <CardDescription>{programmeCount} programme{programmeCount !== 1 ? 's' : ''}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-[var(--muted-foreground)]">{programmeCount > 0 ? 'BE, BTech, and more' : 'Not yet configured'}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">{programmeCount > 0 ? 'BE, BTech, and more' : 'Not yet configured'}</p>
             </CardContent>
           </Card>
         </Link>
@@ -67,7 +67,7 @@ export default async function AcademicSetupPage() {
               <CardDescription>{schemeCount > 0 ? `${schemeCount} scheme${schemeCount !== 1 ? 's' : ''}` : 'Not yet configured'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-[var(--muted-foreground)]">{subjectCount > 0 ? `${subjectCount} subject${subjectCount !== 1 ? 's' : ''} placed` : 'No subjects placed yet'}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">{subjectCount > 0 ? `${subjectCount} subject${subjectCount !== 1 ? 's' : ''} placed` : 'No subjects placed yet'}</p>
             </CardContent>
           </Card>
         </Link>
@@ -79,7 +79,7 @@ export default async function AcademicSetupPage() {
               <CardDescription>{batchCount > 0 ? `${activeBatchCount} active` : 'None yet'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-[var(--muted-foreground)]">{batchCount > 0 ? `${batchCount} total batche${batchCount !== 1 ? 's' : ''}` : 'Not yet configured'}</p>
+              <p className="text-sm text-[var(--text-tertiary)]">{batchCount > 0 ? `${batchCount} total batche${batchCount !== 1 ? 's' : ''}` : 'Not yet configured'}</p>
             </CardContent>
           </Card>
         </Link>
@@ -100,9 +100,9 @@ export default async function AcademicSetupPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium">{step.label}</span>
-                    <span className="text-xs text-[var(--muted-foreground)]">{step.count}</span>
+                    <span className="text-xs text-[var(--text-tertiary)]">{step.count}</span>
                   </div>
-                  <p className="text-sm text-[var(--muted-foreground)]">{step.desc}</p>
+                  <p className="text-sm text-[var(--text-tertiary)]">{step.desc}</p>
                 </div>
                 <Badge variant={step.done ? "success" : "default"}>
                   {step.done ? 'Done' : 'Start'}

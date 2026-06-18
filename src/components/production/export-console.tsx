@@ -108,7 +108,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
               <Textarea id="instructions" name="instructions" defaultValue={"Answer all questions.\nDraw neat diagrams wherever necessary.\nAssume suitable data if required."} />
             </div>
             <div className="xl:col-span-3 flex items-center justify-between gap-3">
-              <p className="text-sm italic text-[var(--muted-foreground)]">{message}</p>
+              <p className="text-sm italic text-[var(--text-tertiary)]">{message}</p>
               <Button type="submit" disabled={busy}>Generate Export</Button>
             </div>
           </form>
@@ -146,7 +146,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
                           {artifact.format === "PDF" ? <Button size="sm" variant="outline" type="button" onClick={() => downloadExport(artifact.id)}>Print</Button> : null}
                         </div>
                       ) : (
-                        <span className="text-xs text-[var(--muted-foreground)]">Pending</span>
+                        <span className="text-xs text-[var(--text-tertiary)]">Pending</span>
                       )}
                     </TD>
                   </TR>

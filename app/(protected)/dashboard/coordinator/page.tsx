@@ -25,7 +25,7 @@ function AttentionCard({ item }: { item: AttentionItem }) {
         <span className="font-medium">{item.subjectCode}</span>
         <span className={`text-xs font-medium uppercase tracking-wider ${info.color}`}>{info.label}</span>
       </div>
-      <p className="mt-1 text-[var(--foreground)]">{item.subject}</p>
+      <p className="mt-1 text-[var(--text-primary)]">{item.subject}</p>
       <p className="mt-0.5 text-xs opacity-75">{item.detail}</p>
     </Link>
   );
@@ -36,7 +36,7 @@ function PhaseStatCard({ count, label, color }: { count: number; label: string; 
     <Card>
       <CardContent className="p-4 text-center">
         <p className={`text-2xl font-bold ${color}`}>{count}</p>
-        <p className="text-xs text-[var(--muted-foreground)] mt-1">{label}</p>
+        <p className="text-xs text-[var(--text-tertiary)] mt-1">{label}</p>
       </CardContent>
     </Card>
   );
@@ -46,7 +46,7 @@ function BankRow({ bank }: { bank: BankStatusItem }) {
   const fillColor = bank.fillPercentage >= 100 ? "text-green-600" : bank.fillPercentage >= 50 ? "text-amber-600" : "text-red-600";
 
   return (
-    <TR className="cursor-pointer hover:bg-[var(--muted)]">
+    <TR className="cursor-pointer hover:bg-[var(--surface-hover)]">
       <TD className="font-medium">
         <Link href={`/dashboard/coordinator/question-banks/${bank.id}`} className="hover:underline">
           {bank.subjectCode}
@@ -58,7 +58,7 @@ function BankRow({ bank }: { bank: BankStatusItem }) {
       </TD>
       <TD className={fillColor}>
         {bank.fillPercentage}%
-        <span className="text-xs text-[var(--muted-foreground)] ml-1">({bank.filledCount}/{bank.totalSlots})</span>
+        <span className="text-xs text-[var(--text-tertiary)] ml-1">({bank.filledCount}/{bank.totalSlots})</span>
       </TD>
       <TD>{bank.approvedPercentage}%</TD>
       <TD>
@@ -67,7 +67,7 @@ function BankRow({ bank }: { bank: BankStatusItem }) {
             {bank.daysInPhase}d
           </span>
         ) : (
-          <span className="text-[var(--muted-foreground)]">&lt;1d</span>
+          <span className="text-[var(--text-tertiary)]">&lt;1d</span>
         )}
       </TD>
       <TD>
@@ -76,7 +76,7 @@ function BankRow({ bank }: { bank: BankStatusItem }) {
         </Badge>
       </TD>
       <TD className="text-sm">
-        <span className="text-[var(--muted-foreground)]">{bank.nextAction}</span>
+        <span className="text-[var(--text-tertiary)]">{bank.nextAction}</span>
       </TD>
     </TR>
   );
@@ -102,23 +102,23 @@ export default async function CoordinatorDashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active Banks</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active Banks</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold">{totalBanks}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">In Drafting</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">In Drafting</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-amber-600">{data.phaseDistribution.drafting}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">In Moderation</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">In Moderation</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-blue-600">{data.phaseDistribution.moderation}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">In Approval</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">In Approval</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-indigo-600">{data.phaseDistribution.approval}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Completed</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Completed</CardTitle></CardHeader>
           <CardContent><p className="text-2xl font-bold text-green-600">{data.phaseDistribution.complete}</p></CardContent>
         </Card>
       </div>
@@ -140,7 +140,7 @@ export default async function CoordinatorDashboardPage() {
                     <span className="font-medium">{bank.subjectCode}</span>
                     <span className="text-xs text-red-600 font-medium">{bank.daysInPhase}d stalled</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-[var(--muted-foreground)]">{bank.subjectName} · {bank.phase}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{bank.subjectName} · {bank.phase}</p>
                 </Link>
               ))}
             </div>
@@ -164,10 +164,10 @@ export default async function CoordinatorDashboardPage() {
                 <Link
                   key={cycle.id}
                   href={`/dashboard/coordinator/exam-workspace/${cycle.id}`}
-                  className="rounded-lg border border-[var(--border)] p-4 hover:bg-[var(--muted)] transition-colors"
+                  className="rounded-lg border border-[var(--border)] p-4 hover:bg-[var(--surface-hover)] transition-colors"
                 >
                   <p className="font-medium text-sm">{cycle.name}</p>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                  <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
                     <Badge variant="success">Active</Badge>
                     <span>{cycle.initializedBanks} banks</span>
                   </div>
@@ -230,7 +230,7 @@ export default async function CoordinatorDashboardPage() {
               <TBody>
                 {data.bankStatuses.length === 0 && (
                   <TR>
-                    <TD colSpan={8} className="text-center text-[var(--muted-foreground)] py-8">
+                    <TD colSpan={8} className="text-center text-[var(--text-tertiary)] py-8">
                       No question banks found in your assigned departments.
                     </TD>
                   </TR>
@@ -249,12 +249,12 @@ export default async function CoordinatorDashboardPage() {
           <CardHeader><CardTitle>Recent Contribution Activity</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             {data.recentContributionActivity.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No recent contribution activity.</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No recent contribution activity.</p>
             ) : (
               data.recentContributionActivity.map((question: { id: string; subjectName: string; contributorName: string; status: string; submittedAt: string }) => (
                 <div key={question.id} className="rounded-lg border border-[var(--border)] p-3">
                   <p className="font-medium">{question.subjectName}</p>
-                  <p className="text-[var(--muted-foreground)]">{question.contributorName} · {question.status}</p>
+                  <p className="text-[var(--text-tertiary)]">{question.contributorName} · {question.status}</p>
                 </div>
               ))
             )}
@@ -266,12 +266,12 @@ export default async function CoordinatorDashboardPage() {
           <CardContent className="space-y-3 text-sm">
             <p className="font-medium">Unread: {data.unreadNotificationCount}</p>
             {data.notifications.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No notifications.</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No notifications.</p>
             ) : (
               data.notifications.slice(0, 5).map((notification: { id: string; title: string; message: string; createdAt: string }) => (
                 <div key={notification.id} className="rounded-lg border border-[var(--border)] p-3">
                   <p className="font-medium">{notification.title}</p>
-                  <p className="text-[var(--muted-foreground)]">{notification.message}</p>
+                  <p className="text-[var(--text-tertiary)]">{notification.message}</p>
                 </div>
               ))
             )}

@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { CurriculumSchemeService } from "@/modules/curriculum-schemes/service";
 import { curriculumSchemeSchema } from "@/modules/curriculum-schemes/validation";
 
@@ -17,7 +17,7 @@ export const GET = withApiHandler(
 
 export const POST = withApiHandler(
   async (request) => {
-    const payload = curriculumSchemeSchema.parse(await parseJson(request));
+    const payload = curriculumSchemeSchema.parse(await request.json());
     return service.create(payload);
   },
   { roles: [Role.COE], audit: { action: "CURRICULUM_SCHEME_CREATED", entityType: "CURRICULUM_SCHEME", getEntityId: (r) => (r as { id?: string }).id } },

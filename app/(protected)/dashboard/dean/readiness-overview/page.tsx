@@ -18,11 +18,11 @@ export default async function DeanReadinessOverviewPage() {
           <CardHeader><CardTitle>Pending Reviews ({data.pendingReviews.length})</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.pendingReviews.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No banks awaiting review.</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No banks awaiting review.</p>
             ) : data.pendingReviews.map((item) => (
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="text-sm font-semibold">{item.subjectCode} · {item.subjectName}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{item.examCycleLabel}</p>
                 <Badge variant="warning" className="mt-2">Pending</Badge>
               </div>
             ))}
@@ -33,11 +33,11 @@ export default async function DeanReadinessOverviewPage() {
           <CardHeader><CardTitle>Completed Reviews ({data.completedReviews.length})</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {data.completedReviews.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No completed reviews yet.</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No completed reviews yet.</p>
             ) : data.completedReviews.map((item) => (
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="text-sm font-semibold">{item.subjectCode} · {item.subjectName}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">{item.examCycleLabel}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{item.examCycleLabel}</p>
                 <Badge variant="success" className="mt-2">Completed</Badge>
               </div>
             ))}

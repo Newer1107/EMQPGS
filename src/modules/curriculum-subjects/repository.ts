@@ -1,10 +1,10 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import type { CurriculumSubjectInput, CurriculumSubjectUpdateInput } from "@/modules/curriculum-subjects/validation";
 
-export class CurriculumSubjectRepository extends BaseRepository {
+export class CurriculumSubjectRepository {
   list(where?: Prisma.CurriculumSubjectWhereInput) {
-    return this.prisma.curriculumSubject.findMany({
+    return prisma.curriculumSubject.findMany({
       where,
       orderBy: [{ semesterNumber: "asc" }, { subject: { subjectName: "asc" } }],
       include: {
@@ -16,7 +16,7 @@ export class CurriculumSubjectRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.curriculumSubject.findUnique({
+    return prisma.curriculumSubject.findUnique({
       where: { id },
       include: {
         curriculumScheme: { include: { programme: true } },
@@ -31,7 +31,7 @@ export class CurriculumSubjectRepository extends BaseRepository {
   }
 
   create(data: CurriculumSubjectInput) {
-    return this.prisma.curriculumSubject.create({
+    return prisma.curriculumSubject.create({
       data,
       include: {
         curriculumScheme: { select: { id: true, name: true, year: true } },
@@ -42,7 +42,7 @@ export class CurriculumSubjectRepository extends BaseRepository {
   }
 
   update(id: string, data: CurriculumSubjectUpdateInput) {
-    return this.prisma.curriculumSubject.update({
+    return prisma.curriculumSubject.update({
       where: { id },
       data,
       include: {
@@ -54,11 +54,11 @@ export class CurriculumSubjectRepository extends BaseRepository {
   }
 
   delete(id: string) {
-    return this.prisma.curriculumSubject.delete({ where: { id } });
+    return prisma.curriculumSubject.delete({ where: { id } });
   }
 
   findBySubjectAndScheme(subjectId: string, schemeId: string) {
-    return this.prisma.curriculumSubject.findMany({
+    return prisma.curriculumSubject.findMany({
       where: { subjectId, curriculumSchemeId: schemeId },
     });
   }

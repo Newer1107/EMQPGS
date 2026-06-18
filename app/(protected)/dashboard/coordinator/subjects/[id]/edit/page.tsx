@@ -23,7 +23,7 @@ export default async function EditSubjectPage({ params }: { params: Promise<{ id
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Edit Subject</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">{subject.subjectCode} - {subject.subjectName}</p>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">{subject.subjectCode} - {subject.subjectName}</p>
       </div>
       <SubjectForm
         departments={departments}

@@ -23,15 +23,15 @@ export default async function DepartmentsManagementPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Departments</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Departments</p>
           <p className="mt-1 text-2xl font-bold">{departments.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
           <p className="mt-1 text-2xl font-bold text-green-600">{departments.filter((d) => d.isActive).length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Inactive</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Inactive</p>
           <p className="mt-1 text-2xl font-bold text-red-600">{departments.filter((d) => !d.isActive).length}</p>
         </div>
       </div>

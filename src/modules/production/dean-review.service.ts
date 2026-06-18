@@ -5,8 +5,8 @@ import {
   RecordStatus,
   Role,
   type Prisma,
-  type User,
 } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -16,7 +16,6 @@ import { ENTITY_TYPES } from "@/lib/constants";
 
 const DEAN_REVIEW_REMINDER_DAYS = Number(process.env.DEAN_REVIEW_REMINDER_DAYS ?? "3");
 
-type Actor = Pick<User, "id" | "role" | "email" | "name" | "departmentId">;
 
 export type DeanDashboardItem = {
   id: string;
@@ -282,7 +281,8 @@ export class DeanReviewService {
   }
 
   private deanDepartmentFilter(actor: Actor): { departmentId?: string } {
-    return actor.departmentId ? { departmentId: actor.departmentId } : {};
+    const departmentId = (actor as { departmentId?: string }).departmentId;
+    return departmentId ? { departmentId } : {};
   }
 
   private async listDeanQuestionBanks(actor: Actor) {

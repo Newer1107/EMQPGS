@@ -46,7 +46,7 @@ export default function ForgotPasswordPage() {
             <CardDescription>{message}</CardDescription>
           </CardHeader>
           <CardContent className="text-center">
-            <Link href="/login" className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:underline">
+            <Link href="/login" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:underline">
               Back to sign in
             </Link>
           </CardContent>
@@ -82,7 +82,7 @@ export default function ForgotPasswordPage() {
               {loading ? "Sending..." : "Send reset link"}
             </Button>
             <div className="text-center">
-              <Link href="/login" className="text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:underline">
+              <Link href="/login" className="text-sm text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:underline">
                 Back to sign in
               </Link>
             </div>

@@ -1,4 +1,5 @@
-import { AiReportStatus, NotificationType, type Prisma, type User } from "@prisma/client";
+import { AiReportStatus, NotificationType, type Prisma } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
@@ -7,7 +8,6 @@ import { ENTITY_TYPES } from "@/lib/constants";
 import { OllamaService } from "@/modules/ai/ollama-service";
 import { AnalysisEngine } from "@/modules/reports/analysis-engine";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
 const analysisInclude = {
   subject: true,

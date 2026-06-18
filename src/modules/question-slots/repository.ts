@@ -1,8 +1,8 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 
-export class QuestionSlotRepository extends BaseRepository {
+export class QuestionSlotRepository {
   findByQuestionBank(questionBankId: string) {
-    return this.prisma.questionSlot.findMany({
+    return prisma.questionSlot.findMany({
       where: { questionBankId },
       include: {
         assignedQuestion: {
@@ -17,7 +17,7 @@ export class QuestionSlotRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.questionSlot.findUnique({
+    return prisma.questionSlot.findUnique({
       where: { id },
       include: {
         assignedQuestion: true,
@@ -27,7 +27,7 @@ export class QuestionSlotRepository extends BaseRepository {
   }
 
   assignQuestion(id: string, questionId: string) {
-    return this.prisma.questionSlot.update({
+    return prisma.questionSlot.update({
       where: { id, assignedQuestionId: null },
       data: { assignedQuestionId: questionId },
       include: { assignedQuestion: true },
@@ -35,7 +35,7 @@ export class QuestionSlotRepository extends BaseRepository {
   }
 
   unassignQuestion(id: string) {
-    return this.prisma.questionSlot.update({
+    return prisma.questionSlot.update({
       where: { id },
       data: { assignedQuestionId: null },
     });

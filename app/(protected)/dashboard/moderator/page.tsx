@@ -34,7 +34,7 @@ export default async function ModeratorDashboardPage() {
             {data.awaitingRevisionResubmission.map((item: { id: string; subjectName: string; moduleNumber: number; markType: number; contributorName: string; revisionRequestedAt: string }) => (
               <Link key={item.id} href={`/dashboard/moderator/questions?questionId=${item.id}`} className="block rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{item.subjectName}</p>
-                <p className="text-[var(--muted-foreground)]">Module {item.moduleNumber} · {item.markType}-mark · {item.contributorName}</p>
+                <p className="text-[var(--text-tertiary)]">Module {item.moduleNumber} · {item.markType}-mark · {item.contributorName}</p>
               </Link>
             ))}
           </CardContent>
@@ -46,7 +46,7 @@ export default async function ModeratorDashboardPage() {
             {data.recentModerationActivity.map((item: { id: string; questionId: string; subjectName: string; action: string; timestamp: string }) => (
               <div key={item.id} className="rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{item.subjectName}</p>
-                <p className="text-[var(--muted-foreground)]">{item.action} · {new Date(item.timestamp).toLocaleString()}</p>
+                <p className="text-[var(--text-tertiary)]">{item.action} · {new Date(item.timestamp).toLocaleString()}</p>
               </div>
             ))}
           </CardContent>
@@ -58,7 +58,7 @@ export default async function ModeratorDashboardPage() {
             {data.quickAccessBanks.map((bank: { id: string; subjectName: string; examCycle: string; pendingCount: number; revisionSubmittedCount: number; urgency: number }) => (
               <Link key={bank.id} href={`/dashboard/moderator/questions?bankId=${bank.id}`} className="block rounded-lg border border-[var(--border)] p-3">
                 <p className="font-medium">{bank.subjectName}</p>
-                <p className="text-[var(--muted-foreground)]">{bank.examCycle}</p>
+                <p className="text-[var(--text-tertiary)]">{bank.examCycle}</p>
                 <p>{bank.pendingCount} pending · {bank.revisionSubmittedCount} revision submitted</p>
               </Link>
             ))}

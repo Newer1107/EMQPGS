@@ -113,9 +113,9 @@ function WorkflowProgressBar({ phase, recordStatus }: { phase: string; recordSta
         const isCurrent = i === currentIdx;
         return (
           <div key={p} className="flex items-center flex-1">
-            <div className={`flex items-center gap-2 text-xs ${isPast ? "text-green-700" : isCurrent ? "text-[var(--foreground)] font-medium" : "text-[var(--muted-foreground)]"}`}>
+            <div className={`flex items-center gap-2 text-xs ${isPast ? "text-green-700" : isCurrent ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-tertiary)]"}`}>
               <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                isPast ? "bg-green-500 text-white" : isCurrent ? "bg-[var(--foreground)] text-[var(--background)]" : "bg-[var(--muted)] text-[var(--muted-foreground)]"
+                isPast ? "bg-green-500 text-white" : isCurrent ? "bg-[var(--foreground)] text-[var(--background)]" : "bg-[var(--surface-hover)] text-[var(--text-tertiary)]"
               }`}>
                 {isPast ? "✓" : i + 1}
               </div>
@@ -143,7 +143,7 @@ function WorkflowProgressBar({ phase, recordStatus }: { phase: string; recordSta
 function StatCard({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div className="rounded-lg border bg-white p-3">
-      <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">{label}</p>
+      <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">{label}</p>
       <p className={`mt-1 text-xl font-bold ${color ?? ""}`}>{value}</p>
     </div>
   );
@@ -156,7 +156,7 @@ function SlotCell({ slot, isSelected, onClick }: { slot: SlotItem; isSelected: b
       className={`relative flex h-9 w-9 items-center justify-center rounded border text-xs font-medium transition-colors ${slotStatusClass(status)} ${isSelected ? "ring-2 ring-[var(--foreground)]" : "hover:opacity-80"} ${slot.isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
       title={`Slot ${slot.slotNumber} · ${slot.assignedQuestion?.questionText?.slice(0, 60) ?? "Empty"}`}
     >
-      <span className={status ? "" : "text-[var(--muted-foreground)]"}>{slot.slotNumber}</span>
+      <span className={status ? "" : "text-[var(--text-tertiary)]"}>{slot.slotNumber}</span>
     </button>
   );
 }
@@ -167,7 +167,7 @@ function SlotDetailPanel({ slot }: { slot: SlotItem }) {
     return (
       <Card>
         <CardHeader><CardTitle>Slot {slot.slotNumber} · Module {slot.moduleNumber} · {slot.marks} Marks</CardTitle></CardHeader>
-        <CardContent><p className="text-sm text-[var(--muted-foreground)]">No question assigned to this slot.</p></CardContent>
+        <CardContent><p className="text-sm text-[var(--text-tertiary)]">No question assigned to this slot.</p></CardContent>
       </Card>
     );
   }
@@ -178,14 +178,14 @@ function SlotDetailPanel({ slot }: { slot: SlotItem }) {
         <div className="flex items-start justify-between">
           <div>
             <CardTitle>Slot {slot.slotNumber} · Module {slot.moduleNumber} · {slot.marks} Marks</CardTitle>
-            <p className="text-sm text-[var(--muted-foreground)] mt-1">{q.coMapping} · {q.rbtLevel}{q.difficultyLevel ? ` · ${difficultyLabels[q.difficultyLevel as keyof typeof difficultyLabels] ?? q.difficultyLevel}` : ""}</p>
+            <p className="text-sm text-[var(--text-tertiary)] mt-1">{q.coMapping} · {q.rbtLevel}{q.difficultyLevel ? ` · ${difficultyLabels[q.difficultyLevel as keyof typeof difficultyLabels] ?? q.difficultyLevel}` : ""}</p>
           </div>
           <Badge>{questionStatusLabels[q.status as keyof typeof questionStatusLabels] ?? q.status}</Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="rounded-lg bg-[var(--muted)] p-4 text-sm whitespace-pre-wrap">{q.questionText}</div>
-        <div className="flex items-center gap-3 text-sm text-[var(--muted-foreground)]">
+        <div className="rounded-lg bg-[var(--surface-hover)] p-4 text-sm whitespace-pre-wrap">{q.questionText}</div>
+        <div className="flex items-center gap-3 text-sm text-[var(--text-tertiary)]">
           <span>Contributor: {q.creator?.name ?? "Unknown"}</span>
         </div>
       </CardContent>
@@ -264,7 +264,7 @@ function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotClick }:
                 const group = grid.get(key) ?? [];
                 return (
                   <div key={key} className="flex items-center gap-2">
-                    <span className="w-16 shrink-0 text-xs text-[var(--muted-foreground)]">{marks} marks</span>
+                    <span className="w-16 shrink-0 text-xs text-[var(--text-tertiary)]">{marks} marks</span>
                     <div className="flex gap-1">
                       {group.sort((a, b) => a.slotNumber - b.slotNumber).map((slot) => (
                         <SlotCell key={slot.slotNumber} slot={slot} isSelected={selectedSlotId === `${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`} onClick={() => onSlotClick(slot)} />
@@ -328,30 +328,30 @@ function QuestionListView({ slots, filters, onFilterChange }: {
       <CardContent className="p-0">
         <div className="divide-y divide-[var(--border)]">
           {filtered.length === 0 && (
-            <div className="px-6 py-8 text-center text-sm text-[var(--muted-foreground)]">No questions match the current filters.</div>
+            <div className="px-6 py-8 text-center text-sm text-[var(--text-tertiary)]">No questions match the current filters.</div>
           )}
           {filtered.map((slot) => {
             const q = slot.assignedQuestion;
             return (
-              <div key={`${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`} className="flex items-center gap-4 px-6 py-3 hover:bg-[var(--muted)] transition-colors">
+              <div key={`${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`} className="flex items-center gap-4 px-6 py-3 hover:bg-[var(--surface-hover)] transition-colors">
                 <Badge className="shrink-0 w-16 text-center">M{slot.moduleNumber}</Badge>
-                <div className="w-16 shrink-0 text-xs text-[var(--muted-foreground)]">{slot.marks} marks</div>
+                <div className="w-16 shrink-0 text-xs text-[var(--text-tertiary)]">{slot.marks} marks</div>
                 <div className="flex-1 min-w-0">
                   {q ? (
                     <p className="text-sm truncate">{q.questionText}</p>
                   ) : (
-                    <p className="text-sm text-[var(--muted-foreground)] italic">Empty slot</p>
+                    <p className="text-sm text-[var(--text-tertiary)] italic">Empty slot</p>
                   )}
                 </div>
                 {q && (
                   <div className="flex items-center gap-2 shrink-0">
-                    {q.difficultyLevel && <span className="text-xs text-[var(--muted-foreground)]">{difficultyLabels[q.difficultyLevel as keyof typeof difficultyLabels] ?? q.difficultyLevel}</span>}
-                    <span className="text-xs text-[var(--muted-foreground)]">{q.rbtLevel}</span>
+                    {q.difficultyLevel && <span className="text-xs text-[var(--text-tertiary)]">{difficultyLabels[q.difficultyLevel as keyof typeof difficultyLabels] ?? q.difficultyLevel}</span>}
+                    <span className="text-xs text-[var(--text-tertiary)]">{q.rbtLevel}</span>
                     <Badge>{questionStatusLabels[q.status as keyof typeof questionStatusLabels] ?? q.status}</Badge>
                   </div>
                 )}
                 {q && q.creator && (
-                  <span className="text-xs text-[var(--muted-foreground)] shrink-0 w-20 text-right truncate">{q.creator.name}</span>
+                  <span className="text-xs text-[var(--text-tertiary)] shrink-0 w-20 text-right truncate">{q.creator.name}</span>
                 )}
               </div>
             );
@@ -395,32 +395,32 @@ function CoverageStats({ slots, totalSlots }: { slots: SlotItem[]; totalSlots: n
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="rounded-lg border bg-white p-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Fill Rate</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Fill Rate</p>
         <div className="mt-2">
           <div className="flex items-baseline gap-1">
             <span className="text-xl font-bold">{fillPct}%</span>
-            <span className="text-xs text-[var(--muted-foreground)]">({filled}/{totalSlots})</span>
+            <span className="text-xs text-[var(--text-tertiary)]">({filled}/{totalSlots})</span>
           </div>
-          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+          <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-hover)]">
             <div className={`h-full rounded-full ${fillPct >= 100 ? "bg-green-500" : fillPct >= 50 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${fillPct}%` }} />
           </div>
         </div>
       </div>
       <div className="rounded-lg border bg-white p-3">
-        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Difficulty</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Difficulty</p>
         <div className="mt-2 space-y-1">
-          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-green-600 font-medium">{difficulties.easy}</span><span className="text-[var(--muted-foreground)]">Easy</span></div>
-          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-amber-600 font-medium">{difficulties.medium}</span><span className="text-[var(--muted-foreground)]">Medium</span></div>
-          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-red-600 font-medium">{difficulties.hard}</span><span className="text-[var(--muted-foreground)]">Hard</span></div>
+          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-green-600 font-medium">{difficulties.easy}</span><span className="text-[var(--text-tertiary)]">Easy</span></div>
+          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-amber-600 font-medium">{difficulties.medium}</span><span className="text-[var(--text-tertiary)]">Medium</span></div>
+          <div className="flex items-center gap-2 text-xs"><span className="w-10 text-red-600 font-medium">{difficulties.hard}</span><span className="text-[var(--text-tertiary)]">Hard</span></div>
         </div>
       </div>
       <div className="rounded-lg border bg-white p-3 col-span-2">
-        <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">RBT Levels</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">RBT Levels</p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {(["L1", "L2", "L3", "L4", "L5", "L6"] as const).map((level) => {
             const count = rbtLevels[level] ?? 0;
             return (
-              <div key={level} className={`rounded px-2 py-0.5 text-xs ${count > 0 ? "bg-blue-50 text-blue-700 font-medium" : "bg-[var(--muted)] text-[var(--muted-foreground)]"}`}>
+              <div key={level} className={`rounded px-2 py-0.5 text-xs ${count > 0 ? "bg-blue-50 text-blue-700 font-medium" : "bg-[var(--surface-hover)] text-[var(--text-tertiary)]"}`}>
                 {level}: {count}
               </div>
             );
@@ -458,12 +458,12 @@ export function BankDetailClient(props: BankDetailClientProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
-        <Link href="/dashboard/coordinator" className="hover:text-[var(--foreground)] transition-colors">Dashboard</Link>
+      <div className="flex items-center gap-2 text-sm text-[var(--text-tertiary)]">
+        <Link href="/dashboard/coordinator" className="hover:text-[var(--text-primary)] transition-colors">Dashboard</Link>
         <span>/</span>
-        <Link href="/dashboard/coordinator/question-banks" className="hover:text-[var(--foreground)] transition-colors">Question Banks</Link>
+        <Link href="/dashboard/coordinator/question-banks" className="hover:text-[var(--text-primary)] transition-colors">Question Banks</Link>
         <span>/</span>
-        <span className="text-[var(--foreground)] font-medium">{props.subjectCode}</span>
+        <span className="text-[var(--text-primary)] font-medium">{props.subjectCode}</span>
       </div>
 
       <div className="flex items-start justify-between gap-4">
@@ -475,7 +475,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
               {recordStatusLabels[props.recordStatus as keyof typeof recordStatusLabels] ?? props.recordStatus}
             </Badge>
           </div>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
             {props.examType} · {props.batchName} · Sem {props.semesterNumber} · {props.academicYearCode} · {props.academicUnitName}
           </p>
         </div>
@@ -499,8 +499,8 @@ export function BankDetailClient(props: BankDetailClientProps) {
       <ReadinessPanel phase={props.phase} slots={props.slots} totalSlots={props.totalSlots} />
 
       <div className="flex items-center gap-2 border-b pb-2">
-        <button onClick={() => setViewMode("grid")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-[3px] transition-colors ${viewMode === "grid" ? "border-[var(--foreground)]" : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}>Slot Grid</button>
-        <button onClick={() => setViewMode("list")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-[3px] transition-colors ${viewMode === "list" ? "border-[var(--foreground)]" : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"}`}>Question List</button>
+        <button onClick={() => setViewMode("grid")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-[3px] transition-colors ${viewMode === "grid" ? "border-[var(--foreground)]" : "border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>Slot Grid</button>
+        <button onClick={() => setViewMode("list")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-[3px] transition-colors ${viewMode === "list" ? "border-[var(--foreground)]" : "border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>Question List</button>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -519,11 +519,11 @@ export function BankDetailClient(props: BankDetailClientProps) {
               <CardHeader className="pb-3"><CardTitle className="text-base">AI Report</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">Status</p><p className="font-medium">{props.aiReports[0].status}</p></div>
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">Model</p><p className="font-medium">{props.aiReports[0].modelName}</p></div>
-                  {props.aiReports[0].generatedAt && <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">Generated</p><p className="font-medium">{new Date(props.aiReports[0].generatedAt).toLocaleString()}</p></div>}
+                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Status</p><p className="font-medium">{props.aiReports[0].status}</p></div>
+                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Model</p><p className="font-medium">{props.aiReports[0].modelName}</p></div>
+                  {props.aiReports[0].generatedAt && <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Generated</p><p className="font-medium">{new Date(props.aiReports[0].generatedAt).toLocaleString()}</p></div>}
                 </div>
-                {props.aiReports[0].summary && <div className="rounded-lg bg-[var(--muted)] p-3 text-sm whitespace-pre-wrap">{props.aiReports[0].summary}</div>}
+                {props.aiReports[0].summary && <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm whitespace-pre-wrap">{props.aiReports[0].summary}</div>}
               </CardContent>
             </Card>
           )}
@@ -537,10 +537,10 @@ export function BankDetailClient(props: BankDetailClientProps) {
                     <div key={paper.id} className="rounded-lg border p-4">
                       <p className="text-lg font-semibold">{paper.variant.replace("PAPER_", "Paper ")}</p>
                       <div className="mt-3 space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><span>{paper.status}</span></div>
-                        <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Questions</span><span>{paper.questionCount}</span></div>
-                        {paper.coverageScore != null && <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Coverage</span><span>{paper.coverageScore}%</span></div>}
-                        {paper.qualityScore != null && <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Quality</span><span>{paper.qualityScore}/10</span></div>}
+                        <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><span>{paper.status}</span></div>
+                        <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Questions</span><span>{paper.questionCount}</span></div>
+                        {paper.coverageScore != null && <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Coverage</span><span>{paper.coverageScore}%</span></div>}
+                        {paper.qualityScore != null && <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Quality</span><span>{paper.qualityScore}/10</span></div>}
                       </div>
                     </div>
                   ))}
@@ -554,11 +554,11 @@ export function BankDetailClient(props: BankDetailClientProps) {
               <CardHeader className="pb-3"><CardTitle className="text-base">Dean Review</CardTitle></CardHeader>
               <CardContent>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">Regular</p><p className="mt-1 font-medium">{props.deanReview.regularPaper.replace("PAPER_", "Paper ")}</p></div>
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">Supplementary</p><p className="mt-1 font-medium">{props.deanReview.supplementaryPaper.replace("PAPER_", "Paper ")}</p></div>
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--muted-foreground)]">KT</p><p className="mt-1 font-medium">{props.deanReview.ktPaper.replace("PAPER_", "Paper ")}</p></div>
+                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Regular</p><p className="mt-1 font-medium">{props.deanReview.regularPaper.replace("PAPER_", "Paper ")}</p></div>
+                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Supplementary</p><p className="mt-1 font-medium">{props.deanReview.supplementaryPaper.replace("PAPER_", "Paper ")}</p></div>
+                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">KT</p><p className="mt-1 font-medium">{props.deanReview.ktPaper.replace("PAPER_", "Paper ")}</p></div>
                 </div>
-                <p className="mt-3 text-xs text-[var(--muted-foreground)]">Reviewed by {props.deanReview.reviewedBy} · {new Date(props.deanReview.reviewedAt).toLocaleString()}</p>
+                <p className="mt-3 text-xs text-[var(--text-tertiary)]">Reviewed by {props.deanReview.reviewedBy} · {new Date(props.deanReview.reviewedAt).toLocaleString()}</p>
               </CardContent>
             </Card>
           )}
@@ -568,7 +568,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
           <BankActionsPanel questionBankId={props.bankId} phase={props.phase} recordStatus={props.recordStatus} />
           
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Coverage</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Coverage</CardTitle></CardHeader>
             <CardContent><CoverageStats slots={props.slots} totalSlots={props.totalSlots} /></CardContent>
           </Card>
 

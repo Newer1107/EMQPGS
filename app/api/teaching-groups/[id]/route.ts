@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { TeachingGroupService } from "@/modules/teaching-groups/service";
 import { teachingGroupUpdateSchema } from "@/modules/teaching-groups/validation";
 
@@ -17,7 +17,7 @@ export const GET = withApiHandler(
 export const PATCH = withApiHandler(
   async (request) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
-    const payload = teachingGroupUpdateSchema.parse(await parseJson(request));
+    const payload = teachingGroupUpdateSchema.parse(await request.json());
     return service.update(id, payload);
   },
   { roles: [Role.COE], audit: { action: "TEACHING_GROUP_UPDATED", entityType: "TEACHING_GROUP", getEntityId: (r) => (r as { id?: string }).id } },

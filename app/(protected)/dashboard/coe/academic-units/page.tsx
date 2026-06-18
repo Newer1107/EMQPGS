@@ -22,15 +22,15 @@ export default async function AcademicUnitsPage() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Units</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Units</p>
           <p className="mt-1 text-2xl font-bold">{units.length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
           <p className="mt-1 text-2xl font-bold text-green-600">{units.filter((u) => u.isActive).length}</p>
         </div>
         <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Inactive</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Inactive</p>
           <p className="mt-1 text-2xl font-bold text-red-600">{units.filter((u) => !u.isActive).length}</p>
         </div>
       </div>
@@ -70,7 +70,7 @@ export default async function AcademicUnitsPage() {
       </div>
 
       <div className="flex items-center gap-4 rounded-lg border bg-gray-50 p-4">
-        <span className="text-sm text-[var(--muted-foreground)]">Next step:</span>
+        <span className="text-sm text-[var(--text-tertiary)]">Next step:</span>
         <Link href="/dashboard/coe/programmes" className="text-sm font-medium underline">Go to Programmes →</Link>
       </div>
     </div>

@@ -50,7 +50,7 @@ export function SlotCoverageDashboard({ questions }: SlotCoverageDashboardProps)
         <div className="space-y-4">
           {MODULES.map((module) => (
             <div key={module}>
-              <h4 className="text-sm font-medium mb-2 text-[var(--foreground)]">Module {module}</h4>
+              <h4 className="text-sm font-medium mb-2 text-[var(--text-primary)]">Module {module}</h4>
               <div className="grid grid-cols-3 gap-3">
                 {MARKS.map((marks) => {
                   const slot = getSlotStatus(module, marks);
@@ -66,7 +66,7 @@ export function SlotCoverageDashboard({ questions }: SlotCoverageDashboardProps)
 
                   return (
                     <div key={`${module}-${marks}`} className={`rounded-lg border p-3 ${bgClass}`}>
-                      <p className="text-xs font-semibold text-[var(--foreground)]">{marks} Marks</p>
+                      <p className="text-xs font-semibold text-[var(--text-primary)]">{marks} Marks</p>
                       <p className={`text-xs mt-1 ${textClass}`}>{label}</p>
                       {slot.pendingCount > 0 && (
                         <p className="text-xs text-amber-600 mt-0.5">{slot.pendingCount} pending</p>

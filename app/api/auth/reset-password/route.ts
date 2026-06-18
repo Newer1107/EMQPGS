@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/errors";
 import { z } from "zod";
@@ -12,7 +12,7 @@ const resetSchema = z.object({
 });
 
 export const POST = withApiHandler(async (request) => {
-  const { token, password } = resetSchema.parse(await parseJson(request));
+  const { token, password } = resetSchema.parse(await request.json());
   const hashed = crypto.createHash("sha256").update(token).digest("hex");
   const user = await prisma.user.findFirst({
     where: {

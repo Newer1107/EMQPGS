@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { CoordinatorDepartmentAssignmentService } from "@/modules/coordinator-departments/service";
 import { coordinatorDepartmentAssignmentSchema } from "@/modules/coordinator-departments/validation";
 
@@ -13,7 +13,7 @@ export const GET = withApiHandler(
 
 export const POST = withApiHandler(
   async (request) => {
-    const payload = coordinatorDepartmentAssignmentSchema.parse(await parseJson(request));
+    const payload = coordinatorDepartmentAssignmentSchema.parse(await request.json());
     return service.create(payload);
   },
   {

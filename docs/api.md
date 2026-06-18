@@ -204,7 +204,6 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
 | PATCH | `/api/question-banks/[id]/advance` | COORDINATOR | Advance phase (validated via transitions.ts) |
-| PATCH | `/api/question-banks/[id]/status` | COORDINATOR, MODERATOR | Change status (alt. endpoint) |
 | PATCH | `/api/question-banks/[id]/lock` | COORDINATOR | Lock (creates QuestionBankSnapshot) |
 | POST | `/api/question-banks/[id]/unlock` | COORDINATOR | Unlock (reversible) |
 | GET | `/api/question-banks/[id]/readiness` | COORDINATOR, MODERATOR | ReadinessEngine check |
@@ -244,7 +243,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 |---|---|---|---|
 | GET | `/api/question-banks/[id]/slots` | COORDINATOR, MODERATOR, CONTRIBUTOR | List all slots |
 | PATCH | `/api/question-banks/[id]/slots/[slotId]` | CONTRIBUTOR, COORDINATOR | Assign question to slot |
-| DELETE | `/api/question-banks/[id]/slots/[slotId]` | CONTRIBUTOR, COORDINATOR | Unassign question from slot |
+| DELETE | `/api/question-banks/[id]/slots/[slotId]` | COORDINATOR | Unassign question from slot |
 
 ---
 
@@ -305,7 +304,7 @@ Moderators can only moderate questions assigned to banks they are assigned to (v
 | GET | `/api/health` | Public | Health check (token-gated) |
 | GET | `/api/monitoring` | COE | Monitoring dashboard |
 | GET | `/api/audit-logs` | COE | Audit log listing |
-| GET | `/api/dashboard` | All roles | Role-based dashboard data |
+| GET | `/api/dashboard` | COE, COORDINATOR, MODERATOR, CONTRIBUTOR | Role-based dashboard data |
 | POST | `/api/backups` | COE | Trigger system backup |
 
 ## Storage

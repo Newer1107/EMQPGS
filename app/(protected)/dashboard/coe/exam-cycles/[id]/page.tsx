@@ -45,26 +45,26 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Programme</span><span className="font-medium">{batch?.programme?.name ?? '-'}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Batch</span><span className="font-medium">{batch?.name}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Semester</span><span className="font-medium">Semester {bs?.semesterNumber}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Academic Unit</span><span className="font-medium">{bs?.academicUnit?.name}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Academic Year</span><span className="font-medium">{bs?.academicYear?.code}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Curriculum</span><span className="font-medium">{batch?.curriculumScheme?.name} ({batch?.curriculumScheme?.year})</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Programme</span><span className="font-medium">{batch?.programme?.name ?? '-'}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Batch</span><span className="font-medium">{batch?.name}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Semester</span><span className="font-medium">Semester {bs?.semesterNumber}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Unit</span><span className="font-medium">{bs?.academicUnit?.name}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Year</span><span className="font-medium">{bs?.academicYear?.code}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Curriculum</span><span className="font-medium">{batch?.curriculumScheme?.name} ({batch?.curriculumScheme?.year})</span></div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Exam Information</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Exam Information</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Exam Type</span><Badge variant="info">{examTypeLabels[cycle.examType as keyof typeof examTypeLabels] ?? cycle.examType}</Badge></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Status</span><Badge variant={statusVariants[cycle.status] ?? "default"}>{examCycleStatusLabels[cycle.status as keyof typeof examCycleStatusLabels] ?? cycle.status}</Badge></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Subjects</span><Badge>{cycle.subjectLinks.length} subjects</Badge></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Question Banks</span><Badge>{cycle.questionBanks.length} banks</Badge></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Created</span><span>{new Date(cycle.createdAt).toLocaleDateString()}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--muted-foreground)]">Version</span><span>{cycle.version}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Exam Type</span><Badge variant="info">{examTypeLabels[cycle.examType as keyof typeof examTypeLabels] ?? cycle.examType}</Badge></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><Badge variant={statusVariants[cycle.status] ?? "default"}>{examCycleStatusLabels[cycle.status as keyof typeof examCycleStatusLabels] ?? cycle.status}</Badge></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Subjects</span><Badge>{cycle.subjectLinks.length} subjects</Badge></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Question Banks</span><Badge>{cycle.questionBanks.length} banks</Badge></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Created</span><span>{new Date(cycle.createdAt).toLocaleDateString()}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Version</span><span>{cycle.version}</span></div>
           </CardContent>
         </Card>
       </div>
@@ -79,7 +79,7 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
               <div key={link.id} className="flex items-center justify-between px-6 py-3">
                 <div>
                   <p className="text-sm font-medium">{link.subject.subjectName}</p>
-                  <p className="text-xs text-[var(--muted-foreground)]">{link.subject.subjectCode} · {link.subject.credits} credits</p>
+                  <p className="text-xs text-[var(--text-tertiary)]">{link.subject.subjectCode} · {link.subject.credits} credits</p>
                 </div>
                 <Badge variant="default">{link.subject.subjectCode}</Badge>
               </div>
@@ -96,9 +96,9 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {cycle.questionBanks.map((qb) => (
-                <Link key={qb.id} href={`/dashboard/coordinator/question-banks/${qb.id}`} className="rounded-lg border border-[var(--border)] p-3 text-sm hover:bg-[var(--muted)] transition-colors">
+                <Link key={qb.id} href={`/dashboard/coordinator/question-banks/${qb.id}`} className="rounded-lg border border-[var(--border)] p-3 text-sm hover:bg-[var(--surface-hover)] transition-colors">
                   <p className="font-medium">{qb.phase}</p>
-                  <p className="text-xs text-[var(--muted-foreground)]">Question Bank</p>
+                  <p className="text-xs text-[var(--text-tertiary)]">Question Bank</p>
                 </Link>
               ))}
             </div>
@@ -107,10 +107,10 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
       )}
 
       <div className="flex flex-wrap gap-3 pt-2">
-        <Link href={`/dashboard/coe/batches/${batch?.id}`} className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] underline transition-colors">
+        <Link href={`/dashboard/coe/batches/${batch?.id}`} className="text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline transition-colors">
           View Batch
         </Link>
-        <Link href="/dashboard/coe/exam-cycles" className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] underline transition-colors">
+        <Link href="/dashboard/coe/exam-cycles" className="text-sm font-medium text-[var(--text-tertiary)] hover:text-[var(--text-primary)] underline transition-colors">
           All Exam Cycles
         </Link>
       </div>

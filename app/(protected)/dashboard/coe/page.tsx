@@ -22,7 +22,7 @@ export default async function CoeDashboardPage() {
           <CardHeader><CardTitle>Pending Tasks</CardTitle></CardHeader>
           <CardContent>
             {data.pendingTasks.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No pending tasks</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No pending tasks</p>
             ) : (
               <ul className="space-y-2">
                 {data.pendingTasks.map((task) => <li key={task} className="text-sm">{task}</li>)}
@@ -34,7 +34,7 @@ export default async function CoeDashboardPage() {
           <CardHeader><CardTitle>Notifications</CardTitle></CardHeader>
           <CardContent>
             {data.notifications.length === 0 ? (
-              <p className="text-sm text-[var(--muted-foreground)]">No notifications</p>
+              <p className="text-sm text-[var(--text-tertiary)]">No notifications</p>
             ) : (
               <ul className="space-y-2">
                 {(data.notifications as Array<{ id: string; title: string }>).map((item) => <li key={item.id} className="text-sm">{item.title}</li>)}

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["devenv.tcetcercd.in"],
+  allowedDevOrigins: [],
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
 

@@ -50,7 +50,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
           <Link
             key={p.id}
             href={`/dashboard/coe/curriculum`}
-            className="rounded-lg border px-3 py-1.5 text-sm text-[var(--muted-foreground)]"
+            className="rounded-lg border px-3 py-1.5 text-sm text-[var(--text-tertiary)]"
           >
             {p.name}
           </Link>
@@ -73,7 +73,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
         <div className="flex flex-wrap gap-2 border-b pb-2">
           <Link
             href={`/dashboard/coe/curriculum?schemeId=${activeScheme.id}`}
-            className={`rounded-t-lg px-4 py-2 text-sm font-medium ${!selectedSemester ? 'border-b-2 border-black' : 'text-[var(--muted-foreground)]'}`}
+            className={`rounded-t-lg px-4 py-2 text-sm font-medium ${!selectedSemester ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
           >
             All Semesters
           </Link>
@@ -81,7 +81,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
             <Link
               key={sem}
               href={`/dashboard/coe/curriculum?schemeId=${activeScheme.id}&semester=${sem}`}
-              className={`rounded-t-lg px-4 py-2 text-sm font-medium ${selectedSemester === sem ? 'border-b-2 border-black' : 'text-[var(--muted-foreground)]'}`}
+              className={`rounded-t-lg px-4 py-2 text-sm font-medium ${selectedSemester === sem ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
             >
               Sem {sem}
             </Link>
@@ -101,7 +101,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
                 {subjects.map((s) => (
                   <TR key={s.id}>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">Semester {s.semesterNumber}</Badge></TD>
-                    <TD className="font-medium">{s.subject?.subjectName} <span className="text-xs text-[var(--muted-foreground)]">({s.subject?.subjectCode})</span></TD>
+                    <TD className="font-medium">{s.subject?.subjectName} <span className="text-xs text-[var(--text-tertiary)]">({s.subject?.subjectCode})</span></TD>
                     <TD>{s.subject?.credits ?? '-'}</TD>
                     <TD>{s.academicUnit?.name ?? '-'}</TD>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">{groupLabels[s.groupAssignment] ?? s.groupAssignment}</Badge></TD>
@@ -110,7 +110,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
               </TBody>
             </Table>
           ) : (
-            <div className="p-8 text-center text-sm text-[var(--muted-foreground)]">Select a curriculum scheme above to see its subjects.</div>
+            <div className="p-8 text-center text-sm text-[var(--text-tertiary)]">Select a curriculum scheme above to see its subjects.</div>
           )}
         </DataTableCard>
 
@@ -132,7 +132,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
             <Card>
               <CardHeader><CardTitle className="text-lg">Add Subject</CardTitle></CardHeader>
               <CardContent>
-                <p className="text-sm text-[var(--muted-foreground)]">Select a curriculum scheme first to add subjects.</p>
+                <p className="text-sm text-[var(--text-tertiary)]">Select a curriculum scheme first to add subjects.</p>
               </CardContent>
             </Card>
           )}
@@ -140,7 +140,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
       </div>
 
       <div className="flex items-center gap-4 rounded-lg border bg-gray-50 p-4">
-        <span className="text-sm text-[var(--muted-foreground)]">Next step:</span>
+        <span className="text-sm text-[var(--text-tertiary)]">Next step:</span>
         <Link href="/dashboard/coe/batches" className="text-sm font-medium underline">Go to Batches →</Link>
       </div>
     </div>

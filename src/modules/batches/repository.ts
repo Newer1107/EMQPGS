@@ -1,9 +1,9 @@
-import { BaseRepository } from "@/modules/shared/base-repository";
+import { prisma } from "@/lib/db";
 import type { BatchInput, BatchUpdateInput } from "@/modules/batches/validation";
 
-export class BatchRepository extends BaseRepository {
+export class BatchRepository {
   list() {
-    return this.prisma.batch.findMany({
+    return prisma.batch.findMany({
       orderBy: [{ admissionYear: "desc" }, { name: "asc" }],
       include: {
         programme: { include: { homeAcademicUnit: true } },
@@ -14,7 +14,7 @@ export class BatchRepository extends BaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.batch.findUnique({
+    return prisma.batch.findUnique({
       where: { id },
       include: {
         programme: { include: { homeAcademicUnit: true, firstYearAcademicUnit: true } },
@@ -26,11 +26,11 @@ export class BatchRepository extends BaseRepository {
   }
 
   findByCode(code: string) {
-    return this.prisma.batch.findUnique({ where: { code } });
+    return prisma.batch.findUnique({ where: { code } });
   }
 
   findByProgramme(programmeId: string) {
-    return this.prisma.batch.findMany({
+    return prisma.batch.findMany({
       where: { programmeId },
       orderBy: { admissionYear: "desc" },
       include: {
@@ -42,7 +42,7 @@ export class BatchRepository extends BaseRepository {
   }
 
   create(data: BatchInput) {
-    return this.prisma.batch.create({
+    return prisma.batch.create({
       data,
       include: {
         programme: { include: { homeAcademicUnit: true, firstYearAcademicUnit: true } },
@@ -52,7 +52,7 @@ export class BatchRepository extends BaseRepository {
   }
 
   update(id: string, data: BatchUpdateInput) {
-    return this.prisma.batch.update({
+    return prisma.batch.update({
       where: { id },
       data,
       include: {
@@ -63,6 +63,6 @@ export class BatchRepository extends BaseRepository {
   }
 
   delete(id: string) {
-    return this.prisma.batch.delete({ where: { id } });
+    return prisma.batch.delete({ where: { id } });
   }
 }

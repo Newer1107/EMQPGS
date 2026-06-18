@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
-import { parseJson } from "@/lib/parse-body";
+
 import { QuestionLibraryService } from "@/modules/question-library/service";
 import { questionLibraryItemSchema } from "@/modules/question-library/validation";
 
@@ -25,7 +25,7 @@ export const GET = withApiHandler(async (request) => {
 
 export const POST = withApiHandler(
   async (request, context) => {
-    const payload = questionLibraryItemSchema.parse(await parseJson(request));
+    const payload = questionLibraryItemSchema.parse(await request.json());
     const questionBankId = request.nextUrl.searchParams.get("bankId");
     if (questionBankId) {
       return service.createForBank({ ...payload, questionBankId }, context.user!);

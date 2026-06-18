@@ -27,7 +27,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Edit Question</h1>
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           {isRevisionRequested ? "A moderator has requested changes. After editing, use 'Save & Submit' to resubmit." : "Update your question in the library."}
         </p>
       </div>

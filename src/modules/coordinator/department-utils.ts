@@ -1,12 +1,16 @@
-import { Role, type User } from "@prisma/client";
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
-
-export type Actor = Pick<User, "id" | "role" | "email" | "name">;
+import { type Actor } from "@/lib/types";
+export { type Actor };
 
 export class DepartmentAccessUtils {
   async getAssignedDepartmentIds(actor: Actor) {
-    if (actor.role !== Role.COORDINATOR) throw new ForbiddenError("Only coordinators can access this resource.");
+    if (actor.role === Role.COE) {
+      const all = await prisma.department.findMany({ select: { id: true } });
+      return all.map((d) => d.id);
+    }
+    if (actor.role !== Role.COORDINATOR) throw new ForbiddenError("Only coordinators and COE can access this resource.");
     const assignments = await prisma.coordinatorDepartmentAssignment.findMany({
       where: { coordinatorId: actor.id },
       select: { departmentId: true },

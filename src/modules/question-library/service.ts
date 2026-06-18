@@ -1,4 +1,5 @@
-import { Prisma, QuestionStatus, RecordStatus, type User } from "@prisma/client";
+import { Prisma, QuestionStatus, RecordStatus } from "@prisma/client";
+import { type Actor } from "@/lib/types";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
@@ -6,14 +7,11 @@ import { withOptimisticLock } from "@/lib/optimistic-lock";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
-type Actor = Pick<User, "id" | "role" | "email" | "name">;
 
-export class QuestionUsageService {
-  async recordUsage(questionId: string, examCycleId: string, sourceType: string, sourceId: string) {
-    return prisma.questionUsageHistory.create({
-      data: { questionId, examCycleId, sourceType, sourceId },
-    });
-  }
+export async function recordUsage(questionId: string, examCycleId: string, sourceType: string, sourceId: string) {
+  return prisma.questionUsageHistory.create({
+    data: { questionId, examCycleId, sourceType, sourceId },
+  });
 }
 
 export class QuestionLibraryService {

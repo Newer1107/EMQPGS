@@ -13,13 +13,13 @@ export function TBody({ className, ...props }: React.HTMLAttributes<HTMLTableSec
 }
 
 export function TR({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
-  return <tr className={cn("border-b border-[var(--border-light)] last:border-0", className)} {...props} />;
+  return <tr className={cn("border-b border-[var(--border-soft)] last:border-0", className)} {...props} />;
 }
 
 export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableHeaderCellElement>) {
-  return <th className={cn("px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]", className)} {...props} />;
+  return <th className={cn("px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-secondary)]", className)} {...props} />;
 }
 
 export function TD({ className, ...props }: React.TdHTMLAttributes<HTMLTableDataCellElement>) {
-  return <td className={cn("px-4 py-3 text-sm text-[var(--foreground)]", className)} {...props} />;
+  return <td className={cn("px-4 py-3 text-sm text-[var(--text-primary)]", className)} {...props} />;
 }

@@ -352,7 +352,7 @@ model QuestionOwnershipHistory {
   transferredById String
   reason         String?
   transferredAt  DateTime           @default(now())
-  question       QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  question       QuestionLibraryItem @relation(fields: [questionId], references: [id], onDelete: Cascade)
   fromUser       User              @relation("ownershipFromUser", fields: [fromUserId], references: [id])
   toUser         User               @relation("ownershipToUser", fields: [toUserId], references: [id])
   transferredBy  User               @relation("ownershipTransferredBy", fields: [transferredById], references: [id])
@@ -373,7 +373,7 @@ model QuestionRevision {
   changedById      String
   changeReason     String?
   createdAt        DateTime           @default(now())
-  question         QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  question         QuestionLibraryItem @relation(fields: [questionId], references: [id], onDelete: Cascade)
   changedBy        User               @relation("revisionChangedBy", fields: [changedById], references: [id])
 
   @@unique([questionId, revisionNumber])
@@ -386,7 +386,7 @@ model QuestionUsageHistory {
   sourceId             String
   examCycleId          String?
   usedAt               DateTime           @default(now())
-  question             QuestionLibraryItem @relation(fields: [questionId], references: [id])
+  question             QuestionLibraryItem @relation(fields: [questionId], references: [id], onDelete: Cascade)
   examCycle            ExamCycle?         @relation("usageHistoryExamCycle", fields: [examCycleId], references: [id])
 
   @@index([questionId, usedAt])
@@ -395,8 +395,12 @@ model QuestionUsageHistory {
 
 // A QuestionSlot links a QuestionLibraryItem to a specific position within a QuestionBank.
 // A QuestionLibraryItem MAY be assigned to slots in multiple different banks simultaneously,
-// but within a single bank it can only occupy ONE slot (enforced at the application layer).
-// The slot's composite unique key (bank + module + marks + slotNumber) defines the position.
+// but within a single bank it can only occupy ONE slot.
+// This is enforced at the app layer (via conflict detection in createForBank).
+// MySQL does not support partial/filtered unique indexes in Prisma,
+// so a DB-level unique constraint on (questionBankId, assignedQuestionId)
+// would prevent cross-bank assignments, which we do NOT want.
+// Keep: app-layer enforcement + @@index for query performance.
 model QuestionSlot {
   id                 String               @id @default(cuid())
   questionBankId     String
@@ -440,6 +444,7 @@ model ApprovalDecision {
   decidedBy       User                @relation(fields: [decidedById], references: [id])
 
   @@index([questionBankId])
+  @@unique([questionBankId])
 }
 model QuestionBankSnapshot {
   id              String             @id @default(cuid())
@@ -453,7 +458,7 @@ model QuestionBankSnapshot {
   version         Int
   createdAt       DateTime           @default(now())
 
-  questionBank    QuestionBank       @relation(fields: [questionBankId], references: [id])
+  questionBank    QuestionBank       @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
 
   @@index([questionBankId, snapshotType, createdAt])
 }
@@ -612,7 +617,7 @@ model GeneratedPaperItem {
   generatedPaperId  String
   questionId        String
   createdAt         DateTime       @default(now())
-  generatedPaper      GeneratedPaper @relation(fields: [generatedPaperId], references: [id])
+  generatedPaper      GeneratedPaper @relation(fields: [generatedPaperId], references: [id], onDelete: Cascade)
   question            QuestionLibraryItem @relation(fields: [questionId], references: [id])
 
   @@unique([generatedPaperId, questionId])
@@ -663,6 +668,16 @@ model SystemBackup {
   updatedAt     DateTime     @updatedAt
   fileAsset     FileAsset?   @relation("systemBackupFileAsset", fields: [fileAssetId], references: [id])
   triggeredBy   User?        @relation("backupTrigger", fields: [triggeredById], references: [id])
+}
+
+model RevokedToken {
+  id        String   @id @default(cuid())
+  jti       String   @unique
+  type      String   // "access" | "refresh"
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
 
 // ──────────────────────────────────────────────
