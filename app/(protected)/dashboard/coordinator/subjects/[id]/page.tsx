@@ -6,6 +6,7 @@ import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { LinkCycleForm } from "@/components/forms/link-cycle-form";
 import { ActionButton } from "@/components/forms/action-button";
 import { ExamCycleStatus } from "@prisma/client";
@@ -22,11 +23,17 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
       versions: { orderBy: { versionNumber: "desc" }, include: { effectiveFromAcademicYear: true } },
       examCycleLinks: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } },
       questionBanks: { include: { examCycle: true } },
+      curriculumSubjects: {
+        include: { curriculumScheme: { select: { name: true, year: true } }, academicUnit: { select: { name: true } } },
+      },
     },
   });
   if (!subject) notFound();
 
   await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+
+  const curriculumPlacements = subject.curriculumSubjects ?? [];
+  const isPlaced = curriculumPlacements.length > 0;
 
   const rawCycles = await prisma.examCycle.findMany({
     where: { status: ExamCycleStatus.ACTIVE },
@@ -54,6 +61,11 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
           <Link href={`/dashboard/coordinator/subjects/${id}/versions`}>
             <Button variant="outline" size="sm">Versions</Button>
           </Link>
+          <Link href={`/dashboard/coordinator/subjects/${id}/place-in-curriculum`}>
+            <Button variant={isPlaced ? "outline" : "default"} size="sm">
+              {isPlaced ? "Curriculum" : "Place in Curriculum"}
+            </Button>
+          </Link>
           <ActionButton
             label="Deactivate"
             endpoint={`/api/subjects/${id}/deactivate`}
@@ -67,6 +79,15 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
+      {!isPlaced && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          This subject is not yet placed in any curriculum. Use{' '}
+          <Link href={`/dashboard/coordinator/subjects/${id}/place-in-curriculum`} className="underline font-medium">
+            Place in Curriculum
+          </Link> to make it available for exam cycles and question banks.
+        </div>
+      )}
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Subject Details</CardTitle></CardHeader>
@@ -75,8 +96,30 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Credits</span><span>{subject.credits}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><span>{subject.status}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Department</span><span>{subject.department?.name ?? '-'}</span></div>
+            <div className="flex justify-between">
+              <span className="text-[var(--text-tertiary)]">Curriculum</span>
+              <span>{isPlaced ? <Badge variant="success">Placed</Badge> : <Badge variant="warning">Not Placed</Badge>}</span>
+            </div>
           </CardContent>
         </Card>
+
+        {isPlaced && (
+          <Card>
+            <CardHeader><CardTitle>Curriculum Placements</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {curriculumPlacements.map((cp) => (
+                <div key={cp.id} className="flex justify-between">
+                  <span className="text-[var(--text-tertiary)]">
+                    {cp.curriculumScheme.name} ({cp.curriculumScheme.year})
+                  </span>
+                  <span>
+                    Sem {cp.semesterNumber} · {cp.academicUnit.name}
+                  </span>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         <LinkCycleForm subjectId={id} examCycles={examCycles} existingLinks={subject.examCycleLinks ?? []} />
       </div>
@@ -95,7 +138,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
                 </TR>
               ))}
               {subject.examCycleLinks?.length === 0 && (
-                <TR><TD colSpan={3} className="text-center text-sm text-[var(--text-tertiary)]">No exam cycles linked</TD></TR>
+                <TR><TD colSpan={3} className="text-center text-sm text-[var(--text-tertiary)]">No exam cycles linked. Place the subject in a curriculum first.</TD></TR>
               )}
             </TBody>
           </Table>

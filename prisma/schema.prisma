@@ -316,7 +316,7 @@ model QuestionLibraryItem {
   subjectVersionId String
   moduleNumber    Int
   marks           Int
-  questionText    String
+  questionText    String    @db.Text
   coMapping       CourseOutcome
   rbtLevel        RbtLevel
   difficultyLevel DifficultyLevel?
@@ -363,7 +363,7 @@ model QuestionRevision {
   id               String             @id @default(cuid())
   questionId       String
   revisionNumber   Int
-  snapshotQuestionText String
+  snapshotQuestionText String @db.Text
   snapshotModule   Int
   snapshotMarks    Int
   snapshotCo       CourseOutcome

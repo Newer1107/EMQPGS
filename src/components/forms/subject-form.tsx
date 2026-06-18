@@ -10,15 +10,12 @@ import { Select } from "@/components/ui/select";
 import { apiFetch } from "@/lib/client-fetch";
 import { useRouter } from "next/navigation";
 
-const SEMESTER_OPTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
-
 type SubjectFormProps = {
   departments: Array<{ id: string; name: string; code: string }>;
   initialValues?: {
     name?: string;
     code?: string;
     departmentId?: string;
-    semesterNumber?: number;
     credits?: number;
   };
   endpoint: string;
@@ -32,7 +29,6 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
     name: initialValues?.name ?? "",
     code: initialValues?.code ?? "",
     departmentId: initialValues?.departmentId ?? "",
-    semesterNumber: String(initialValues?.semesterNumber ?? ""),
     credits: String(initialValues?.credits ?? ""),
   });
 
@@ -48,7 +44,6 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
       name: values.name,
       code: values.code,
       departmentId: values.departmentId,
-      semesterNumber: Number(values.semesterNumber),
       credits: Number(values.credits),
     };
 
@@ -60,8 +55,13 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success(title);
-        router.push("/dashboard/coordinator/subjects");
+        const subjectId = result.data?.id;
+        toast.success("Subject created. Now place it in a curriculum to make it available for exam cycles.");
+        if (subjectId && !initialValues) {
+          router.push(`/dashboard/coordinator/subjects/${subjectId}`);
+        } else {
+          router.push("/dashboard/coordinator/subjects");
+        }
         router.refresh();
       } else {
         toast.error(result.error?.message ?? "Failed to save subject");
@@ -101,18 +101,9 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="semesterNumber">Semester</Label>
-              <Select id="semesterNumber" value={values.semesterNumber} onChange={(e) => setField("semesterNumber", e.target.value)} required>
-                <option value="">Select</option>
-                {SEMESTER_OPTIONS.map((n) => (
-                  <option key={n} value={n}>Semester {n}</option>
-                ))}
-              </Select>
+              <Label htmlFor="credits">Credit Load</Label>
+              <Input id="credits" type="number" min={1} max={10} value={values.credits} onChange={(e) => setField("credits", e.target.value)} required placeholder="e.g. 4" />
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="credits">Credit Load</Label>
-            <Input id="credits" type="number" min={1} max={10} value={values.credits} onChange={(e) => setField("credits", e.target.value)} required placeholder="e.g. 4" />
           </div>
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? "Saving..." : initialValues ? "Update Subject" : "Create Subject"}

@@ -15,9 +15,9 @@ export const GET = withApiHandler(
 );
 
 export const POST = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const payload = curriculumSubjectSchema.parse(await request.json());
-    return service.create(payload);
+    return service.createWithDepartmentCheck(payload, context.user!);
   },
-  { roles: [Role.COE], audit: { action: "CURRICULUM_SUBJECT_CREATED", entityType: "CURRICULUM_SUBJECT", getEntityId: (r) => (r as { id?: string }).id } },
+  { roles: [Role.COE, Role.COORDINATOR], audit: { action: "CURRICULUM_SUBJECT_CREATED", entityType: "CURRICULUM_SUBJECT", getEntityId: (r) => (r as { id?: string }).id } },
 );

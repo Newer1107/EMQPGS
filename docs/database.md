@@ -162,7 +162,7 @@ When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The
 | status | SubjectStatus | ACTIVE or INACTIVE |
 | questionBankDueDate | DateTime | Legacy — will be replaced by CurriculumSubject placement |
 | departmentId | String | FK → Department (legacy HR field) |
-| semesterNumber | Int | 1-8. Legacy — authoritative placement is now `CurriculumSubject.semesterNumber`. |
+| ~~semesterNumber~~ | (removed) | Column dropped. `CurriculumSubject.semesterNumber` is the sole source of truth. |
 
 **Unique:** `@@unique([subjectCode, departmentId])` — same code can exist in different departments.
 

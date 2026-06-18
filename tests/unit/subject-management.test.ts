@@ -57,7 +57,6 @@ describe("SubjectManagementService.createSubject", () => {
         subjectCode: "CS201",
         subjectName: "Data Structures",
         departmentId: "dept-1",
-        semesterNumber: 3,
         creditLoad: 4,
       }),
     ).rejects.toThrow("No active academic year found");
@@ -75,7 +74,6 @@ describe("SubjectManagementService.createSubject", () => {
       subjectCode: "CS201",
       subjectName: "Data Structures",
       departmentId: "dept-1",
-      semesterNumber: 3,
       creditLoad: 4,
     });
     expect(result).toEqual({ id: "sub-1" });

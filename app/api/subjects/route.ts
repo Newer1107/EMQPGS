@@ -10,19 +10,15 @@ const subjectCreateSchema = z.object({
   name: z.string().trim().min(1, "Subject name is required."),
   code: z.string().trim().min(1, "Subject code is required.").max(20).transform((value) => value.toUpperCase()),
   departmentId: z.string().min(1),
-  semesterNumber: z.coerce.number().int().min(1).max(8),
   credits: z.coerce.number().positive(),
 });
 
 export const GET = withApiHandler(async (request, context) => {
   const departmentId = request.nextUrl.searchParams.get("departmentId") ?? undefined;
-  const semesterNumberParam = request.nextUrl.searchParams.get("semesterNumber");
-  const semesterNumber = semesterNumberParam ? Number(semesterNumberParam) : undefined;
   const status = request.nextUrl.searchParams.get("status") as "ACTIVE" | "INACTIVE" | null;
 
   return service.listSubjects(context.user!, {
     departmentId,
-    semesterNumber,
     status: status ?? undefined,
   });
 }, { roles: [Role.COORDINATOR] });
@@ -36,7 +32,6 @@ export const POST = withApiHandler(
         subjectCode: payload.code,
         subjectName: payload.name,
         departmentId: payload.departmentId,
-        semesterNumber: payload.semesterNumber,
         creditLoad: Math.trunc(payload.credits),
       });
     } catch (error) {

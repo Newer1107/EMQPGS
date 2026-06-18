@@ -8,7 +8,6 @@ const service = new SubjectManagementService();
 const subjectUpdateSchema = z.object({
   name: z.string().trim().min(1, "Subject name is required.").optional(),
   code: z.string().trim().min(1, "Subject code is required.").max(20).transform((value) => value.toUpperCase()).optional(),
-  semesterNumber: z.coerce.number().int().min(1).max(8).optional(),
   credits: z.coerce.number().positive().optional(),
 });
 
@@ -19,7 +18,6 @@ export const PUT = withApiHandler(
     return service.updateSubject(context.user!, id, {
       ...(payload.name !== undefined ? { subjectName: payload.name } : {}),
       ...(payload.code !== undefined ? { subjectCode: payload.code } : {}),
-      ...(payload.semesterNumber !== undefined ? { semesterNumber: payload.semesterNumber } : {}),
       ...(payload.credits !== undefined ? { creditLoad: Math.trunc(payload.credits) } : {}),
     });
   },

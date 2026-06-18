@@ -84,7 +84,7 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     try {
       await service.createSubject(
         { id: "coord-1", role: "COORDINATOR" } as never,
-        { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-1", semesterNumber: 5, creditLoad: 4 },
+        { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-1", creditLoad: 4 },
       );
     } catch (e) {
       thrown = e;

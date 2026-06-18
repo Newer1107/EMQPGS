@@ -1,4 +1,4 @@
-import { Role, SubjectStatus, type User } from "@prisma/client";
+import { Role, SubjectStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { withUniqueCheck } from "@/lib/db-helpers";
@@ -9,20 +9,17 @@ type SubjectPayload = {
   subjectCode: string;
   subjectName: string;
   departmentId: string;
-  semesterNumber: number;
   creditLoad: number;
 };
 
 type SubjectUpdatePayload = {
   subjectCode?: string;
   subjectName?: string;
-  semesterNumber?: number;
   creditLoad?: number;
 };
 
 type SubjectFilters = {
   departmentId?: string;
-  semesterNumber?: number;
   status?: SubjectStatus;
 };
 
@@ -48,7 +45,6 @@ export class SubjectManagementService {
       where: {
         departmentId: { in: departmentIds },
         ...(filters.departmentId ? { departmentId: filters.departmentId } : {}),
-        ...(filters.semesterNumber ? { semesterNumber: filters.semesterNumber } : {}),
         ...(filters.status ? { status: filters.status } : {}),
       },
       select: {
@@ -104,10 +100,6 @@ export class SubjectManagementService {
       await this.deptUtils.assertDepartmentAccess(actor, payload.departmentId);
     }
 
-    if (payload.semesterNumber < 1 || payload.semesterNumber > 8) {
-      throw new AppError("Semester number must be between 1 and 8", 400);
-    }
-
     const currentAcademicYear = await prisma.academicYear.findFirst({
       where: { status: "ACTIVE" },
       orderBy: { startDate: "desc" },
@@ -158,7 +150,6 @@ export class SubjectManagementService {
       data: {
         ...(payload.subjectCode !== undefined ? { subjectCode: payload.subjectCode } : {}),
         ...(payload.subjectName !== undefined ? { subjectName: payload.subjectName } : {}),
-        ...(payload.semesterNumber !== undefined ? { semesterNumber: payload.semesterNumber } : {}),
         ...(payload.creditLoad !== undefined ? { credits: payload.creditLoad } : {}),
       },
       include: { department: true },
@@ -180,7 +171,10 @@ export class SubjectManagementService {
   async linkSubjectToExamCycle(actor: Actor, subjectId: string, examCycleId: string) {
     const [subject, examCycle] = await Promise.all([
       prisma.subject.findUnique({ where: { id: subjectId } }),
-      prisma.examCycle.findUnique({ where: { id: examCycleId } }),
+      prisma.examCycle.findUnique({
+        where: { id: examCycleId },
+        include: { batchSemester: { include: { batch: true } } },
+      }),
     ]);
 
     if (!subject) throw new NotFoundError("Subject not found");
@@ -188,6 +182,20 @@ export class SubjectManagementService {
     await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
     if (examCycle.status !== "ACTIVE") {
       throw new AppError("Only active exam cycles can be linked.", 400);
+    }
+
+    const placement = await prisma.curriculumSubject.findFirst({
+      where: {
+        subjectId,
+        curriculumSchemeId: examCycle.batchSemester.batch.curriculumSchemeId,
+        semesterNumber: examCycle.batchSemester.semesterNumber,
+      },
+    });
+    if (!placement) {
+      throw new AppError(
+        "Subject must be placed in the curriculum before linking to an exam cycle. Use 'Place in Curriculum' first.",
+        400,
+      );
     }
 
     return prisma.subjectExamCycleLink.upsert({

@@ -4,9 +4,14 @@ import { withUniqueCheck } from "@/lib/db-helpers";
 import { CurriculumSubjectRepository } from "@/modules/curriculum-subjects/repository";
 import type { CurriculumSubjectInput, CurriculumSubjectUpdateInput } from "@/modules/curriculum-subjects/validation";
 import type { Prisma } from "@prisma/client";
+import type { Actor } from "@/lib/types";
+import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 
 export class CurriculumSubjectService {
-  constructor(private readonly repository = new CurriculumSubjectRepository()) {}
+  constructor(
+    private readonly repository = new CurriculumSubjectRepository(),
+    private readonly deptUtils = new DepartmentAccessUtils(),
+  ) {}
 
   list(filters?: { curriculumSchemeId?: string; semesterNumber?: number; academicUnitId?: string; subjectId?: string }) {
     const where: Record<string, unknown> = {};
@@ -24,6 +29,37 @@ export class CurriculumSubjectService {
   }
 
   async create(data: CurriculumSubjectInput) {
+    const duplicate = await this.repository.list({
+      curriculumSchemeId: data.curriculumSchemeId,
+      subjectId: data.subjectId,
+      semesterNumber: data.semesterNumber,
+      groupAssignment: data.groupAssignment,
+    } as Prisma.CurriculumSubjectWhereInput);
+
+    if (duplicate.length > 0) {
+      throw new AppError("This subject is already placed in this semester with the same group assignment", 409);
+    }
+
+    const scheme = await prisma.curriculumScheme.findUnique({ where: { id: data.curriculumSchemeId } });
+    if (!scheme) throw new NotFoundError("Curriculum scheme not found");
+    if (!scheme.isActive) {
+      throw new AppError("Cannot add subjects to an inactive curriculum scheme", 400);
+    }
+
+    const unit = await prisma.academicUnit.findUnique({ where: { id: data.academicUnitId } });
+    if (!unit) throw new NotFoundError("Academic unit not found");
+    if (!unit.isActive) {
+      throw new AppError("Cannot use an inactive academic unit for curriculum placement", 400);
+    }
+
+    return withUniqueCheck(() => this.repository.create(data));
+  }
+
+  async createWithDepartmentCheck(data: CurriculumSubjectInput, actor: Actor) {
+    const subject = await prisma.subject.findUnique({ where: { id: data.subjectId }, include: { department: true } });
+    if (!subject) throw new NotFoundError("Subject not found");
+    await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+
     const duplicate = await this.repository.list({
       curriculumSchemeId: data.curriculumSchemeId,
       subjectId: data.subjectId,
