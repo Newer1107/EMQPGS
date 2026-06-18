@@ -10,7 +10,7 @@ The QuestionBank has two orthogonal state axes:
 
 ```
 Phase:        DRAFTING → MODERATION → APPROVAL → COMPLETE
-RecordStatus: ACTIVE ←→ LOCKED (ARCHIVED for retention)
+RecordStatus: ACTIVE ←→ LOCKED
 ```
 
 These are independent — a bank can be in APPROVAL phase and LOCKED simultaneously.
@@ -31,7 +31,6 @@ These are independent — a bank can be in APPROVAL phase and LOCKED simultaneou
 ```
 ACTIVE → LOCKED : lock()  (creates QuestionBankSnapshot)
 LOCKED → ACTIVE : unlock() (reversible — available for emergency recovery)
-ACTIVE → ARCHIVED : archive()
 ```
 
 ---
@@ -53,34 +52,37 @@ ACTIVE → ARCHIVED : archive()
 8. **Link Subject to Exam Cycle**
 9. **Initialize QuestionBank** → phase DRAFTING, PaperPattern created, all QuestionSlots generated (63 for ISE, 126 for ENDSEM)
 10. **Assign Moderator** to bank
+11. **Assign Contributor** to bank → contributor sees bank immediately in their dashboard
 
 ### Phase 3: Contribution (Contributor + Coordinator)
 
-11. **Create QuestionLibraryItem** → belongs to SubjectVersion, status DRAFT
-12. **Assign to Slot** → matches `(moduleNumber, marks)` position
-13. **Submit for Moderation** → status → PENDING
+12. **Create QuestionLibraryItem** → belongs to SubjectVersion, status DRAFT
+13. **Assign to Slot** → matches `(moduleNumber, marks)` position
+14. **Submit for Moderation** → status → PENDING
 
 All slots must be filled before advancing out of DRAFTING.
 
+**Editing rules:** DRAFT and REVISION_REQUESTED questions are freely editable. PENDING, APPROVED, REJECTED, and REVISION_SUBMITTED block edits via `QuestionLibraryService.update()`. If a COORDINATOR edits an APPROVED question, it auto-reverts to REVISION_REQUESTED.
+
 ### Phase 4: Moderation (Moderator)
 
-14. **Review questions** → Approve / Reject / Request Revision
+15. **Review questions** → Approve / Reject / Request Revision
 
 Question lifecycle: `DRAFT → PENDING → APPROVED | REJECTED | REVISION_REQUESTED → REVISION_SUBMITTED → APPROVED | REJECTED`
 
 ### Phase 5: Approval (Coordinator)
 
-15. **Advance to APPROVAL**
-16. **Trigger AI analysis** → `POST /api/question-banks/[id]/reports`
-17. **Generate papers** → 3 variants (A, B, C), 18 questions each for ENDSEM
-18. **Coordinator decision** → Approve (→COMPLETE) or Reject (→MODERATION)
+16. **Advance to APPROVAL**
+17. **Trigger AI analysis** → `POST /api/question-banks/[id]/reports`
+18. **Generate papers** → 3 variants (A, B, C), 18 questions each for ENDSEM
+19. **Coordinator decision** → Approve (→COMPLETE) or Reject (→MODERATION)
 
 ### Phase 6: Finalization
 
-19. **Lock bank** → creates QuestionBankSnapshot, all mutations blocked
-20. **Dean review** → select distinct variants for Regular, Supplementary, KT
-21. **COE export** → PDF/DOCX/ZIP
-22. **Close Exam Cycle**
+20. **Lock bank** → creates QuestionBankSnapshot, all mutations blocked
+21. **Dean review** → select distinct variants for Regular, Supplementary, KT
+22. **COE export** → PDF/DOCX/ZIP
+23. **Close Exam Cycle**
 
 ---
 

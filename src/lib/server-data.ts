@@ -1,7 +1,6 @@
 import { Role } from "@prisma/client";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
-import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { DashboardService } from "@/modules/dashboard/service";
 import { DeanReviewService } from "@/modules/production/dean-review.service";
 import { ExportService } from "@/modules/production/export.service";
@@ -38,43 +37,39 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
   };
 }
 
-export async function getQuestionContributionWorkspace(role: Role) {
-  const actor = await getCurrentUserFromCookies();
-  if (actor.role !== role) {
-    return null;
-  }
-  const coordinatorDepartmentIds =
-    role === Role.COORDINATOR ? await new DepartmentAccessUtils().getAssignedDepartmentIds(actor) : null;
-  const questionBank = await prisma.questionBank.findFirst({
-    where: coordinatorDepartmentIds
-      ? {
-          subject: {
-            departmentId: { in: coordinatorDepartmentIds },
-          },
-        }
-      : undefined,
-    orderBy: { createdAt: "asc" },
-    include: {
-      subject: true,
-      examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
-      slots: {
-        include: {
-          assignedQuestion: {
-            include: {
-              creator: { select: { id: true, name: true } },
-              subjectVersion: { include: { subject: true } },
+export async function getContributorAssignedBanks(contributorId: string) {
+  return prisma.questionBank.findMany({
+    where: {
+      OR: [
+        {
+          slots: {
+            some: {
+              OR: [
+                { assignedQuestion: { ownerId: contributorId } },
+              ],
             },
           },
         },
+        {
+          contributorAssignments: {
+            some: { contributorId },
+          },
+        },
+      ],
+    },
+    include: {
+      subject: { include: { versions: { where: { status: "ACTIVE" }, take: 1 } } },
+      examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
+      pattern: true,
+      slots: {
+        include: {
+          assignedQuestion: { select: { id: true, status: true, ownerId: true, moduleNumber: true, marks: true } },
+        },
+        orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
       },
     },
+    orderBy: { updatedAt: "desc" },
   });
-
-  if (!questionBank) {
-    return null;
-  }
-
-  return { actor, questionBank: questionBank! };
 }
 
 export async function getDeanReviewData() {

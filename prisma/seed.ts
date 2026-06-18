@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ExamType, QuestionBankPhase, RecordStatus, QuestionStatus, RbtLevel, CourseOutcome, DifficultyLevel, ExamCycleStatus, UserStatus, SubjectStatus, BatchStatus, BatchSemesterStatus, AcademicYearStatus, AcademicUnitType, GroupAssignment, SnapshotType, NotificationType, ReviewStatus, PaperGenerationStatus, PaperVariant, AiReportStatus, CoordinatorDecision } from "@prisma/client";
+import { PrismaClient, Role, ExamType, QuestionBankPhase, RecordStatus, QuestionStatus, RbtLevel, CourseOutcome, DifficultyLevel, ExamCycleStatus, UserStatus, SubjectStatus, BatchStatus, BatchSemesterStatus, AcademicYearStatus, AcademicUnitType, GroupAssignment, SnapshotType, NotificationType, PaperGenerationStatus, PaperVariant, AiReportStatus, CoordinatorDecision } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -612,7 +612,7 @@ async function main() {
               questionBankId: bank.id, reviewedById: deanId,
               regularPaper: PaperVariant.PAPER_A, supplementaryPaper: PaperVariant.PAPER_B, ktPaper: PaperVariant.PAPER_C,
               notes: "All three paper variants verified. Content coverage is comprehensive and balanced.",
-              status: ReviewStatus.CONFIRMED, reviewedAt: dt(2026, 12, 5),
+              reviewedAt: dt(2026, 12, 5),
             },
           }).catch(() => {});
         }

@@ -11,7 +11,7 @@
 | Sev | Count | Category |
 |-----|-------|----------|
 | Critical | 2 | Schema drift, seed failure |
-| High | 6 | Inconsistent design, dead code paths, incomplete features |
+| High | 5 | Inconsistent design, dead code paths, incomplete features |
 | Medium | 5 | Naming issues, logic gaps, unreachable states |
 | Low | 4 | Documentation drift, minor inconsistencies |
 
@@ -67,7 +67,7 @@
 | **Fix** | Either: (a) implement slot-locking UI/API, or (b) remove the field and the checks. |
 | **Type** | Dead code |
 
-### 2.2 [HIGH] `RecordStatus.ARCHIVED` is unreachable
+### 2.2 [HIGH] `RecordStatus.ARCHIVED` is unreachable — **RESOLVED**
 
 | Field | Value |
 |---|---|
@@ -76,6 +76,7 @@
 | **Evidence** | The `computeNextAction` function handles ARCHIVED (returns "Archived") and the attention items filter skips ARCHIVED. But nothing produces ARCHIVED. |
 | **Impact** | Unreachable code path. If a bank needs to be archived (soft-deleted), there's no way to do it. |
 | **Fix** | Either implement an archive endpoint, or remove ARCHIVED from the enum and the dead code. |
+| **Resolution** | ARCHIVED removed from `RecordStatus` enum (migration `20260618000100`). `RecordStatus` now has only ACTIVE and LOCKED values. |
 | **Type** | Dead code |
 
 ### 2.3 [MEDIUM] `creditLoad` vs `credits` naming inconsistency
@@ -198,7 +199,26 @@
 
 ---
 
-## 7. Documentation Drift
+## 7. Additional Cleanup (June 2026 — outside original audit scope)
+
+The following dead fields/enums were removed from runtime in migration `20260618000100`:
+
+| Removed | Reason |
+|---|---|
+| `ReviewStatus` enum (PENDING, SUBMITTED, CONFIRMED) | Never read or updated |
+| `DeanReview.status` field | State determined by record existence |
+| `SnapshotType.APPROVED` and `SnapshotType.EXPORTED` | Only LOCKED used |
+| `QuestionBankSnapshot.metadata` and `paperAssignments` | Never written |
+| `PaperSnapshot.metadata` | Never written |
+
+Additionally:
+- `ContributorBankAssignment` model added (mirrors `ModeratorBankAssignment`)
+- `QuestionLibraryService.update()` now guards against editing moderated questions
+- `QuestionSlot.reservedById` deprecated at runtime (column kept, no code reads/writes)
+
+---
+
+## 8. Documentation Drift
 
 ### 7.1 [LOW] `docs/database.md` references `SemesterType` enum and `activeSemesterType` field
 
@@ -212,7 +232,7 @@
 
 ---
 
-## 8. Test Coverage Gaps
+## 9. Test Coverage Gaps
 
 | # | Issue | Sev | Files | Detail |
 |---|---|---|---|---|
@@ -272,11 +292,13 @@ This order ensures no workflow or migration is broken during the process.
 ### Phase 4: Clean Up (fixes 5 medium/low issues)
 
 ```
-8. Remove ARCHIVED unreachable code or implement archive endpoint   → §2.2
-9. Remove hardcoded attachments: [] and "Upload attachments"         → §2.4
-10. Extract DEFAULT_PATTERNS to shared constants                     → §4.2
-11. Add cascade delete on QuestionBank → QuestionSlot               → §3.4
-12. Update docs/database.md (remove SemesterType/activeSemesterType) → §7.1
+8. [DONE] Remove ARCHIVED from RecordStatus enum                     → §2.2
+9. [DONE] Remove dead fields: ReviewStatus, DeanReview.status,
+    SnapshotType values, metadata fields                             → §7
+10. Remove hardcoded attachments: [] and "Upload attachments"         → §2.4
+11. Extract DEFAULT_PATTERNS to shared constants                      → §4.2
+12. Add cascade delete on QuestionBank → QuestionSlot                → §3.4
+13. Update docs/database.md (remove SemesterType/activeSemesterType)  → §7.1
 ```
 
 ### Phase 5: Testing (adds missing coverage)

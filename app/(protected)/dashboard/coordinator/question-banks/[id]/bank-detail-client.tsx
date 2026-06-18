@@ -55,7 +55,6 @@ export type DeanReviewItem = {
   ktPaper: string;
   reviewedBy: string;
   reviewedAt: string;
-  status: string;
 };
 
 type BankDetailClientProps = {

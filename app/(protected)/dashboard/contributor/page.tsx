@@ -2,77 +2,18 @@ import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { getContributorAssignedBanks } from "@/lib/server-data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { questionBankPhaseLabels, questionStatusLabels } from "@/lib/constants";
-
-type BankWithSlots = {
-  id: string;
-  phase: string;
-  subjectName: string;
-  subjectCode: string;
-  examType: string;
-  examCycleLabel: string;
-  totalSlots: number;
-  slots: Array<{ moduleNumber: number; marks: number; assignedQuestion: { status: string } | null }>;
-};
-
-type ModuleMarksSummary = {
-  moduleNumber: number;
-  marks: number;
-  filled: number;
-  total: number;
-  empty: number;
-  biggest: boolean;
-};
-
-function computeModuleMarks(slots: BankWithSlots["slots"], totalModules: number, marksOptions: number[], slotsPerModule: number): ModuleMarksSummary[] {
-  const result: ModuleMarksSummary[] = [];
-  let maxEmpty = 0;
-
-  for (let m = 1; m <= totalModules; m++) {
-    for (const mk of marksOptions) {
-      const group = slots.filter((s) => s.moduleNumber === m && s.marks === mk);
-      const filled = group.filter((s) => s.assignedQuestion).length;
-      const empty = slotsPerModule - filled;
-      if (empty > maxEmpty) maxEmpty = empty;
-      result.push({ moduleNumber: m, marks: mk, filled, total: slotsPerModule, empty, biggest: false });
-    }
-  }
-
-  if (maxEmpty > 0) {
-    for (const r of result) {
-      if (r.empty === maxEmpty) r.biggest = true;
-    }
-  }
-
-  return result;
-}
 
 export default async function ContributorDashboardPage() {
   const actor = await getCurrentUserFromCookies();
+  const banks = await getContributorAssignedBanks(actor.id);
 
-  const [banks, myQuestions] = await Promise.all([
-    prisma.questionBank.findMany({
-      where: actor.departmentId
-        ? {
-            subject: { departmentId: actor.departmentId },
-            phase: { in: ["DRAFTING", "MODERATION"] },
-          }
-        : { phase: "DRAFTING" },
-      include: {
-        subject: true,
-        examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
-        pattern: true,
-        slots: {
-          where: { assignedQuestionId: { not: null } },
-          select: { moduleNumber: true, marks: true, assignedQuestion: { select: { status: true } } },
-        },
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 20,
-    }),
+  const [myQuestions] = await Promise.all([
     prisma.questionLibraryItem.findMany({
       where: { createdById: actor.id },
       include: {
@@ -104,81 +45,46 @@ export default async function ContributorDashboardPage() {
         description="Contribute questions and track your submissions"
       />
 
-      {banks.length > 0 && (
+      {banks.length === 0 ? (
+        <Card>
+          <CardContent className="py-8">
+            <EmptyState
+              message="No subjects assigned"
+              description="You have not been assigned to any question banks. Contact your coordinator to get started."
+            />
+          </CardContent>
+        </Card>
+      ) : (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base">My Banks ({banks.length})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {banks.map((bank) => {
-              const totalSlots = bank.pattern?.totalSlots ?? 126;
-              const totalModules = bank.pattern?.totalModules ?? 6;
-              const marksOptions = (bank.pattern?.marksPattern as number[]) ?? [2, 5, 10];
-              const slotsPerModule = bank.pattern?.slotsPerModule ?? 7;
-              const filledCount = bank.slots.length;
-              const fillPct = totalSlots > 0 ? Math.round((filledCount / totalSlots) * 100) : 0;
-              const summary = computeModuleMarks(bank.slots, totalModules, marksOptions, slotsPerModule);
-              const biggestGap = summary.find((s) => s.biggest);
+              const svId = bank.subject.versions[0]?.id;
 
               return (
                 <div key={bank.id} className="rounded-lg border border-[var(--border)] p-4">
-                  <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center justify-between mb-2">
                     <div>
                       <p className="font-medium">{bank.subject.subjectName}</p>
                       <p className="text-sm text-[var(--text-tertiary)]">
                         {bank.subject.subjectCode} · Sem {bank.examCycle.batchSemester.semesterNumber} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType.replaceAll("_", " ")}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge>
-                      <span className="text-sm font-medium">{fillPct}% filled</span>
-                    </div>
+                    <Badge>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge>
                   </div>
-
-                  <div className="space-y-1.5">
-                    {summary.map((sm) => (
-                      <div key={`${sm.moduleNumber}-${sm.marks}`} className={`flex items-center gap-3 text-sm ${sm.biggest && sm.empty > 0 ? "font-medium" : ""}`}>
-                        <span className="w-20 shrink-0 text-[var(--text-tertiary)]">Module {sm.moduleNumber}</span>
-                        <span className="w-16 text-[var(--text-tertiary)]">{sm.marks} marks</span>
-                        <div className="flex items-center gap-1">
-                          <span className="text-green-600">{sm.filled}</span>
-                          <span className="text-[var(--text-tertiary)]">/</span>
-                          <span className={sm.empty > 0 ? "text-red-600" : "text-[var(--text-tertiary)]"}>{sm.total}</span>
-                          <span className="text-xs text-[var(--text-tertiary)] ml-1">
-                            ({new Array(sm.total).fill(null).map((_, i) =>
-                              i < sm.filled ? "■" : "□"
-                            ).join("")})
-                          </span>
-                        </div>
-                    {sm.biggest && sm.empty > 0 && (
-                          <Badge variant="danger" className="text-xs">Gap</Badge>
-                        )}
-                      </div>
-                    ))}
+                  <div className="flex gap-2 mt-2">
+                    <Link href={`/dashboard/contributor/my-subjects`}>
+                      <Button size="sm" variant="outline">View Details</Button>
+                    </Link>
+                    <Link href={`/dashboard/contributor/submit-question?subjectVersionId=${svId ?? ''}`}>
+                      <Button size="sm">Submit Question</Button>
+                    </Link>
                   </div>
-
-                  {biggestGap && biggestGap.empty > 0 && (
-                    <div className="mt-3">
-                      <Link
-                        href={`/dashboard/contributor/submit-question?module=${biggestGap.moduleNumber}&marks=${biggestGap.marks}`}
-                      >
-                        <Button size="sm" variant="outline">
-                          Create Question for Module {biggestGap.moduleNumber}, {biggestGap.marks} marks
-                        </Button>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               );
             })}
-          </CardContent>
-        </Card>
-      )}
-
-      {banks.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-[var(--text-tertiary)]">
-            No active banks found in your department.
           </CardContent>
         </Card>
       )}

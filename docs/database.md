@@ -233,6 +233,19 @@ When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The
 
 **Unique:** `@@unique([moderatorId, questionBankId])` — one assignment per moderator per bank.
 
+### ContributorBankAssignment
+
+| Field | Type | Notes |
+|---|---|---|
+| id | String (cuid) | PK |
+| contributorId | String | FK → User |
+| questionBankId | String | FK → QuestionBank |
+| assignedAt | DateTime | Default now |
+
+**Unique:** `@@unique([contributorId, questionBankId])` — one assignment per contributor per bank.
+
+**Purpose:** Mirrors `ModeratorBankAssignment`. Provides explicit contributor-to-bank assignment used by `getContributorAssignedBanks()` alongside slots-based inference. POST/DELETE/GET API at `/api/question-banks/{id}/assignments/contributor`.
+
 ### Notification
 
 | Field | Type | Notes |
@@ -311,6 +324,9 @@ Invariant: Append-only. SHA-256 hash chain for tamper detection.
 | isLocked | Boolean | Default false (individual slot lock) |
 
 **Unique:** `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
+
+**Notes:**
+- `reservedById` is deprecated at runtime (schema column kept, no code reads or writes it)
 
 **Invariants:**
 - One question per slot (by position key)
@@ -411,7 +427,7 @@ Invariant: Only ACTIVE cycles can have question bank initialization or locking.
 | subjectId | String | FK → Subject |
 | examCycleId | String | FK → ExamCycle |
 | phase | QuestionBankPhase | DRAFTING, MODERATION, APPROVAL, COMPLETE |
-| recordStatus | RecordStatus | ACTIVE, LOCKED, ARCHIVED |
+| recordStatus | RecordStatus | ACTIVE, LOCKED |
 | version | Int | Optimistic locking counter |
 | createdById | String | FK → User |
 | lockedAt | DateTime? | |
@@ -456,12 +472,10 @@ Invariant: Write-once per bank (application-enforced — transaction creates bot
 |---|---|---|
 | id | String (cuid) | PK |
 | questionBankId | String | FK → QuestionBank |
-| snapshotType | SnapshotType | LOCKED, APPROVED, EXPORTED |
+| snapshotType | SnapshotType | LOCKED |
 | phase | QuestionBankPhase | Phase at snapshot time |
 | status | RecordStatus | Status at snapshot time |
 | slotAssignments | Json | Full slot array |
-| paperAssignments | Json? | Paper variant data |
-| metadata | Json? | |
 | version | Int | Bank version at snapshot time |
 | createdAt | DateTime | |
 
@@ -476,7 +490,6 @@ Invariant: Write-once per bank (application-enforced — transaction creates bot
 | coverageScore | Float? | |
 | difficultyScore | Float? | |
 | qualityScore | Float? | |
-| metadata | Json? | |
 
 **Unique:** `@@unique([questionBankId, variant])` — one snapshot per variant per bank.
 
@@ -526,10 +539,9 @@ Invariant: Write-once per bank (application-enforced — transaction creates bot
 | ktPaper | PaperVariant | |
 | reviewedById | String | FK → User |
 | notes | String? | |
-| status | ReviewStatus | PENDING, SUBMITTED, CONFIRMED |
 | reviewedAt | DateTime | |
 
-Invariant: One dean review per bank. Write-once (no update path).
+Invariant: One dean review per bank. Write-once (no update path). State is determined by record existence (not a status field).
 
 ### ExportArtifact
 
@@ -597,9 +609,8 @@ Invariant: One dean review per bank. Write-once (no update path).
 | ExamType | ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT | ExamCycle, PaperPattern |
 | ExamCycleStatus | DRAFT, ACTIVE, CLOSED | ExamCycle |
 | QuestionBankPhase | DRAFTING, MODERATION, APPROVAL, COMPLETE | QuestionBank, QuestionBankSnapshot |
-| RecordStatus | ACTIVE, LOCKED, ARCHIVED | QuestionBank, QuestionBankSnapshot |
-| ReviewStatus | PENDING, SUBMITTED, CONFIRMED | DeanReview |
-| SnapshotType | LOCKED, APPROVED, EXPORTED | QuestionBankSnapshot |
+| RecordStatus | ACTIVE, LOCKED | QuestionBank, QuestionBankSnapshot |
+| SnapshotType | LOCKED | QuestionBankSnapshot |
 | AiReportStatus | PENDING, PROCESSING, COMPLETED, FAILED | AiReport |
 | PaperGenerationStatus | PENDING, PROCESSING, COMPLETED, FAILED | GeneratedPaper |
 | PaperVariant | PAPER_A, PAPER_B, PAPER_C | GeneratedPaper, PaperSnapshot, DeanReview |

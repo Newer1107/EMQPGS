@@ -704,6 +704,40 @@ When advancing to **COMPLETE**:
 
 ---
 
+### Architecture Cleanup and Fixes (June 2026)
+
+**What:** Four categories of fixes addressing audit issues and dead code.
+
+**Moderation Bypass Fix (CRITICAL):**
+- `QuestionLibraryService.update()` now blocks editing questions that are PENDING, APPROVED, REJECTED, or REVISION_SUBMITTED
+- DRAFT and REVISION_REQUESTED are freely editable
+- COORDINATOR editing an APPROVED question auto-reverts to REVISION_REQUESTED
+- Prevents contributors from bypassing moderation by editing already-moderated questions
+
+**ContributorBankAssignment:**
+- New model mirroring `ModeratorBankAssignment`
+- Gives explicit contributor-to-bank assignment
+- Used by `getContributorAssignedBanks()` alongside slots-based inference
+- POST/DELETE/GET API at `/api/question-banks/{id}/assignments/contributor`
+- Coordinator UI for managing assignments
+
+**Dead Field Cleanup (removed from runtime):**
+
+| Removed | Reason |
+|---|---|
+| `ReviewStatus` enum | Never read or updated |
+| `DeanReview.status` field | State determined by record existence |
+| `SnapshotType.APPROVED` and `SnapshotType.EXPORTED` | Only LOCKED used |
+| `RecordStatus.ARCHIVED` | Never set by any code path |
+| `QuestionBankSnapshot.metadata` and `paperAssignments` | Never written |
+| `PaperSnapshot.metadata` | Never written |
+
+**reservedById Deprecation:**
+- `QuestionSlot.reservedById` field is deprecated at runtime
+- Schema column kept, no code reads or writes it
+
+---
+
 ## 9. Incomplete Work
 
 ### Partially Implemented Features

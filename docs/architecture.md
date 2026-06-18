@@ -30,6 +30,7 @@ EMQPGS (Examination Management & Question Paper Generation System) manages the c
 | Subjects, question banks | Read | Manage | Review | Own work | Read |
 | Slot assignments | — | Manage | — | Own work | — |
 | Moderator assignment | — | Manage | — | — | — |
+| Contributor assignment | — | Manage | — | — | — |
 | Question moderation | — | — | Review | — | — |
 | AI reports, paper generation | — | Manage | — | — | — |
 | Coordinator approval | — | Manage | — | — | — |
@@ -53,7 +54,11 @@ ExamCycle 1─N QuestionBank
 
 ### Key entity: QuestionSlot
 
-`QuestionSlot` is the **sole** linkage between `QuestionBank` and `QuestionLibraryItem`. No join table exists. Each slot represents a position defined by `(moduleNumber, marks, slotNumber)` within a bank. A question can occupy at most one slot per bank but can be in multiple banks simultaneously.
+`QuestionSlot` is the **sole** linkage between `QuestionBank` and `QuestionLibraryItem`. No join table exists. Each slot represents a position defined by `(moduleNumber, marks, slotNumber)` within a bank. A question can occupy at most one slot per bank but can be in multiple banks simultaneously. `reservedById` is deprecated at runtime (schema column kept, no code reads/writes it).
+
+### ContributorBankAssignment
+
+`ContributorBankAssignment` mirrors `ModeratorBankAssignment`. It provides an explicit contributor-to-bank assignment, used by `getContributorAssignedBanks()` alongside the existing slots-based inference. POST/DELETE/GET API at `/api/question-banks/{id}/assignments/contributor`. Coordinator UI for managing assignments.
 
 ### Academic domain (June 2026)
 
@@ -78,7 +83,7 @@ Two orthogonal state axes:
 | Axis | States | Purpose |
 |---|---|---|
 | **Phase** (workflow) | DRAFTING → MODERATION → APPROVAL → COMPLETE | Workflow progression |
-| **RecordStatus** (mutability) | ACTIVE, LOCKED, ARCHIVED | Operational mutability |
+| **RecordStatus** (mutability) | ACTIVE, LOCKED | Operational mutability |
 
 A bank can be in APPROVAL phase and LOCKED simultaneously. Phase advancement is **manual** (coordinator action). The ReadinessEngine reports readiness but does not auto-advance.
 
@@ -100,7 +105,7 @@ See `docs/workflow.md` for detailed walkthrough.
 | Decision | Implementation |
 |---|---|
 | **QuestionSlot linkage** | No `QuestionBankQuestion` table. Slots are first-class positional entities with `@@unique([questionBankId, moduleNumber, marks, slotNumber])`. |
-| **Two-axis bank state** | 4-phase + 3-record-status model. `QuestionBankPhase` is orthogonal to `RecordStatus`. |
+| **Two-axis bank state** | 4-phase + 2-record-status model. `QuestionBankPhase` is orthogonal to `RecordStatus`. |
 | **ReadinessEngine is advisory** | Reports readiness with issues/warnings. Does not auto-advance. Coordinators always advance manually. |
 | **ApprovalDecision is write-once** | Created in same transaction as phase update. No update or delete path. |
 | **Snapshots** | `QuestionBankSnapshot` on lock (immutable). `PaperSnapshot` on paper generation (upsert per variant). |
@@ -135,6 +140,8 @@ Browser → proxy.ts middleware (route-level role gate)
 9. MinIO buckets: exactly 5 (`question-bank-attachments`, `generated-papers`, `exports`, `audit-files`, `system-backups`)
 10. ExamCycle is department-scoped — `@@unique([semesterId, examType, departmentId])`
 11. ApprovalDecision is write-once — no update or delete path
+12. Question editing guard: DRAFT and REVISION_REQUESTED statuses are freely editable; PENDING, APPROVED, REJECTED, and REVISION_SUBMITTED block edits via `QuestionLibraryService.update()`
+13. Coordinator override: a COORDINATOR editing an APPROVED question auto-reverts its status to REVISION_REQUESTED
 
 ---
 

@@ -64,7 +64,6 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       ktPaper: (bank.deanReview).ktPaper,
       reviewedBy: (bank.deanReview).reviewedBy.name,
       reviewedAt: (bank.deanReview).reviewedAt.toISOString(),
-      status: (bank.deanReview).status,
     };
   }
 

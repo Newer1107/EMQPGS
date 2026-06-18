@@ -159,6 +159,14 @@ export class QuestionLibraryService {
     });
     if (lockedBank) ensureQuestionBankMutable(lockedBank.questionBank.recordStatus);
 
+    if (question.status !== QuestionStatus.DRAFT && question.status !== QuestionStatus.REVISION_REQUESTED) {
+      if (question.status === QuestionStatus.APPROVED && actor.role === "COORDINATOR") {
+        input.status = QuestionStatus.REVISION_REQUESTED;
+      } else {
+        throw new AppError("Question cannot be edited in its current status.", 409);
+      }
+    }
+
     const contentChanged = input.questionText !== undefined || input.moduleNumber !== undefined || input.marks !== undefined || input.coMapping !== undefined || input.rbtLevel !== undefined || input.difficultyLevel !== undefined || input.teachingIndex !== undefined;
 
     const updated = await prisma.$transaction(async (tx) => {

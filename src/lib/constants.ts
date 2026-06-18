@@ -7,7 +7,6 @@ import {
   QuestionStatus,
   RbtLevel,
   RecordStatus,
-  ReviewStatus,
   Role,
   UserStatus,
 } from "@prisma/client";
@@ -49,13 +48,6 @@ export const questionBankPhaseLabels: Record<QuestionBankPhase, string> = {
 export const recordStatusLabels: Record<RecordStatus, string> = {
   ACTIVE: "Active",
   LOCKED: "Locked",
-  ARCHIVED: "Archived",
-};
-
-export const reviewStatusLabels: Record<ReviewStatus, string> = {
-  PENDING: "Pending",
-  SUBMITTED: "Submitted",
-  CONFIRMED: "Confirmed",
 };
 
 export const userStatusLabels: Record<UserStatus, string> = {

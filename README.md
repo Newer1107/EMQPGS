@@ -39,7 +39,7 @@ Five roles control access: **COE** (system admin), **COORDINATOR** (academic man
 
 - **QuestionLibraryItem** — A standalone, reusable question. Belongs to a `SubjectVersion`. Can be in multiple banks simultaneously.
 - **QuestionSlot** — The **sole** linkage between a bank and a question. Each slot is a position defined by `(moduleNumber, marks, slotNumber)`. No join table exists.
-- **QuestionBank** — Container per `(Subject, ExamCycle)` pair. Has two orthogonal state axes: phase (DRAFTING → MODERATION → APPROVAL → COMPLETE) and record status (ACTIVE / LOCKED / ARCHIVED).
+- **QuestionBank** — Container per `(Subject, ExamCycle)` pair. Has two orthogonal state axes: phase (DRAFTING → MODERATION → APPROVAL → COMPLETE) and record status (ACTIVE / LOCKED).
 - **ReadinessEngine** — Reports whether a bank meets requirements to advance. Does **not** auto-advance — the coordinator always advances manually.
 - **ApprovalDecision** — Write-once record. Created when coordinator approves (→COMPLETE) or rejects (→MODERATION loopback).
 

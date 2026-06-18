@@ -71,7 +71,6 @@ function computeNextAction(
   hasDeanReview: boolean,
 ): string {
   if (recordStatus === "LOCKED") return "Locked";
-  if (recordStatus === "ARCHIVED") return "Archived";
 
   switch (phase) {
     case "DRAFTING":
@@ -150,6 +149,7 @@ export class CoordinatorService {
             },
           },
           moderatorAssignments: { select: { id: true } },
+          contributorAssignments: { select: { id: true } },
           aiReports: {
             orderBy: { createdAt: "desc" },
             take: 1,
@@ -251,7 +251,7 @@ export class CoordinatorService {
 
     const attentionItems: AttentionItem[] = [];
     for (const bank of bankStatuses) {
-      if (bank.recordStatus === "LOCKED" || bank.recordStatus === "ARCHIVED") continue;
+      if (bank.recordStatus === "LOCKED") continue;
 
       if (bank.daysInPhase > STALL_DAYS_THRESHOLD && bank.phase !== "COMPLETE") {
         attentionItems.push({
