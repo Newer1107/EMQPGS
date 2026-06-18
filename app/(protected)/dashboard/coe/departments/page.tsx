@@ -20,6 +20,22 @@ export default async function DepartmentsManagementPage() {
         title="Departments"
         description="Manage academic departments"
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Departments</p>
+          <p className="mt-1 text-2xl font-bold">{departments.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{departments.filter((d) => d.isActive).length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Inactive</p>
+          <p className="mt-1 text-2xl font-bold text-red-600">{departments.filter((d) => !d.isActive).length}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Departments">
           <Table>
@@ -36,7 +52,7 @@ export default async function DepartmentsManagementPage() {
               {departments.length === 0 && (
                 <TR>
                   <TD colSpan={5}>
-                    <EmptyState message="No departments found" description="Create a department to get started." />
+                    <EmptyState message="No departments have been created yet" description="Departments represent academic faculties within the institution. Create a department to begin." />
                   </TD>
                 </TR>
               )}
@@ -63,11 +79,12 @@ export default async function DepartmentsManagementPage() {
         </DataTableCard>
         <SimpleForm
           title="Create Department"
+          submitLabel="Create Department"
           endpoint="/api/departments"
           fields={[
-            { name: "name", label: "Department Name", type: "text" },
-            { name: "code", label: "Department Code", type: "text" },
-            { name: "hodName", label: "HOD Name", type: "text" },
+            { name: "name", label: "Department Name", type: "text", placeholder: "e.g. Computer Engineering" },
+            { name: "code", label: "Department Code", type: "text", placeholder: "e.g. CO" },
+            { name: "hodName", label: "Head of Department", type: "text", placeholder: "e.g. Dr. S. R. Patel" },
           ]}
         />
       </div>

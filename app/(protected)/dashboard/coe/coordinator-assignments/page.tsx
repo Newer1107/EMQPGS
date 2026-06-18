@@ -37,6 +37,22 @@ export default async function CoordinatorAssignmentsPage() {
         title="Coordinator Assignments"
         description="Assign coordinators to academic departments"
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Assignments</p>
+          <p className="mt-1 text-2xl font-bold">{assignments.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Coordinators Available</p>
+          <p className="mt-1 text-2xl font-bold">{coordinators.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Departments Covered</p>
+          <p className="mt-1 text-2xl font-bold">{departments.length}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="Current Assignments">
           <Table>
@@ -51,7 +67,7 @@ export default async function CoordinatorAssignmentsPage() {
             </THead>
             <TBody>
               {assignments.length === 0 && (
-                <TR><TD colSpan={5}><EmptyState message="No assignments found" description="Assign a coordinator to get started." /></TD></TR>
+                <TR><TD colSpan={5}><EmptyState message="No coordinators have been assigned yet" description="Assign a coordinator to each department to oversee question bank creation and moderation." /></TD></TR>
               )}
               {assignments.map((assignment) => (
                 <TR key={assignment.id}>

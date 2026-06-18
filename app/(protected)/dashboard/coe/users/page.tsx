@@ -15,12 +15,35 @@ export default async function UsersManagementPage() {
   const departments = data.departments as Array<{ id: string; name: string }>;
   const users = data.users as Array<{ id: string; name: string; email: string; role: string; status: string; department?: { id: string; name: string } | null }>;
 
+  const activeUsers = users.filter((u) => u.status === "ACTIVE").length;
+  const disabledUsers = users.filter((u) => u.status === "DISABLED").length;
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Users"
         description="Manage institutional users and their roles"
       />
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Users</p>
+          <p className="mt-1 text-2xl font-bold">{users.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{activeUsers}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Disabled</p>
+          <p className="mt-1 text-2xl font-bold text-red-600">{disabledUsers}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Departments</p>
+          <p className="mt-1 text-2xl font-bold">{departments.length}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Users">
           <Table>
@@ -38,7 +61,7 @@ export default async function UsersManagementPage() {
               {users.length === 0 && (
                 <TR>
                   <TD colSpan={6}>
-                    <EmptyState message="No users found" description="Create a user to get started." />
+                    <EmptyState message="No users have been created yet" description="Create a user to assign roles and grant access to the system." />
                   </TD>
                 </TR>
               )}
@@ -66,14 +89,15 @@ export default async function UsersManagementPage() {
         </DataTableCard>
         <SimpleForm
           title="Create User"
+          submitLabel="Create User"
           endpoint="/api/users"
           fields={[
-            { name: "name", label: "Name", type: "text" },
-            { name: "email", label: "Email", type: "email" },
+            { name: "name", label: "Full Name", type: "text", placeholder: "e.g. Dr. Anil Sharma" },
+            { name: "email", label: "Email Address", type: "email", placeholder: "e.g. anil.sharma@college.edu" },
             { name: "departmentId", label: "Department", type: "select", options: departments.map((d) => ({ value: d.id, label: d.name })) },
             { name: "role", label: "Role", type: "select", options: Object.values(Role).map((role) => ({ value: role, label: roleLabels[role] ?? role })) },
-            { name: "status", label: "Status", type: "select", options: Object.values(UserStatus).map((s) => ({ value: s, label: userStatusLabels[s] ?? s })) },
-            { name: "password", label: "Password", type: "text" },
+            { name: "status", label: "Account Status", type: "select", options: Object.values(UserStatus).map((s) => ({ value: s, label: userStatusLabels[s] ?? s })) },
+            { name: "password", label: "Password", type: "text", placeholder: "Minimum 8 characters" },
           ]}
         />
       </div>

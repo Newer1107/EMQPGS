@@ -64,6 +64,7 @@ export default async function QuestionBanksManagementPage() {
         </DataTableCard>
         <SimpleForm
           title="Create Question Bank"
+          submitLabel="Create Question Bank"
           endpoint="/api/question-banks"
           fields={[
             { name: "subjectId", label: "Subject", type: "select", options: (subjects as Array<{ id: string; subjectCode: string; subjectName: string }>).map((subject) => ({ value: subject.id, label: `${subject.subjectCode} - ${subject.subjectName}` })) },

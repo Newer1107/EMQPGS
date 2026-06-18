@@ -24,6 +24,26 @@ export default async function BatchesPage() {
         title="Batches"
         description="A batch is one intake of students. For example, BE Computer Engineering (2025–2029). Each batch follows a curriculum scheme and progresses through semesters."
       />
+
+      <div className="grid gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Batches</p>
+          <p className="mt-1 text-2xl font-bold">{batches.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{batches.filter((b) => b.status === "ACTIVE").length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Graduated</p>
+          <p className="mt-1 text-2xl font-bold text-blue-600">{batches.filter((b) => b.status === "GRADUATED").length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Semesters</p>
+          <p className="mt-1 text-2xl font-bold">{batches.reduce((sum, b) => sum + b._count.batchSemesters, 0)}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Batches">
           <Table>
@@ -32,7 +52,7 @@ export default async function BatchesPage() {
             </THead>
             <TBody>
               {batches.length === 0 && (
-                <TR><TD colSpan={7}><EmptyState message="No batches found" description="Create a batch to get started." /></TD></TR>
+                <TR><TD colSpan={7}><EmptyState message="No batches have been created yet" description="Create your first student batch to begin scheduling semesters and assigning curriculum." /></TD></TR>
               )}
               {batches.map((b) => (
                 <TR key={b.id}>
@@ -50,15 +70,16 @@ export default async function BatchesPage() {
         </DataTableCard>
         <SimpleForm
           title="Create Batch"
+          submitLabel="Create Batch"
           endpoint="/api/batches"
           transform={(p) => ({ ...p, admissionYear: Number(p.admissionYear), graduationYear: Number(p.graduationYear), hasTeachingGroups: false })}
           fields={[
-            { name: "name", label: "Name", type: "text" },
-            { name: "code", label: "Code", type: "text" },
+            { name: "name", label: "Batch Name", type: "text", placeholder: "e.g. BE CO 2025" },
+            { name: "code", label: "Batch Code", type: "text", placeholder: "e.g. BECO-2025" },
             { name: "programmeId", label: "Programme", type: "select", options: programmes.map((p) => ({ value: p.id, label: p.name })) },
             { name: "curriculumSchemeId", label: "Curriculum Scheme", type: "select", options: schemes.map((s) => ({ value: s.id, label: `${s.name} (${s.year})` })) },
-            { name: "admissionYear", label: "Admission Year", type: "number" },
-            { name: "graduationYear", label: "Graduation Year", type: "number" },
+            { name: "admissionYear", label: "Admission Year", type: "number", placeholder: "e.g. 2025" },
+            { name: "graduationYear", label: "Expected Graduation Year", type: "number", placeholder: "e.g. 2029" },
           ]}
         />
       </div>

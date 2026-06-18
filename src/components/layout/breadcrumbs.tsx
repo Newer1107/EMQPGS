@@ -66,7 +66,7 @@ export function Breadcrumbs() {
           {crumb.isLast ? (
             <span className="font-medium text-[var(--foreground)]">{crumb.label}</span>
           ) : (
-            <Link href={crumb.href} className="hover:text-[var(--foreground)] transition-colors">
+            <Link href={crumb.href} className="rounded-sm hover:text-[var(--foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)]">
               {crumb.label}
             </Link>
           )}

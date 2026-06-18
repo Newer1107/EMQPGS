@@ -32,7 +32,7 @@ export default async function CoeAcademicYearsPage() {
             </THead>
             <TBody>
               {academicYears.length === 0 && (
-                <TR><TD colSpan={4}><EmptyState message="No academic years found" /></TD></TR>
+                <TR><TD colSpan={4}><EmptyState message="No academic years have been defined yet" description="Create an academic year to begin organising semesters and exam cycles." /></TD></TR>
               )}
               {academicYears.map((ay) => (
                 <TR key={ay.id}>

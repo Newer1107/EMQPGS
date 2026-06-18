@@ -19,6 +19,22 @@ export default async function AcademicUnitsPage() {
         title="Academic Units"
         description="Academic units represent who teaches a part of the curriculum. For example, ES&H teaches first-year subjects, while Computer Engineering teaches department-specific subjects from semester 3 onward."
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Units</p>
+          <p className="mt-1 text-2xl font-bold">{units.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{units.filter((u) => u.isActive).length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Inactive</p>
+          <p className="mt-1 text-2xl font-bold text-red-600">{units.filter((u) => !u.isActive).length}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Academic Units">
           <Table>
@@ -27,7 +43,7 @@ export default async function AcademicUnitsPage() {
             </THead>
             <TBody>
               {units.length === 0 && (
-                <TR><TD colSpan={5}><EmptyState message="No academic units found" /></TD></TR>
+                <TR><TD colSpan={5}><EmptyState message="No academic units have been added yet" description="Academic units represent who teaches the curriculum — for example, ES&H or Computer Engineering." /></TD></TR>
               )}
               {units.map((u) => (
                 <TR key={u.id}>
@@ -43,11 +59,12 @@ export default async function AcademicUnitsPage() {
         </DataTableCard>
         <SimpleForm
           title="Add Academic Unit"
+          submitLabel="Add Academic Unit"
           endpoint="/api/academic-units"
           fields={[
-            { name: "name", label: "Name", type: "text" },
-            { name: "code", label: "Code", type: "text" },
-            { name: "hodName", label: "HOD Name", type: "text" },
+            { name: "name", label: "Unit Name", type: "text", placeholder: "e.g. Computer Engineering" },
+            { name: "code", label: "Unit Code", type: "text", placeholder: "e.g. CO" },
+            { name: "hodName", label: "Head of Unit", type: "text", placeholder: "e.g. Dr. A. R. Rao" },
           ]}
         />
       </div>

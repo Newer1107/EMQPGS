@@ -11,11 +11,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/client-fetch";
 
 type Field =
-  | { name: string; label: string; type: "text" | "email" | "number" | "date" }
-  | { name: string; label: string; type: "select"; options: { value: string; label: string }[] }
-  | { name: string; label: string; type: "textarea" };
+  | { name: string; label: string; type: "text" | "email" | "number" | "date"; placeholder?: string }
+  | { name: string; label: string; type: "select"; options: { value: string; label: string }[]; placeholder?: string }
+  | { name: string; label: string; type: "textarea"; placeholder?: string };
 
-export function SimpleForm({ fields, endpoint, title, transform }: { fields: Field[]; endpoint: string; title: string; transform?: (payload: Record<string, FormDataEntryValue>) => unknown }) {
+export function SimpleForm({
+  fields,
+  endpoint,
+  title,
+  submitLabel = "Save",
+  transform,
+}: {
+  fields: Field[];
+  endpoint: string;
+  title: string;
+  submitLabel?: string;
+  transform?: (payload: Record<string, FormDataEntryValue>) => unknown;
+}) {
   const [loading, setLoading] = useState(false);
   const initialValues = Object.fromEntries(
     fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
@@ -72,7 +84,7 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
                   value={values[field.name] ?? ""}
                   onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
                 >
-                  <option value="">Select</option>
+                  <option value="">{field.placeholder ?? "Select..."}</option>
                   {field.options.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -83,6 +95,7 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
                 <Textarea
                   name={field.name}
                   id={field.name}
+                  placeholder={field.placeholder}
                   value={values[field.name] ?? ""}
                   onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
                 />
@@ -91,6 +104,7 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
                   type={field.type}
                   name={field.name}
                   id={field.name}
+                  placeholder={field.placeholder}
                   value={values[field.name] ?? ""}
                   onChange={(event) => setValues((current) => ({ ...current, [field.name]: event.target.value }))}
                 />
@@ -98,7 +112,7 @@ export function SimpleForm({ fields, endpoint, title, transform }: { fields: Fie
             </div>
           ))}
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Saving..." : "Save"}
+            {loading ? "Saving..." : submitLabel}
           </Button>
         </form>
       </CardContent>

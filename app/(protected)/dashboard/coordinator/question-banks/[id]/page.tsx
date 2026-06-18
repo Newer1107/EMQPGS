@@ -68,14 +68,23 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
     };
   }
 
+  const bs = bank.examCycle.batchSemester;
+
   return (
     <BankDetailClient
       bankId={bank.id}
       subjectName={(bank.subject).subjectName}
       subjectCode={(bank.subject).subjectCode}
-      examCycleLabel={`${bank.examCycle.batchSemester.academicYear.code} · Sem ${bank.examCycle.batchSemester.semesterNumber} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}`}
+      batchName={bs.batch?.name ?? ""}
+      programmeName={""}
+      semesterNumber={bs.semesterNumber}
+      academicUnitName={bs.academicUnit?.name ?? ""}
+      academicYearCode={bs.academicYear?.code ?? ""}
+      examType={examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}
+      examCycleLabel={bs.academicYear?.code ? `${bs.academicYear.code} · Sem ${bs.semesterNumber} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}` : ""}
       phase={bank.phase}
       recordStatus={bank.recordStatus}
+      userRole={actor.role}
       totalSlots={totalSlots}
       totalModules={totalModules}
       marksOptions={marksOptions}

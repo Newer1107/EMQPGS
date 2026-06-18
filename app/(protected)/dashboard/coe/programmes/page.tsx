@@ -22,6 +22,22 @@ export default async function ProgrammesPage() {
         title="Programmes"
         description="A programme is the degree students graduate with. For example, BE Computer Engineering or BE Information Technology."
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Total Programmes</p>
+          <p className="mt-1 text-2xl font-bold">{programmes.length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Active</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{programmes.filter((p) => p.isActive).length}</p>
+        </div>
+        <div className="rounded-lg border bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wider text-[var(--muted-foreground)]">Inactive</p>
+          <p className="mt-1 text-2xl font-bold text-red-600">{programmes.filter((p) => !p.isActive).length}</p>
+        </div>
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Programmes">
           <Table>
@@ -30,7 +46,7 @@ export default async function ProgrammesPage() {
             </THead>
             <TBody>
               {programmes.length === 0 && (
-                <TR><TD colSpan={7}><EmptyState message="No programmes found" /></TD></TR>
+                <TR><TD colSpan={7}><EmptyState message="No programmes have been created yet" description="Create a programme to define the degrees offered by your institution, such as BE Computer Engineering." /></TD></TR>
               )}
               {programmes.map((p) => (
                 <TR key={p.id}>
@@ -50,14 +66,15 @@ export default async function ProgrammesPage() {
         <div className="space-y-6">
           <SimpleForm
             title="Add Programme"
+            submitLabel="Add Programme"
             endpoint="/api/programmes"
             transform={(p) => ({ ...p, firstYearAcademicUnitId: p.firstYearAcademicUnitId || null })}
             fields={[
-              { name: "name", label: "Name", type: "text" },
-              { name: "code", label: "Code", type: "text" },
+              { name: "name", label: "Programme Name", type: "text", placeholder: "e.g. BE Computer Engineering" },
+              { name: "code", label: "Programme Code", type: "text", placeholder: "e.g. BECO" },
               { name: "degreeType", label: "Degree Type", type: "select", options: [{ value: "BE", label: "BE" }, { value: "BTECH", label: "BTech" }, { value: "MTECH", label: "MTech" }, { value: "PHD", label: "PhD" }, { value: "DIPLOMA", label: "Diploma" }] },
-              { name: "durationYears", label: "Duration (years)", type: "number" },
-              { name: "durationSemesters", label: "Duration (semesters)", type: "number" },
+              { name: "durationYears", label: "Duration (years)", type: "number", placeholder: "e.g. 4" },
+              { name: "durationSemesters", label: "Duration (semesters)", type: "number", placeholder: "e.g. 8" },
             ]}
           />
         </div>

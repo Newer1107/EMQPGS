@@ -108,7 +108,7 @@ export function AppShell({
             <p className="text-xs text-[var(--muted-foreground)]">{roleLabels[role] ?? role}</p>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
           {filteredNavItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
             return (
@@ -116,7 +116,7 @@ export function AppShell({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--foreground)] focus-visible:ring-offset-2",
                     isActive
                     ? "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
                     : "bg-transparent text-gray-800 hover:bg-gray-100 hover:text-gray-900",

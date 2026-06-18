@@ -97,7 +97,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
                 <TR><TH>Semester</TH><TH>Subject</TH><TH>Credits</TH><TH>Academic Unit</TH><TH>Teaching Group</TH></TR>
               </THead>
               <TBody>
-                {subjects.length === 0 && <TR><TD colSpan={5}><EmptyState message="No subjects placed yet" description="Add a subject below." /></TD></TR>}
+                {subjects.length === 0 && <TR><TD colSpan={5}><EmptyState message="No subjects have been placed yet" description="Select a curriculum scheme and semester above, then add subjects to begin building the curriculum." /></TD></TR>}
                 {subjects.map((s) => (
                   <TR key={s.id}>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">Semester {s.semesterNumber}</Badge></TD>
@@ -118,12 +118,13 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
           {activeScheme && (
             <SimpleForm
               title={selectedSemester ? `Add Subject to Semester ${selectedSemester}` : "Add Subject"}
+              submitLabel="Add Subject"
               endpoint="/api/curriculum-subjects"
               transform={(p) => ({ ...p, curriculumSchemeId: activeScheme.id, semesterNumber: Number(p.semesterNumber), groupAssignment: p.groupAssignment || "ALL" })}
               fields={[
-                { name: "subjectId", label: "Subject ID", type: "text" },
+                { name: "subjectId", label: "Subject", type: "text", placeholder: "Enter subject ID" },
                 { name: "semesterNumber", label: "Semester (1-8)", type: "number" },
-                { name: "academicUnitId", label: "Academic Unit ID", type: "text" },
+                { name: "academicUnitId", label: "Taught By (Academic Unit)", type: "text", placeholder: "Enter academic unit ID" },
               ]}
             />
           )}
