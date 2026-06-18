@@ -29,11 +29,24 @@ export type DeanDashboardItem = {
     supplementaryPaper: PaperVariant;
     ktPaper: PaperVariant;
   } | null;
+  qualityScore: number | null;
+  coverageScore: number | null;
+  aiSummary: string | null;
+  reviewedAt: string | null;
 };
 
 export type DeanDashboardData = {
   pendingReviews: DeanDashboardItem[];
   completedReviews: DeanDashboardItem[];
+  approvalHistory: Array<{
+    subjectName: string;
+    subjectCode: string;
+    examCycleLabel: string;
+    regularPaper: PaperVariant;
+    supplementaryPaper: PaperVariant;
+    ktPaper: PaperVariant;
+    reviewedAt: string;
+  }>;
   notifications: Array<{
     id: string;
     title: string;
@@ -110,9 +123,22 @@ export class DeanReviewService {
 
     const items = questionBanks.map((questionBank) => this.mapDeanDashboardItem(questionBank));
 
+    const approvalHistory = items
+      .filter((item) => item.reviewSubmitted && item.reviewedAt)
+      .map((item) => ({
+        subjectName: item.subjectName,
+        subjectCode: item.subjectCode,
+        examCycleLabel: item.examCycleLabel,
+        regularPaper: item.reviewSummary!.regularPaper,
+        supplementaryPaper: item.reviewSummary!.supplementaryPaper,
+        ktPaper: item.reviewSummary!.ktPaper,
+        reviewedAt: item.reviewedAt!,
+      }));
+
     return {
       pendingReviews: items.filter((item) => !item.reviewSubmitted),
       completedReviews: items.filter((item) => item.reviewSubmitted),
+      approvalHistory,
       notifications: notifications.map((notification) => ({
         id: notification.id,
         title: notification.title,
@@ -320,6 +346,15 @@ export class DeanReviewService {
   }
 
   private mapDeanDashboardItem(questionBank: DeanDashboardQuestionBank): DeanDashboardItem {
+    const aiReport = questionBank.aiReports?.[0];
+    const scoredPapers = questionBank.generatedPapers.filter((p) => p.qualityScore != null);
+    const avgQuality = scoredPapers.length > 0
+      ? scoredPapers.reduce((acc, p) => acc + (p.qualityScore ?? 0), 0) / scoredPapers.length
+      : null;
+    const scoredCoverage = questionBank.generatedPapers.filter((p) => p.coverageScore != null);
+    const avgCoverage = scoredCoverage.length > 0
+      ? scoredCoverage.reduce((acc, p) => acc + (p.coverageScore ?? 0), 0) / scoredCoverage.length
+      : null;
     return {
       id: questionBank.id,
       subjectName: questionBank.subject.subjectName,
@@ -332,6 +367,10 @@ export class DeanReviewService {
         supplementaryPaper: questionBank.deanReview.supplementaryPaper,
         ktPaper: questionBank.deanReview.ktPaper,
       } : null,
+      qualityScore: avgQuality != null ? Math.round(avgQuality * 10) / 10 : null,
+      coverageScore: avgCoverage != null ? Math.round(avgCoverage * 10) / 10 : null,
+      aiSummary: aiReport?.summary ?? null,
+      reviewedAt: questionBank.deanReview?.reviewedAt.toISOString() ?? null,
     };
   }
 
@@ -395,6 +434,10 @@ const deanDashboardInclude = {
     include: {
       reviewedBy: true,
     },
+  },
+  aiReports: {
+    orderBy: { createdAt: "desc" as const },
+    take: 1,
   },
 } satisfies Prisma.QuestionBankInclude;
 

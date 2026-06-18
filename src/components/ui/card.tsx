@@ -1,7 +1,25 @@
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)]", className)} {...props} />;
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: "default" | "dense" | "stat";
+}
+
+export function Card({ className, variant = "default", ...props }: CardProps) {
+  const variantClasses = {
+    default: "",
+    dense: "p-3",
+    stat: "p-4 text-center",
+  }[variant];
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-[var(--border)] bg-[var(--card)] text-[var(--card-foreground)]",
+        variantClasses,
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

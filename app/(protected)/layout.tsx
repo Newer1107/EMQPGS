@@ -17,5 +17,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
-  return <AppShell role={role!} userName={name!} userEmail={email!}>{children}</AppShell>;
+  const badgeCounts: Record<string, number> = {};
+
+  return <AppShell role={role!} userName={name!} userEmail={email!} badgeCounts={badgeCounts}>{children}</AppShell>;
 }

@@ -26,4 +26,10 @@ export class ModeratorAssignmentRepository {
       data: { moderatorId, questionBankId },
     });
   }
+
+  delete(moderatorId: string, questionBankId: string) {
+    return prisma.moderatorBankAssignment.delete({
+      where: { moderatorId_questionBankId: { moderatorId, questionBankId } },
+    });
+  }
 }

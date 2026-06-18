@@ -52,7 +52,24 @@ export function BankActionsPanel({ questionBankId, phase, recordStatus }: BankAc
         )}
 
         {phase === "APPROVAL" && !isLocked && (
-          <CoordinatorDecisionForm questionBankId={questionBankId} />
+          <>
+            <ActionButton
+              endpoint={`/api/question-banks/${questionBankId}/reports`}
+              method="POST"
+              label="Trigger AI Analysis"
+              onSuccess={() => router.refresh()}
+            />
+            <CoordinatorDecisionForm questionBankId={questionBankId} />
+          </>
+        )}
+
+        {(phase === "APPROVAL" || phase === "COMPLETE") && !isLocked && (
+          <ActionButton
+            endpoint={`/api/question-banks/${questionBankId}/papers`}
+            method="POST"
+            label="Generate Papers"
+            onSuccess={() => router.refresh()}
+          />
         )}
 
         {phase === "COMPLETE" && !isLocked && (

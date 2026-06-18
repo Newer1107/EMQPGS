@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/client-fetch";
 import { useRouter } from "next/navigation";
+import { SlotDemand, type SlotInfo } from "@/components/forms/slot-demand";
 
 const MODULE_OPTIONS = Array.from({ length: 6 }, (_, i) => ({ value: String(i + 1), label: `Module ${i + 1}` }));
 const MARKS_OPTIONS = [2, 5, 10].map((m) => ({ value: String(m), label: `${m} Marks` }));
@@ -40,9 +41,10 @@ type QuestionFormProps = {
   redirectOnSuccess?: string;
   submitAfterSave?: boolean;
   submitEndpoint?: string;
+  slotDataMap?: Record<string, SlotInfo[]>;
 };
 
-export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint }: QuestionFormProps) {
+export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint, slotDataMap }: QuestionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -183,6 +185,13 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
               </Select>
             </div>
           </div>
+          {slotDataMap && values.subjectVersionId && slotDataMap[values.subjectVersionId] && (
+            <SlotDemand
+              slots={slotDataMap[values.subjectVersionId]}
+              selectedModule={values.moduleNumber}
+              selectedMarks={values.marks}
+            />
+          )}
           <div className="space-y-2">
             <Label htmlFor="questionText">Question Text</Label>
             <Textarea id="questionText" value={values.questionText} onChange={(e) => setField("questionText", e.target.value)} rows={4} required placeholder="Enter your question (minimum 15 characters)" />

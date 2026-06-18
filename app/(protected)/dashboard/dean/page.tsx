@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { EmptyState } from "@/components/dashboard/empty-state";
 import { NotificationInbox } from "@/components/moderator/notification-inbox";
 import { getDeanReviewData } from "@/lib/server-data";
 
@@ -34,10 +35,26 @@ export default async function DeanDashboardPage() {
                       Generated {item.generationTimestamp ? new Date(item.generationTimestamp).toLocaleString() : "Unavailable"}
                     </p>
                   </div>
-                  <Link className="text-sm font-medium underline underline-offset-4" href={`/dashboard/dean/review?bank=${item.id}`}>
+                  <Link className="text-sm font-medium underline underline-offset-4 shrink-0" href={`/dashboard/dean/review?bank=${item.id}`}>
                     Review papers
                   </Link>
                 </div>
+                {item.qualityScore != null || item.coverageScore != null || item.aiSummary ? (
+                  <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm">
+                    {item.qualityScore != null && item.coverageScore != null && (
+                      <p className="text-[var(--text-secondary)]">
+                        Quality Score: <span className="font-semibold text-[var(--text-primary)]">{item.qualityScore}/10</span>
+                        {" · "}
+                        Coverage: <span className="font-semibold text-[var(--text-primary)]">{item.coverageScore}%</span>
+                      </p>
+                    )}
+                    {item.aiSummary && (
+                      <p className="mt-1 text-xs text-[var(--text-tertiary)] line-clamp-2">{item.aiSummary}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-[var(--text-tertiary)] italic">No AI report yet</p>
+                )}
               </div>
             ))}
           </CardContent>
@@ -45,6 +62,46 @@ export default async function DeanDashboardPage() {
 
         <NotificationInbox initialNotifications={data.notifications} variant="card" onError="silent" />
       </section>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Approval History</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.approvalHistory.length === 0 ? (
+            <EmptyState title="No approval history available" description="Completed dean reviews will appear here once submitted." />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[var(--text-tertiary)] text-xs uppercase tracking-[0.08em]">
+                    <th className="pb-2 pr-4 font-medium">Subject</th>
+                    <th className="pb-2 pr-4 font-medium">Cycle</th>
+                    <th className="pb-2 pr-4 font-medium">Regular Paper</th>
+                    <th className="pb-2 pr-4 font-medium">Supplementary</th>
+                    <th className="pb-2 pr-4 font-medium">KT</th>
+                    <th className="pb-2 font-medium">Approved At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.approvalHistory.map((entry, idx) => (
+                    <tr key={idx} className="border-t border-[var(--border)]">
+                      <td className="py-2.5 pr-4 font-medium">{entry.subjectCode} · {entry.subjectName}</td>
+                      <td className="py-2.5 pr-4 text-[var(--text-secondary)]">{entry.examCycleLabel}</td>
+                      <td className="py-2.5 pr-4">{entry.regularPaper}</td>
+                      <td className="py-2.5 pr-4">{entry.supplementaryPaper}</td>
+                      <td className="py-2.5 pr-4">{entry.ktPaper}</td>
+                      <td className="py-2.5 whitespace-nowrap text-[var(--text-tertiary)]">
+                        {new Date(entry.reviewedAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

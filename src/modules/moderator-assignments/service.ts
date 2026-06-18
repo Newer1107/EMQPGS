@@ -37,4 +37,12 @@ export class ModeratorAssignmentService {
 
     return assignment;
   }
+
+  async unassignModerator(questionBankId: string, moderatorId: string) {
+    const existing = await this.repository.findDuplicate(moderatorId, questionBankId);
+    if (!existing) {
+      throw new NotFoundError("Assignment not found");
+    }
+    return this.repository.delete(moderatorId, questionBankId);
+  }
 }

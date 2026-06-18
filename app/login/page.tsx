@@ -113,7 +113,7 @@ export default function LoginPage() {
 
           <Card className="border-neutral-200 shadow-sm">
             <CardContent className="p-6">
-              <form className="space-y-5" action={async (formData) => onSubmit(formData)}>
+              <form className="space-y-5" action={async (formData) => onSubmit(formData)} aria-busy={loading} aria-describedby={error ? "login-error" : undefined}>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input id="email" name="email" type="email" placeholder="you@institution.edu" required />
@@ -133,13 +133,20 @@ export default function LoginPage() {
                 </div>
 
                 {error && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  <div id="login-error" className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700" role="alert">
                     {error}
                   </div>
                 )}
 
                 <Button className="w-full h-11" type="submit" disabled={loading}>
-                  {loading ? "Signing in\u2026" : "Sign in"}
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeDashoffset="8" />
+                      </svg>
+                      Signing in&hellip;
+                    </span>
+                  ) : "Sign in"}
                 </Button>
               </form>
             </CardContent>

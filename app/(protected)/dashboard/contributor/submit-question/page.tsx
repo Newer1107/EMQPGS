@@ -5,6 +5,7 @@ import { QuestionForm } from "@/components/forms/question-form";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { getContributorAssignedBanks } from "@/lib/server-data";
+import type { SlotInfo } from "@/components/forms/slot-demand";
 
 export default async function ContributorSubmitQuestionPage({
   searchParams,
@@ -45,6 +46,19 @@ export default async function ContributorSubmitQuestionPage({
         }
       : undefined;
 
+  const slotDataMap: Record<string, SlotInfo[]> = {};
+  for (const bank of banks) {
+    for (const v of bank.subject.versions) {
+      const entries = bank.slots.map((s) => ({
+        moduleNumber: s.moduleNumber,
+        marks: s.marks,
+        slotNumber: s.slotNumber,
+        filled: s.assignedQuestion !== null,
+      }));
+      (slotDataMap[v.id] ??= []).push(...entries);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -63,6 +77,7 @@ export default async function ContributorSubmitQuestionPage({
         title="Create Question"
         redirectOnSuccess="/dashboard/contributor/questions"
         initialValues={initialValues}
+        slotDataMap={slotDataMap}
       />
     </div>
   );

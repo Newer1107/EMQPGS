@@ -5,7 +5,7 @@ export function Table({ className, ...props }: React.HTMLAttributes<HTMLTableEle
 }
 
 export function THead({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <thead className={cn("border-b border-[var(--border)]", className)} {...props} />;
+  return <thead className={cn("border-b border-[var(--border)] sticky top-0 z-10 bg-[var(--background)]", className)} {...props} />;
 }
 
 export function TBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
@@ -17,7 +17,7 @@ export function TR({ className, ...props }: React.HTMLAttributes<HTMLTableRowEle
 }
 
 export function TH({ className, ...props }: React.ThHTMLAttributes<HTMLTableHeaderCellElement>) {
-  return <th className={cn("px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-secondary)]", className)} {...props} />;
+  return <th className={cn("px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--text-secondary)] sticky top-0 z-10 bg-[var(--background)]", className)} {...props} />;
 }
 
 export function TD({ className, ...props }: React.TdHTMLAttributes<HTMLTableDataCellElement>) {

@@ -25,10 +25,12 @@ export class ModeratorDashboardService {
     const rejected = questionCounts.find((item) => item.status === QuestionStatus.REJECTED)?._count._all ?? 0;
     const revisionRequested = questionCounts.find((item) => item.status === QuestionStatus.REVISION_REQUESTED)?._count._all ?? 0;
 
-    const [awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks, notifications] = await Promise.all([
+    const [awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks, pendingQuestionsByBank, perBankStats, notifications] = await Promise.all([
       this.getAwaitingRevisionResubmission(bankIds),
       this.getRecentModerationActivity(actor),
       this.getQuickAccessBanks(bankIds),
+      this.getPendingQuestionsByBank(bankIds),
+      this.getPerBankStats(bankIds),
       this.notifications.listForUser(actor.id, 50),
     ]);
 
@@ -37,6 +39,8 @@ export class ModeratorDashboardService {
       awaitingRevisionResubmission,
       recentModerationActivity,
       quickAccessBanks,
+      pendingQuestionsByBank,
+      perBankStats,
       notifications: notifications.map((n) => ({
         id: n.id,
         title: n.title,
@@ -119,6 +123,64 @@ export class ModeratorDashboardService {
         pendingCount,
         revisionSubmittedCount,
         urgency: pendingCount + revisionSubmittedCount,
+      };
+    });
+  }
+
+  private async getPendingQuestionsByBank(bankIds: string[]) {
+    const banks = await prisma.questionBank.findMany({
+      where: { id: { in: bankIds } },
+      include: {
+        subject: { select: { subjectName: true } },
+        slots: {
+          where: { assignedQuestion: { status: QuestionStatus.PENDING } },
+          include: {
+            assignedQuestion: {
+              select: { id: true, creator: { select: { name: true } } },
+            },
+          },
+          orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }],
+        },
+      },
+    });
+
+    return banks
+      .filter((b) => b.slots.length > 0)
+      .map((b) => ({
+        bankId: b.id,
+        subjectName: b.subject.subjectName,
+        questions: b.slots.map((s) => ({
+          id: s.assignedQuestion!.id,
+          moduleNumber: s.moduleNumber,
+          marks: s.marks,
+          submitterName: s.assignedQuestion!.creator.name,
+        })),
+        count: b.slots.length,
+      }));
+  }
+
+  private async getPerBankStats(bankIds: string[]) {
+    const banks = await prisma.questionBank.findMany({
+      where: { id: { in: bankIds } },
+      include: {
+        subject: { select: { subjectName: true } },
+        slots: {
+          include: { assignedQuestion: { select: { status: true } } },
+          where: { assignedQuestionId: { not: null } },
+        },
+      },
+    });
+
+    return banks.map((b) => {
+      const pending = b.slots.filter((s) => s.assignedQuestion?.status === QuestionStatus.PENDING).length;
+      const approved = b.slots.filter((s) => s.assignedQuestion?.status === QuestionStatus.APPROVED).length;
+      const rejected = b.slots.filter((s) => s.assignedQuestion?.status === QuestionStatus.REJECTED).length;
+      return {
+        bankId: b.id,
+        subjectName: b.subject.subjectName,
+        pending,
+        approved,
+        rejected,
       };
     });
   }

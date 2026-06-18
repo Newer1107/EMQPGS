@@ -22,10 +22,11 @@ const authUserSelect = {
 } as const;
 
 export class UserRepository {
-  list(take = 50, skip = 0) {
+  list(take = 50, skip = 0, role?: string) {
     return prisma.user.findMany({
       take: Math.min(take, 500),
       skip,
+      where: role ? { role: role as any } : undefined,
       orderBy: { createdAt: "desc" },
       select: publicUserSelect,
     });

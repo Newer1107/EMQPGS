@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { questionBankPhaseLabels, recordStatusLabels, questionStatusLabels, diff
 import { BankActionsPanel } from "@/components/forms/bank-actions-panel";
 import { WorkflowTimeline } from "@/components/forms/workflow-timeline";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
+import { apiFetch } from "@/lib/client-fetch";
 
 export type SlotQuestion = {
   id: string;
@@ -57,6 +58,18 @@ export type DeanReviewItem = {
   reviewedAt: string;
 };
 
+export type ModeratorInfo = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type ContributorInfo = {
+  id: string;
+  name: string;
+  email: string;
+};
+
 type BankDetailClientProps = {
   bankId: string;
   subjectName: string;
@@ -79,6 +92,8 @@ type BankDetailClientProps = {
   aiReports: AiReportItem[];
   generatedPapers: GeneratedPaperItem[];
   deanReview: DeanReviewItem | null;
+  moderators: ModeratorInfo[];
+  contributors: ContributorInfo[];
 };
 
 const MODULE_LABELS: Record<number, string> = {
@@ -148,15 +163,23 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
   );
 }
 
-function SlotCell({ slot, isSelected, onClick }: { slot: SlotItem; isSelected: boolean; onClick: () => void }) {
+function SlotCell({ slot, isSelected, onClick, onMouseEnter, onMouseLeave }: {
+  slot: SlotItem; isSelected: boolean; onClick: () => void;
+  onMouseEnter: () => void; onMouseLeave: () => void;
+}) {
   const status = slot.assignedQuestion?.status ?? null;
+  const statusLabel = status ? (questionStatusLabels[status as keyof typeof questionStatusLabels] ?? status) : "empty";
+  const ariaLabel = `Slot ${slot.slotNumber}, Module ${slot.moduleNumber}, ${slot.marks} marks, ${statusLabel}`;
   return (
-    <button type="button" onClick={onClick}
+    <div role="gridcell" tabIndex={0} aria-label={ariaLabel}
+      onClick={onClick}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={`relative flex h-9 w-9 items-center justify-center rounded border text-xs font-medium transition-colors ${slotStatusClass(status)} ${isSelected ? "ring-2 ring-[var(--foreground)]" : "hover:opacity-80"} ${slot.isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-      title={`Slot ${slot.slotNumber} · ${slot.assignedQuestion?.questionText?.slice(0, 60) ?? "Empty"}`}
     >
       <span className={status ? "" : "text-[var(--text-tertiary)]"}>{slot.slotNumber}</span>
-    </button>
+    </div>
   );
 }
 
@@ -197,7 +220,6 @@ function ReadinessPanel({ phase, slots, totalSlots }: { phase: string; slots: Sl
   const emptyCount = totalSlots - filledCount;
   const pendingCount = slots.filter((s) => s.assignedQuestion?.status === "PENDING" || s.assignedQuestion?.status === "REVISION_SUBMITTED").length;
   const draftCount = slots.filter((s) => s.assignedQuestion?.status === "DRAFT").length;
-  if (phase === "COMPLETE") return null;
 
   const issues: string[] = [];
   const warnings: string[] = [];
@@ -216,30 +238,71 @@ function ReadinessPanel({ phase, slots, totalSlots }: { phase: string; slots: Sl
     if (rbts.size < 3) warnings.push(`Only ${rbts.size} RBT levels covered (minimum 3 recommended).`);
   }
 
-  if (issues.length === 0 && warnings.length === 0) return null;
+  if (phase === "COMPLETE") return null;
+
+  const nextPhaseIdx = PHASE_FLOW.indexOf(phase) + 1;
+  const nextPhaseLabel = nextPhaseIdx < PHASE_FLOW.length
+    ? (questionBankPhaseLabels[PHASE_FLOW[nextPhaseIdx] as keyof typeof questionBankPhaseLabels] ?? PHASE_FLOW[nextPhaseIdx])
+    : "Complete";
+
+  const isReady = issues.length === 0;
 
   return (
-    <Card>
-      <CardHeader className="pb-3"><CardTitle className="text-base">Readiness</CardTitle></CardHeader>
-      <CardContent className="space-y-2">
-        {issues.map((issue, i) => (
-          <div key={`issue-${i}`} className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            <span className="mt-0.5 shrink-0">✗</span><span>{issue}</span>
+    <div role="alert" className={`rounded-lg border p-4 ${isReady ? "border-green-500 bg-green-50" : "border-red-500 bg-red-50"}`}>
+      {isReady ? (
+        <div className="flex items-center gap-2 text-green-800">
+          <span className="text-lg">✓</span>
+          <span className="font-medium">Ready to advance to {nextPhaseLabel}</span>
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2 text-red-800 font-medium mb-2">
+            <span className="text-lg">⊘</span>
+            <span>Issues blocking advance</span>
           </div>
-        ))}
-        {warnings.map((warning, i) => (
-          <div key={`warn-${i}`} className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-            <span className="mt-0.5 shrink-0">△</span><span>{warning}</span>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+          {issues.length > 3 ? (
+            <details className="text-sm text-red-700">
+              <summary className="cursor-pointer font-medium">{issues.length} issue{issues.length > 1 ? "s" : ""}</summary>
+              <div className="mt-2 space-y-1">
+                {issues.map((issue, i) => (
+                  <div key={`issue-${i}`} className="flex items-start gap-2 rounded border border-red-200 bg-red-50/50 p-2 text-sm">
+                    <span className="mt-0.5 shrink-0">✗</span><span>{issue}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <div className="space-y-1">
+              {issues.map((issue, i) => (
+                <div key={`issue-${i}`} className="flex items-start gap-2 text-sm text-red-700">
+                  <span className="mt-0.5 shrink-0">✗</span><span>{issue}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {warnings.length > 0 && (
+            <details className="mt-2 text-sm text-amber-700">
+              <summary className="cursor-pointer font-medium">{warnings.length} warning{warnings.length > 1 ? "s" : ""}</summary>
+              <div className="mt-2 space-y-1">
+                {warnings.map((w, i) => (
+                  <div key={`warn-${i}`} className="flex items-start gap-2 rounded border border-amber-200 bg-amber-50/50 p-2">
+                    <span className="mt-0.5 shrink-0">△</span><span>{w}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </>
+      )}
+    </div>
   );
 }
 
 function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotClick }: {
   slots: SlotItem[]; modules: number[]; marksOptions: number[]; selectedSlotId: string | null; onSlotClick: (slot: SlotItem) => void;
 }) {
+  const [hoveredSlotKey, setHoveredSlotKey] = useState<string | null>(null);
+
   const grid = useMemo(() => {
     const map = new Map<string, SlotItem[]>();
     for (const slot of slots) {
@@ -250,31 +313,89 @@ function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotClick }:
     return map;
   }, [slots]);
 
+  const gridRows = useMemo(() => {
+    const rows: SlotItem[][] = [];
+    for (const mn of modules) {
+      for (const m of marksOptions) {
+        const key = `${mn}-${m}`;
+        const group = grid.get(key) ?? [];
+        if (group.length > 0) rows.push(group.sort((a, b) => a.slotNumber - b.slotNumber));
+      }
+    }
+    return rows;
+  }, [grid, modules, marksOptions]);
+
+  function findSlotPosition(slotKey: string): { row: number; col: number } | null {
+    for (let r = 0; r < gridRows.length; r++) {
+      for (let c = 0; c < gridRows[r].length; c++) {
+        const s = gridRows[r][c];
+        if (`${s.moduleNumber}-${s.marks}-${s.slotNumber}` === slotKey) return { row: r, col: c };
+      }
+    }
+    return null;
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (!selectedSlotId) return;
+    const pos = findSlotPosition(selectedSlotId);
+    if (!pos) return;
+    let { row, col } = pos;
+    switch (e.key) {
+      case "ArrowRight": col = Math.min(col + 1, gridRows[row].length - 1); break;
+      case "ArrowLeft": col = Math.max(col - 1, 0); break;
+      case "ArrowDown": row = Math.min(row + 1, gridRows.length - 1); col = Math.min(col, gridRows[row].length - 1); break;
+      case "ArrowUp": row = Math.max(row - 1, 0); col = Math.min(col, gridRows[row].length - 1); break;
+      default: return;
+    }
+    e.preventDefault();
+    onSlotClick(gridRows[row][col]);
+  }
+
+  const hoveredSlot = useMemo(() => {
+    if (!hoveredSlotKey) return null;
+    for (const s of slots) {
+      if (`${s.moduleNumber}-${s.marks}-${s.slotNumber}` === hoveredSlotKey) return s;
+    }
+    return null;
+  }, [hoveredSlotKey, slots]);
+
   return (
     <Card>
       <CardHeader className="pb-3"><CardTitle className="text-base">Slot Grid</CardTitle></CardHeader>
-      <CardContent className="space-y-6">
-        {modules.map((moduleNumber) => (
-          <div key={moduleNumber}>
-            <h3 className="text-sm font-semibold mb-2">{MODULE_LABELS[moduleNumber] ?? `Module ${moduleNumber}`}</h3>
-            <div className="space-y-2">
-              {marksOptions.map((marks) => {
-                const key = `${moduleNumber}-${marks}`;
-                const group = grid.get(key) ?? [];
-                return (
-                  <div key={key} className="flex items-center gap-2">
-                    <span className="w-16 shrink-0 text-xs text-[var(--text-tertiary)]">{marks} marks</span>
-                    <div className="flex gap-1">
-                      {group.sort((a, b) => a.slotNumber - b.slotNumber).map((slot) => (
-                        <SlotCell key={slot.slotNumber} slot={slot} isSelected={selectedSlotId === `${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`} onClick={() => onSlotClick(slot)} />
-                      ))}
+      <CardContent className="relative space-y-6">
+        <div role="grid" aria-label="Question slot grid" onKeyDown={handleKeyDown} className="space-y-6 outline-none">
+          {modules.map((moduleNumber) => (
+            <div key={moduleNumber} role="row">
+              <h3 className="text-sm font-semibold mb-2">{MODULE_LABELS[moduleNumber] ?? `Module ${moduleNumber}`}</h3>
+              <div className="space-y-2">
+                {marksOptions.map((marks) => {
+                  const key = `${moduleNumber}-${marks}`;
+                  const group = grid.get(key) ?? [];
+                  return (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="w-16 shrink-0 text-xs text-[var(--text-tertiary)]">{marks} marks</span>
+                      <div className="flex gap-1" role="row">
+                        {group.sort((a, b) => a.slotNumber - b.slotNumber).map((slot) => (
+                          <SlotCell key={slot.slotNumber} slot={slot}
+                            isSelected={selectedSlotId === `${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`}
+                            onClick={() => onSlotClick(slot)}
+                            onMouseEnter={() => setHoveredSlotKey(`${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`)}
+                            onMouseLeave={() => setHoveredSlotKey(null)}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
+          ))}
+        </div>
+        {hoveredSlot && (
+          <div className="mt-2 rounded border bg-[var(--background)] px-3 py-1.5 text-xs text-[var(--text-primary)] shadow-sm">
+            Slot {hoveredSlot.slotNumber} · Module {hoveredSlot.moduleNumber} · {hoveredSlot.marks} marks · Q: {hoveredSlot.assignedQuestion?.questionText?.slice(0, 40) ?? "Empty"}
           </div>
-        ))}
+        )}
       </CardContent>
     </Card>
   );
@@ -430,6 +551,318 @@ function CoverageStats({ slots, totalSlots }: { slots: SlotItem[]; totalSlots: n
   );
 }
 
+function ContributorCard({ slots, assignedContributors: initialContributors, bankId }: {
+  slots: SlotItem[];
+  assignedContributors: ContributorInfo[];
+  bankId: string;
+}) {
+  const [contributors, setContributors] = useState(initialContributors);
+  const [showAssign, setShowAssign] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowAssign(false);
+      }
+    }
+    if (showAssign) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showAssign]);
+
+  function openAssign() {
+    setShowAssign(true);
+    if (availableUsers.length === 0 && !fetchingUsers) {
+      setFetchingUsers(true);
+      apiFetch("/api/users?role=CONTRIBUTOR&take=200")
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success) {
+            const all = (result.data ?? []) as { id: string; name: string; email: string }[];
+            const assignedIds = new Set(contributors.map((c) => c.id));
+            setAvailableUsers(all.filter((u) => !assignedIds.has(u.id)));
+          }
+        })
+        .catch(() => {})
+        .finally(() => setFetchingUsers(false));
+    }
+  }
+
+  async function handleAssign(userId: string) {
+    setAssignLoading(true);
+    try {
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/contributor`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contributorId: userId }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        const user = availableUsers.find((u) => u.id === userId);
+        if (user) {
+          setContributors((prev) => [...prev, { id: user.id, name: user.name, email: user.email }]);
+          setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
+        }
+        setShowAssign(false);
+      }
+    } catch {}
+    setAssignLoading(false);
+  }
+
+  async function handleRemove(contributorId: string) {
+    setRemoving(contributorId);
+    try {
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/contributor?contributorId=${contributorId}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setContributors((prev) => prev.filter((c) => c.id !== contributorId));
+      }
+    } catch {}
+    setRemoving(null);
+  }
+
+  const contributorCounts = useMemo(() => {
+    const counts = new Map<string, { name: string; count: number }>();
+    for (const slot of slots) {
+      const creator = slot.assignedQuestion?.creator;
+      if (creator) {
+        const existing = counts.get(creator.id) ?? { name: creator.name, count: 0 };
+        existing.count++;
+        counts.set(creator.id, existing);
+      }
+    }
+    for (const c of contributors) {
+      if (!counts.has(c.id)) {
+        counts.set(c.id, { name: c.name, count: 0 });
+      }
+    }
+    return Array.from(counts.entries()).sort((a, b) => b[1].count - a[1].count);
+  }, [slots, contributors]);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Contributors ({contributors.length})</CardTitle>
+          <div className="relative" ref={dropdownRef}>
+            <button onClick={openAssign} className="text-xs font-medium text-blue-600 hover:text-blue-800">+ Assign</button>
+            {showAssign && (
+              <div className="absolute right-0 top-6 z-10 w-56 rounded-lg border bg-white shadow-lg">
+                {fetchingUsers ? (
+                  <div className="p-3 text-xs text-[var(--text-tertiary)]">Loading...</div>
+                ) : availableUsers.length === 0 ? (
+                  <div className="p-3 text-xs text-[var(--text-tertiary)]">No available contributors</div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto py-1">
+                    {availableUsers.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleAssign(u.id)}
+                        disabled={assignLoading}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                      >
+                        <span className="font-medium truncate">{u.name}</span>
+                        <span className="shrink-0 text-xs text-[var(--text-tertiary)]">{u.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {contributors.length === 0 ? (
+          <p className="text-sm text-[var(--text-tertiary)]">No contributors assigned</p>
+        ) : (
+          <div className="space-y-2">
+            {contributors.map((c) => {
+              const count = contributorCounts.find(([id]) => id === c.id)?.[1].count ?? 0;
+              return (
+                <div key={c.id} className="flex items-center justify-between group">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm truncate">{c.name}</span>
+                    <span className="shrink-0 rounded-full bg-[var(--surface-hover)] px-2 py-0.5 text-xs font-medium">{count}</span>
+                  </div>
+                  <button
+                    onClick={() => handleRemove(c.id)}
+                    disabled={removing === c.id}
+                    className="shrink-0 ml-2 text-sm text-[var(--text-tertiary)] hover:text-red-600 disabled:opacity-50"
+                    title="Remove contributor"
+                  >
+                    {removing === c.id ? "..." : "×"}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ModeratorCard({ moderators: initialModerators, slots, bankId }: {
+  moderators: ModeratorInfo[];
+  slots: SlotItem[];
+  bankId: string;
+}) {
+  const [moderators, setModerators] = useState(initialModerators);
+  const [showAssign, setShowAssign] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const mod = moderators.length > 0 ? moderators[0] : null;
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowAssign(false);
+      }
+    }
+    if (showAssign) {
+      document.addEventListener("mousedown", handleClick);
+      return () => document.removeEventListener("mousedown", handleClick);
+    }
+  }, [showAssign]);
+
+  function openAssign() {
+    setShowAssign(true);
+    if (availableUsers.length === 0 && !fetchingUsers) {
+      setFetchingUsers(true);
+      apiFetch("/api/users?role=MODERATOR&take=200")
+        .then((res) => res.json())
+        .then((result) => {
+          if (result.success) {
+            const all = (result.data ?? []) as { id: string; name: string; email: string }[];
+            const assignedIds = new Set(moderators.map((m) => m.id));
+            setAvailableUsers(all.filter((u) => !assignedIds.has(u.id)));
+          }
+        })
+        .catch(() => {})
+        .finally(() => setFetchingUsers(false));
+    }
+  }
+
+  async function handleAssign(userId: string) {
+    setAssignLoading(true);
+    try {
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/moderator`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ moderatorId: userId }),
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        const user = availableUsers.find((u) => u.id === userId);
+        if (user) {
+          setModerators((prev) => [...prev, { id: user.id, name: user.name, email: user.email }]);
+          setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
+        }
+        setShowAssign(false);
+      }
+    } catch {}
+    setAssignLoading(false);
+  }
+
+  async function handleRemove(moderatorId: string) {
+    setRemoving(moderatorId);
+    try {
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/moderator?moderatorId=${moderatorId}`, {
+        method: "DELETE",
+      });
+      const result = await res.json();
+      if (res.ok && result.success) {
+        setModerators((prev) => prev.filter((m) => m.id !== moderatorId));
+      }
+    } catch {}
+    setRemoving(null);
+  }
+
+  const approvedCount = useMemo(() => slots.filter((s) => s.assignedQuestion?.status === "APPROVED").length, [slots]);
+  const totalReviewed = useMemo(() => slots.filter((s) => s.assignedQuestion && s.assignedQuestion.status !== "DRAFT").length, [slots]);
+  const modPct = totalReviewed > 0 ? Math.round((approvedCount / totalReviewed) * 100) : 0;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Moderator</CardTitle>
+          <div className="relative" ref={dropdownRef}>
+            <button onClick={openAssign} className="text-xs font-medium text-blue-600 hover:text-blue-800">+ Assign</button>
+            {showAssign && (
+              <div className="absolute right-0 top-6 z-10 w-56 rounded-lg border bg-white shadow-lg">
+                {fetchingUsers ? (
+                  <div className="p-3 text-xs text-[var(--text-tertiary)]">Loading...</div>
+                ) : availableUsers.length === 0 ? (
+                  <div className="p-3 text-xs text-[var(--text-tertiary)]">No available moderators</div>
+                ) : (
+                  <div className="max-h-48 overflow-y-auto py-1">
+                    {availableUsers.map((u) => (
+                      <button
+                        key={u.id}
+                        onClick={() => handleAssign(u.id)}
+                        disabled={assignLoading}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] disabled:opacity-50"
+                      >
+                        <span className="font-medium truncate">{u.name}</span>
+                        <span className="shrink-0 text-xs text-[var(--text-tertiary)]">{u.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!mod ? (
+          <p className="text-sm text-amber-600">No moderator assigned</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm font-medium">{mod.name}</p>
+                <p className="text-xs text-[var(--text-tertiary)]">{mod.email}</p>
+              </div>
+              <button
+                onClick={() => handleRemove(mod.id)}
+                disabled={removing === mod.id}
+                className="shrink-0 ml-2 text-sm text-[var(--text-tertiary)] hover:text-red-600 disabled:opacity-50"
+                title="Remove moderator"
+              >
+                {removing === mod.id ? "..." : "×"}
+              </button>
+            </div>
+            <div>
+              <div className="flex items-center justify-between text-xs mb-1">
+                <span className="text-[var(--text-tertiary)]">Approved</span>
+                <span>{approvedCount}/{totalReviewed} ({modPct}%)</span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-hover)]">
+                <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${modPct}%` }} />
+              </div>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function BankDetailClient(props: BankDetailClientProps) {
   const [selectedSlot, setSelectedSlot] = useState<SlotItem | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -515,15 +948,21 @@ export function BankDetailClient(props: BankDetailClientProps) {
 
           {props.phase === "APPROVAL" && props.aiReports.length > 0 && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-base">AI Report</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-3 gap-3 text-sm">
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Status</p><p className="font-medium">{props.aiReports[0].status}</p></div>
-                  <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Model</p><p className="font-medium">{props.aiReports[0].modelName}</p></div>
-                  {props.aiReports[0].generatedAt && <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Generated</p><p className="font-medium">{new Date(props.aiReports[0].generatedAt).toLocaleString()}</p></div>}
-                </div>
-                {props.aiReports[0].summary && <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm whitespace-pre-wrap">{props.aiReports[0].summary}</div>}
-              </CardContent>
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-6 pt-4 pb-3">
+                  <CardTitle className="text-sm font-semibold">AI Report</CardTitle>
+                  <span className="text-xs text-[var(--text-tertiary)] group-open:hidden">Show</span>
+                  <span className="text-xs text-[var(--text-tertiary)] hidden group-open:inline">Hide</span>
+                </summary>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Status</p><p className="font-medium">{props.aiReports[0].status}</p></div>
+                    <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Model</p><p className="font-medium">{props.aiReports[0].modelName}</p></div>
+                    {props.aiReports[0].generatedAt && <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Generated</p><p className="font-medium">{new Date(props.aiReports[0].generatedAt).toLocaleString()}</p></div>}
+                  </div>
+                  {props.aiReports[0].summary && <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm whitespace-pre-wrap">{props.aiReports[0].summary}</div>}
+                </CardContent>
+              </details>
             </Card>
           )}
 
@@ -570,6 +1009,9 @@ export function BankDetailClient(props: BankDetailClientProps) {
             <CardHeader className="pb-3"><CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Coverage</CardTitle></CardHeader>
             <CardContent><CoverageStats slots={props.slots} totalSlots={props.totalSlots} /></CardContent>
           </Card>
+
+          <ContributorCard slots={props.slots} assignedContributors={props.contributors} bankId={props.bankId} />
+          <ModeratorCard moderators={props.moderators} slots={props.slots} bankId={props.bankId} />
 
           <WorkflowTimeline phase={props.phase} recordStatus={props.recordStatus} />
           <NextStepGuidance phase={props.phase} recordStatus={props.recordStatus} />

@@ -38,10 +38,11 @@ export type BankStatusItem = {
   nextAction: string;
   hasModerator: boolean;
   aiReportStatus: string | null;
+  attentionFlags?: Array<"stalled" | "missing_moderator" | "low_fill" | "ready_to_advance" | "readiness_flagged">;
 };
 
 export type AttentionItem = {
-  type: "stalled" | "missing_moderator" | "ready";
+  type: "stalled" | "missing_moderator" | "ready_to_advance";
   bankId: string;
   subject: string;
   subjectCode: string;
@@ -219,6 +220,16 @@ export class CoordinatorService {
         hasDeanReview,
       );
 
+      const attentionFlags: Array<"stalled" | "missing_moderator" | "low_fill" | "ready_to_advance" | "readiness_flagged"> = [];
+      if (daysInPhase > STALL_DAYS_THRESHOLD && bank.phase !== QuestionBankPhase.COMPLETE) attentionFlags.push("stalled");
+      if ((bank.phase === QuestionBankPhase.DRAFTING || bank.phase === QuestionBankPhase.MODERATION) && !hasModerator) attentionFlags.push("missing_moderator");
+      if (bank.phase === QuestionBankPhase.DRAFTING && fillPercentage < 100) attentionFlags.push("low_fill");
+      if (
+        (bank.phase === QuestionBankPhase.DRAFTING && fillPercentage >= 100) ||
+        (bank.phase === QuestionBankPhase.MODERATION && pendingModerationCount === 0 && filledCount > 0) ||
+        (bank.phase === QuestionBankPhase.APPROVAL && aiReportStatus === "COMPLETED")
+      ) attentionFlags.push("ready_to_advance");
+
       return {
         id: bank.id,
         subjectName: bank.subject.subjectName,
@@ -239,6 +250,7 @@ export class CoordinatorService {
         nextAction,
         hasModerator,
         aiReportStatus,
+        attentionFlags,
       };
     });
 
@@ -286,7 +298,7 @@ export class CoordinatorService {
         (bank.phase === "APPROVAL" && bank.aiReportStatus === "COMPLETED")
       ) {
         attentionItems.push({
-          type: "ready",
+          type: "ready_to_advance",
           bankId: bank.id,
           subject: bank.subjectName,
           subjectCode: bank.subjectCode,

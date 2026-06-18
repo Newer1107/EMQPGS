@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
-import { BankDetailClient, type SlotItem, type AiReportItem, type GeneratedPaperItem, type DeanReviewItem } from "./bank-detail-client";
+import { BankDetailClient, type SlotItem, type AiReportItem, type GeneratedPaperItem, type DeanReviewItem, type ModeratorInfo, type ContributorInfo } from "./bank-detail-client";
 import { examTypeLabels } from "@/lib/constants";
 
 export default async function QuestionBankDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -67,6 +67,18 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
     };
   }
 
+  const moderators: ModeratorInfo[] = (bank.moderatorAssignments ?? []).map((a) => ({
+    id: a.moderator.id,
+    name: a.moderator.name,
+    email: a.moderator.email,
+  }));
+
+  const contributors: ContributorInfo[] = (bank.contributorAssignments ?? []).map((a) => ({
+    id: a.contributor.id,
+    name: a.contributor.name,
+    email: a.contributor.email,
+  }));
+
   const bs = bank.examCycle.batchSemester;
 
   return (
@@ -92,6 +104,8 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       aiReports={aiReports}
       generatedPapers={generatedPapers}
       deanReview={deanReview}
+      moderators={moderators}
+      contributors={contributors}
     />
   );
 }

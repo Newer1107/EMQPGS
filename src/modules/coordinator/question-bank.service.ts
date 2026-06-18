@@ -100,6 +100,16 @@ export class QuestionBankWorkflowService {
           },
         },
         deanReview: { include: { reviewedBy: true } },
+        moderatorAssignments: {
+          include: {
+            moderator: { select: { id: true, name: true, email: true } },
+          },
+        },
+        contributorAssignments: {
+          include: {
+            contributor: { select: { id: true, name: true, email: true } },
+          },
+        },
       },
     });
     if (!bank) throw new NotFoundError("Question bank not found");

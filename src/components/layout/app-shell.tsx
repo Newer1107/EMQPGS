@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -64,21 +65,56 @@ const roleLabels: Record<string, string> = {
   DEAN: "Dean",
 };
 
+function getSection(href: string): string {
+  if (href === "/dashboard") return "Overview";
+  if (
+    [
+      "/dashboard/coe/academic-setup",
+      "/dashboard/coe/academic-units",
+      "/dashboard/coe/programmes",
+      "/dashboard/coe/curriculum",
+      "/dashboard/coe/batches",
+    ].includes(href)
+  )
+    return "Academic";
+  if (href.startsWith("/dashboard/coe")) return "Administration";
+  if (
+    href.startsWith("/dashboard/coordinator") ||
+    href.startsWith("/dashboard/moderator") ||
+    href.startsWith("/dashboard/dean")
+  )
+    return "Review";
+  if (href.startsWith("/dashboard/contributor")) return "Contributions";
+  return "Overview";
+}
+
+const sectionOrder = ["Overview", "Administration", "Academic", "Review", "Contributions"];
+
 export function AppShell({
   children,
   role,
   userName,
   userEmail,
+  badgeCounts = {},
 }: {
   children: React.ReactNode;
   role: string;
   userName: string;
   userEmail: string;
+  badgeCounts?: Record<string, number>;
 }) {
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(role));
+
+  const grouped = new Map<string, NavItem[]>();
+  for (const item of filteredNavItems) {
+    const section = getSection(item.href);
+    if (!grouped.has(section)) grouped.set(section, []);
+    grouped.get(section)!.push(item);
+  }
 
   async function handleLogout() {
     try {
@@ -98,56 +134,151 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen">
-      <aside className="flex w-64 flex-col border-r border-[var(--border)] bg-white">
-        <div className="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--foreground)] text-sm font-bold text-[var(--background)]">
-            {APP_NAME[0]}
-          </div>
-          <div>
-            <p className="text-sm font-semibold">{APP_NAME}</p>
-            <p className="text-xs text-[var(--text-tertiary)]">{roleLabels[role] ?? role}</p>
-          </div>
+      <aside
+        className={cn(
+          "sticky top-0 flex h-screen flex-col border-r border-[var(--border)] bg-white transition-all duration-200",
+          collapsed ? "w-14" : "w-60",
+        )}
+      >
+        <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-3">
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-hover)]"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className={cn("transition-transform", collapsed && "rotate-180")}
+            >
+              <path d="M15 18l-6-6 6-6" />
+            </svg>
+          </button>
+          {!collapsed && (
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--foreground)] text-sm font-bold text-[var(--background)]">
+                {APP_NAME[0]}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{APP_NAME}</p>
+                <p className="truncate text-xs text-[var(--text-tertiary)]">{roleLabels[role] ?? role}</p>
+              </div>
+            </div>
+          )}
         </div>
-        <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label="Main navigation">
-          {filteredNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+
+        <nav className="flex-1 overflow-y-auto px-2 py-4" aria-label="Main navigation">
+          {sectionOrder.filter((s) => grouped.has(s)).map((section) => {
+            const items = grouped.get(section)!;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
-                  isActive
-                    ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
-                    : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]",
+              <div key={section} className="mb-5">
+                {!collapsed && (
+                  <p className="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+                    {section}
+                  </p>
                 )}
-              >
-                {item.label}
-              </Link>
+                <div className="space-y-0.5">
+                  {items.map((item) => {
+                    const isActive =
+                      pathname === item.href ||
+                      (item.href !== "/dashboard" && pathname.startsWith(item.href));
+                    const badge = badgeCounts[item.href];
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        title={collapsed ? item.label : undefined}
+                        className={cn(
+                          "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2",
+                          isActive
+                            ? "bg-[var(--surface-hover)] text-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)] hover:bg-[var(--surface-elevated)] hover:text-[var(--text-primary)]",
+                          collapsed && "justify-center px-0",
+                        )}
+                      >
+                        {collapsed ? (
+                          <span className="text-sm font-semibold">{item.label[0]}</span>
+                        ) : (
+                          <>
+                            <span className="flex-1 truncate">{item.label}</span>
+                            {badge != null && badge > 0 && (
+                              <span className="ml-auto inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-medium text-white">
+                                {badge > 99 ? "99+" : badge}
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </nav>
-        <div className="border-t border-[var(--border)] p-4">
-          <div className="mb-3 flex items-center gap-3 rounded-xl bg-[var(--surface-elevated)] px-3 py-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
-              {initials}
+
+        <div className="border-t border-[var(--border)] p-3">
+          {collapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-semibold text-white">
+                {initials}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex h-8 w-8 items-center justify-center rounded-md text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-elevated)]"
+                aria-label="Sign out"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
             </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-[var(--text-primary)]">{userName}</p>
-              <p className="truncate text-xs text-[var(--text-tertiary)]">{userEmail}</p>
-            </div>
-          </div>
-          <Button variant="ghost" className="w-full justify-start text-sm text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]" onClick={handleLogout}>
-            Sign out
-          </Button>
+          ) : (
+            <>
+              <div className="mb-3 flex items-center gap-3 rounded-xl bg-[var(--surface-elevated)] px-3 py-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-sm font-semibold text-white">
+                  {initials}
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-[var(--text-primary)]">{userName}</p>
+                  <p className="truncate text-xs text-[var(--text-tertiary)]">{userEmail}</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-sm text-[var(--text-primary)] hover:bg-[var(--surface-elevated)]"
+                onClick={handleLogout}
+              >
+                Sign out
+              </Button>
+            </>
+          )}
         </div>
       </aside>
-      <main id="main-content" className="flex-1 bg-[var(--surface-hover)]">
-        <div className="mx-auto max-w-7xl px-6 py-8">
-          <Breadcrumbs />
-          {children}
-        </div>
-      </main>
+
+      <div className="flex flex-1 flex-col">
+        <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[var(--background)]">
+          <div className="flex items-center justify-between px-6 py-3">
+            <Breadcrumbs />
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-[var(--text-tertiary)]">{userEmail}</span>
+              <span className="block h-2 w-2 rounded-full bg-red-500" aria-label="Unread notifications" />
+            </div>
+          </div>
+        </header>
+        <main id="main-content" className="flex-1 bg-[var(--surface-hover)]">
+          <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
