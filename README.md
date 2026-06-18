@@ -349,6 +349,4 @@ node tests/e2e-validation.mjs
 
 ---
 
-## License
 
-MIT
