@@ -60,6 +60,7 @@ export default async function CoeDashboardPage() {
   const data = await getDashboardSeed(Role.COE);
   if (!data) return null;
 
+  // eslint-disable-next-line react-hooks/purity
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const [

@@ -26,6 +26,7 @@ export class UserRepository {
     return prisma.user.findMany({
       take: Math.min(take, 500),
       skip,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       where: role ? { role: role as any } : undefined,
       orderBy: { createdAt: "desc" },
       select: publicUserSelect,
