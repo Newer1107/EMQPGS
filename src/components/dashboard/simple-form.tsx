@@ -20,13 +20,13 @@ export function SimpleForm({
   endpoint,
   title,
   submitLabel = "Save",
-  transform,
+  extraPayload,
 }: {
   fields: Field[];
   endpoint: string;
   title: string;
   submitLabel?: string;
-  transform?: (payload: Record<string, FormDataEntryValue>) => unknown;
+  extraPayload?: Record<string, unknown>;
 }) {
   const [loading, setLoading] = useState(false);
   const initialValues = Object.fromEntries(
@@ -36,8 +36,13 @@ export function SimpleForm({
 
   async function onSubmit() {
     setLoading(true);
-    const payload = Object.fromEntries(Object.entries(values));
-    const body = transform ? transform(payload) : payload;
+    const payload: Record<string, unknown> = { ...Object.fromEntries(Object.entries(values)) };
+    for (const field of fields) {
+      if (field.type === "number") {
+        payload[field.name] = Number(payload[field.name]);
+      }
+    }
+    const body = { ...payload, ...extraPayload };
 
     try {
       const response = await apiFetch(endpoint, {

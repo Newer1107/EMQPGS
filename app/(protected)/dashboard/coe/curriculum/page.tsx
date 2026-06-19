@@ -118,7 +118,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
               title={selectedSemester ? `Add Subject to Semester ${selectedSemester}` : "Add Subject"}
               submitLabel="Add Subject"
               endpoint="/api/curriculum-subjects"
-              transform={(p) => ({ ...p, curriculumSchemeId: activeScheme.id, semesterNumber: Number(p.semesterNumber), groupAssignment: p.groupAssignment || "ALL" })}
+              extraPayload={{ curriculumSchemeId: activeScheme.id, groupAssignment: "ALL" }}
               fields={[
                 { name: "subjectId", label: "Subject", type: "text", placeholder: "Enter subject ID" },
                 { name: "semesterNumber", label: "Semester (1-8)", type: "number" },

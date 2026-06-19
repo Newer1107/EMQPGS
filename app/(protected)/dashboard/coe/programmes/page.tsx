@@ -73,7 +73,7 @@ export default async function ProgrammesPage() {
             title="Add Programme"
             submitLabel="Add Programme"
             endpoint="/api/programmes"
-            transform={(p) => ({ ...p, firstYearAcademicUnitId: p.firstYearAcademicUnitId || null })}
+            extraPayload={{ firstYearAcademicUnitId: null }}
             fields={[
               { name: "name", label: "Programme Name", type: "text", placeholder: "e.g. BE Computer Engineering" },
               { name: "code", label: "Programme Code", type: "text", placeholder: "e.g. BECO" },

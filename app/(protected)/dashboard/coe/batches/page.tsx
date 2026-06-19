@@ -72,7 +72,7 @@ export default async function BatchesPage() {
           title="Create Batch"
           submitLabel="Create Batch"
           endpoint="/api/batches"
-          transform={(p) => ({ ...p, admissionYear: Number(p.admissionYear), graduationYear: Number(p.graduationYear), hasTeachingGroups: false })}
+          extraPayload={{ hasTeachingGroups: false }}
           fields={[
             { name: "name", label: "Batch Name", type: "text", placeholder: "e.g. BE CO 2025" },
             { name: "code", label: "Batch Code", type: "text", placeholder: "e.g. BECO-2025" },
