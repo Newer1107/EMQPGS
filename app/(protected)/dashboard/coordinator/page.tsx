@@ -1,11 +1,14 @@
 import Link from "next/link";
-import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MetricTile } from "@/components/ui/metric-tile";
-import { NextActions } from "@/components/dashboard/next-actions";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { PrimaryAction } from "@/components/dashboard/primary-action";
 import { AttentionSection } from "@/components/dashboard/attention-card";
+import { WorkflowPipeline, type PipelinePhase, type Bottleneck } from "@/components/dashboard/workflow-pipeline";
+import { TaskQueue, type QueueItem } from "@/components/dashboard/task-queue";
+import { RecentActivity, type ActivityEvent } from "@/components/dashboard/recent-activity";
+import { StatCard } from "@/components/dashboard/stat-card";
 import type { Severity } from "@/components/dashboard/types";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { CoordinatorService, type AttentionItem, type BankStatusItem } from "@/modules/coordinator/service";
@@ -18,34 +21,30 @@ const ATTENTION_SEVERITY: Record<AttentionItem["type"], Severity> = {
   low_fill: "info",
 };
 
+const PHASE_BADGE_VARIANT: Record<string, "default" | "success" | "warning" | "danger" | "info"> = {
+  DRAFTING: "default",
+  MODERATION: "warning",
+  APPROVAL: "info",
+  COMPLETE: "success",
+};
 
-function BankCard({ bank }: { bank: BankStatusItem }) {
-  const fillBarColor =
-    bank.fillPercentage >= 100 ? "bg-green-500" : bank.fillPercentage >= 50 ? "bg-amber-500" : "bg-red-500";
-  const phaseLabel = questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase;
+const PHASE_BAR_COLORS: Record<string, string> = {
+  DRAFTING: "bg-sky-500",
+  MODERATION: "bg-amber-500",
+  APPROVAL: "bg-violet-500",
+  COMPLETE: "bg-green-500",
+};
 
-  return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-      <div className="mb-2 flex items-center justify-between">
-        <Link href={`/dashboard/coordinator/question-banks/${bank.id}`} className="font-semibold hover:underline">
-          {bank.subjectName}
-        </Link>
-        <Badge>{phaseLabel}</Badge>
-      </div>
-      <div className="mb-3 h-2 rounded-full bg-[var(--surface-hover)]">
-        <div className={`h-2 rounded-full ${fillBarColor} transition-all`} style={{ width: `${bank.fillPercentage}%` }} />
-      </div>
-      <div className="text-sm text-[var(--text-tertiary)]">
-        {bank.filledCount}/{bank.totalSlots} filled
-        {" · "}{bank.approvedCount} approved
-        {" · "}{bank.pendingModerationCount} pending
-      </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-        <span>{bank.daysInPhase > 0 ? `${bank.daysInPhase}d in phase` : "<1d in phase"}</span>
-        <span className="font-medium text-[var(--text-primary)]">{bank.nextAction}</span>
-      </div>
-    </div>
-  );
+function daysMetaVariant(days: number): "danger" | "warning" | "default" {
+  if (days > 7) return "danger";
+  if (days > 3) return "warning";
+  return "default";
+}
+
+function greeting(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export default async function CoordinatorDashboardPage() {
@@ -53,73 +52,173 @@ export default async function CoordinatorDashboardPage() {
   const service = new CoordinatorService();
   const data = await service.getDashboard(actor);
 
-  // Map attention items to shared format
-  const attentionItems = data.attentionItems.map((item) => ({
+  const totalBanks =
+    data.phaseDistribution.drafting +
+    data.phaseDistribution.moderation +
+    data.phaseDistribution.approval +
+    data.phaseDistribution.complete;
+
+  // Priority-ordered attention items for PrimaryAction selection
+  const bankPriorityMap = new Map(data.bankStatuses.map((b) => [b.id, b.priorityScore]));
+  const sortedAttention = [...data.attentionItems].sort(
+    (a, b) => (bankPriorityMap.get(b.bankId) ?? 0) - (bankPriorityMap.get(a.bankId) ?? 0),
+  );
+
+  // Top attention item → PrimaryAction hero
+  const topAttention = sortedAttention[0] ?? null;
+  const primaryAction = topAttention
+    ? {
+        title:
+          topAttention.type === "missing_moderator"
+            ? `Assign Moderator to ${topAttention.subject}`
+            : topAttention.type === "stalled"
+              ? `Review stalled bank: ${topAttention.subject} (${topAttention.subjectCode})`
+              : topAttention.type === "ready_to_advance"
+                ? `Advance ${topAttention.subject} (${topAttention.subjectCode})`
+                : topAttention.detail,
+        description: `${topAttention.detail} · ${topAttention.daysInPhase}d in ${topAttention.phase.toLowerCase()}`,
+        href: `/dashboard/coordinator/question-banks/${topAttention.bankId}`,
+        variant: (topAttention.type === "stalled"
+          ? "warning"
+          : topAttention.type === "ready_to_advance"
+            ? "success"
+            : "default") as "default" | "success" | "warning",
+      }
+    : null;
+
+  // Remaining attention items (everything except the PrimaryAction one)
+  const topKey = topAttention ? `${topAttention.bankId}-${topAttention.type}` : null;
+  const mappedAttention = data.attentionItems.map((item) => ({
     id: `${item.bankId}-${item.type}`,
     title: `${item.subject} (${item.subjectCode})`,
     description: item.detail,
     href: `/dashboard/coordinator/question-banks/${item.bankId}`,
-    severity: ATTENTION_SEVERITY[item.type] ?? "info" as Severity,
+    severity: ATTENTION_SEVERITY[item.type] ?? ("info" as Severity),
+  }));
+  const remainingAttention = topKey
+    ? mappedAttention.filter((item) => item.id !== topKey)
+    : mappedAttention;
+
+  // WorkflowPipeline phases
+  const pipelinePhases: PipelinePhase[] = [
+    { key: "drafting", label: "Drafting", count: data.phaseDistribution.drafting, color: PHASE_BAR_COLORS.DRAFTING },
+    { key: "moderation", label: "Moderation", count: data.phaseDistribution.moderation, color: PHASE_BAR_COLORS.MODERATION },
+    { key: "approval", label: "Approval", count: data.phaseDistribution.approval, color: PHASE_BAR_COLORS.APPROVAL },
+    { key: "complete", label: "Complete", count: data.phaseDistribution.complete, color: PHASE_BAR_COLORS.COMPLETE },
+  ];
+
+  // Bottleneck annotations from attention data
+  const stalledCount = data.attentionItems.filter((a) => a.type === "stalled").length;
+  const missingModCount = data.attentionItems.filter((a) => a.type === "missing_moderator").length;
+  const bottlenecks: Bottleneck[] = [];
+  if (stalledCount > 0) {
+    bottlenecks.push({
+      label: "Stalled",
+      count: stalledCount,
+      description: "Banks not updated in 7+ days",
+      color: "bg-rose-500",
+    });
+  }
+  if (missingModCount > 0) {
+    bottlenecks.push({
+      label: "Missing Moderator",
+      count: missingModCount,
+      description: "Banks without an assigned moderator",
+      color: "bg-amber-500",
+    });
+  }
+
+  // TaskQueue: banks with priorityScore > 0, sorted by urgency
+  const priorityBanks = [...data.bankStatuses]
+    .filter((b) => b.priorityScore > 0)
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+
+  const queueItems: QueueItem[] = priorityBanks.map((bank) => ({
+    id: bank.id,
+    title: `${bank.subjectName} (${bank.subjectCode})`,
+    subtitle: `${bank.nextAction}`,
+    description: `${bank.filledCount}/${bank.totalSlots} filled · ${bank.approvedCount} approved · ${bank.pendingModerationCount} pending`,
+    href: `/dashboard/coordinator/question-banks/${bank.id}`,
+    badge: {
+      label: questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase,
+      variant: PHASE_BADGE_VARIANT[bank.phase] ?? "default",
+    },
+    meta: `${bank.daysInPhase}d in phase`,
+    metaVariant: daysMetaVariant(bank.daysInPhase),
   }));
 
-  // Top 3 attention items as next actions, using service-calculated priorityScore
-  const bankPriorityMap = new Map(data.bankStatuses.map((b) => [b.id, b.priorityScore]));
-  const nextActions = [...data.attentionItems]
-    .sort((a, b) => (bankPriorityMap.get(b.bankId) ?? 0) - (bankPriorityMap.get(a.bankId) ?? 0))
-    .slice(0, 3)
-    .map((item, idx) => ({
-      id: `action-${idx}`,
-      title: `${item.subjectCode}`,
-      description: item.detail,
-      href: `/dashboard/coordinator/question-banks/${item.bankId}`,
-      priority: idx + 1,
-      severity: ATTENTION_SEVERITY[item.type] ?? "info" as Severity,
-    }));
+  // RecentActivity timeline from contribution data
+  const activityEvents: ActivityEvent[] = data.recentContributionActivity.map((q) => ({
+    id: q.id,
+    timestamp: new Date(q.submittedAt),
+    actor: q.contributorName,
+    action: q.status.toLowerCase(),
+    target: q.subjectName,
+  }));
 
   return (
     <div className="space-y-6">
-      {/* ZONE 1 */}
-      <PageHeader
+      <DashboardHeader
         title="Coordinator Dashboard"
         description="Overview of your assigned departments and active question banks."
+        greeting={`${greeting(new Date().getHours())}, ${actor.name}`}
+        summary={[
+          { label: "Total Banks", count: data.bankStatuses.length, variant: "default" },
+          {
+            label: "Needs Attention",
+            count: data.attentionItems.length,
+            variant: data.attentionItems.length > 0 ? "warning" : "success",
+          },
+          { label: "Active Cycles", count: data.activeExamCycles.length, variant: "info" },
+        ]}
       />
 
-      {/* ZONE 2: What Needs My Attention */}
-      <AttentionSection items={attentionItems} />
-
-      {/* ZONE 3: What Should I Do Next */}
-      <NextActions actions={nextActions} max={3} />
-
-      {/* ZONE 4: Current Workload */}
-      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <MetricTile value={data.phaseDistribution.drafting} label="In Drafting" />
-        <MetricTile value={data.phaseDistribution.moderation} label="In Moderation" />
-        <MetricTile value={data.phaseDistribution.approval} label="In Approval" />
-        <MetricTile value={data.phaseDistribution.complete} label="Complete" />
-        <MetricTile value={data.bankStatuses.length} label="Total Banks" />
-        <MetricTile value={data.attentionItems.length} label="Needs Attention" />
-      </div>
-
-      {/* ZONE 5: Everything Else */}
-      {data.bankStatuses.length === 0 ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center text-[var(--text-tertiary)]">
-          No question banks found in your assigned departments.
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {data.bankStatuses.map((bank) => (
-            <BankCard key={bank.id} bank={bank} />
-          ))}
-        </div>
+      {primaryAction && (
+        <PrimaryAction
+          title={primaryAction.title}
+          description={primaryAction.description}
+          href={primaryAction.href}
+          variant={primaryAction.variant}
+        />
       )}
+
+      <AttentionSection items={remainingAttention} />
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Workflow Pipeline</CardTitle>
+            <span className="text-xs text-[var(--text-tertiary)]">{totalBanks} total banks</span>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <WorkflowPipeline
+            phases={pipelinePhases}
+            total={totalBanks}
+            bottlenecks={bottlenecks.length > 0 ? bottlenecks : undefined}
+          />
+        </CardContent>
+      </Card>
+
+      <TaskQueue
+        items={queueItems}
+        title="Task Queue"
+        emptyMessage="All banks are on track"
+      />
 
       {data.activeExamCycles.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Active Exam Cycles ({data.activeExamCycles.length})</CardTitle>
-              <Link href={`/dashboard/coordinator/exam-workspace/${data.activeExamCycles[0].id}`}>
-                <Button variant="outline" size="sm">Open Workspace</Button>
+              <CardTitle className="text-base">
+                Active Exam Cycles ({data.activeExamCycles.length})
+              </CardTitle>
+              <Link
+                href={`/dashboard/coordinator/exam-workspace/${data.activeExamCycles[0].id}`}
+              >
+                <Button variant="outline" size="sm">
+                  Open Workspace
+                </Button>
               </Link>
             </div>
           </CardHeader>
@@ -143,39 +242,21 @@ export default async function CoordinatorDashboardPage() {
         </Card>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Recent Contribution Activity</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {data.recentContributionActivity.length === 0 ? (
-              <p className="text-sm text-[var(--text-tertiary)]">No recent contribution activity.</p>
-            ) : (
-              data.recentContributionActivity.map((q) => (
-                <div key={q.id} className="rounded-lg border border-[var(--border)] p-3">
-                  <p className="font-medium">{q.subjectName}</p>
-                  <p className="text-[var(--text-tertiary)]">{q.contributorName} &middot; {q.status}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Recent Contribution Activity</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <RecentActivity events={activityEvents} maxEvents={10} />
+        </CardContent>
+      </Card>
 
-        <Card>
-          <CardHeader><CardTitle>Notification Inbox</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <p className="font-medium">Unread: {data.unreadNotificationCount}</p>
-            {data.notifications.length === 0 ? (
-              <p className="text-sm text-[var(--text-tertiary)]">No notifications.</p>
-            ) : (
-              data.notifications.slice(0, 5).map((n) => (
-                <div key={n.id} className="rounded-lg border border-[var(--border)] p-3">
-                  <p className="font-medium">{n.title}</p>
-                  <p className="text-[var(--text-tertiary)]">{n.message}</p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
+      <div className="grid gap-3 sm:grid-cols-5">
+        <StatCard value={data.bankStatuses.length} label="Total Banks" size="sm" />
+        <StatCard value={data.phaseDistribution.drafting} label="In Drafting" size="sm" variant="info" />
+        <StatCard value={data.phaseDistribution.moderation} label="In Moderation" size="sm" variant="warning" />
+        <StatCard value={data.phaseDistribution.approval} label="In Approval" size="sm" variant="info" />
+        <StatCard value={data.phaseDistribution.complete} label="Complete" size="sm" variant="success" />
       </div>
     </div>
   );
