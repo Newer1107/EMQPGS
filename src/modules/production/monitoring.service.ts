@@ -13,7 +13,7 @@ export class MonitoringService {
     const dbLatencyMs = Date.now() - startedAt;
 
     const [minioOk, pendingAiReports, pendingPapers, pendingExports, pendingBackups, userCount, bankCount, reportCount, exportCount, backupCount, bucketCounts] = await Promise.all([
-      this.storageService.checkBucketHealth("exports").then(() => true).catch(() => false),
+      this.storageService.checkBucketHealth("exports").then(() => ({ ok: true })).catch((e) => ({ ok: false, error: (e as Error).message })),
       prisma.aiReport.count({ where: { status: { in: [AiReportStatus.PENDING, AiReportStatus.PROCESSING] } } }),
       prisma.generatedPaper.count({ where: { status: { in: [PaperGenerationStatus.PENDING, PaperGenerationStatus.PROCESSING] } } }),
       prisma.exportArtifact.count({ where: { status: ExportArtifactStatus.PENDING } }),
@@ -29,7 +29,7 @@ export class MonitoringService {
     return {
       health: {
         database: { ok: !!dbHealthy, latencyMs: dbLatencyMs },
-        minio: { ok: minioOk },
+        minio: minioOk,
       },
       metrics: {
         users: userCount,
