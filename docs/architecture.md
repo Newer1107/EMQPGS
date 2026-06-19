@@ -157,6 +157,232 @@ Browser → proxy.ts middleware (route-level role gate)
 
 ---
 
+## 9. End-to-End Workflow Phases
+
+Below is the full operational pipeline with term explanations and a concrete example.
+
+### Phase-by-Phase Pipeline
+
+```
+COE SETUP PHASE
+┌──────────────────────────────────────────────────────────────┐
+│ AcademicUnit → Programme → CurriculumScheme → CurriculumSubject│
+│ AcademicYear → Batch → BatchSemester → ExamCycle              │
+│   └── BatchSemester activation sets Batch.currentSemester     │
+│   └── ExamCycle creation auto-links subjects from curriculum  │
+│   └── COE assigns Coordinator to Department(s)                │
+└──────────────────────────────────────────────────────────────┘
+
+COORDINATOR PHASE
+┌──────────────────────────────────────────────────────────────┐
+│ initializeQuestionBank(subjectId, examCycleId)                 │
+│   └── Creates: QuestionBank (DRAFTING, ACTIVE)                │
+│   └── Creates: PaperPattern (modules/marks/slots config)      │
+│   └── Creates: 63 (ISE) or 126 (ENDSEM) QuestionSlots         │
+│                                                               │
+│ assignContributors(questionBankId, contributorIds)             │
+│ assignModerators(questionBankId, moderatorIds)                 │
+└──────────────────────────────────────────────────────────────┘
+
+CONTRIBUTOR PHASE
+┌──────────────────────────────────────────────────────────────┐
+│ createQuestion(subjectVersionId, ...) → status: DRAFT         │
+│ submitQuestion(questionId) → status: PENDING                  │
+│   └── Optionally via createForBank(): auto-assigns to slot    │
+│   └── Or assignToSlot(slotId, questionId) manually            │
+└──────────────────────────────────────────────────────────────┘
+
+MODERATION PHASE
+┌──────────────────────────────────────────────────────────────┐
+│ Coordinator advances bank: DRAFTING → MODERATION              │
+│   └── Readiness check: all slots must be filled               │
+│                                                               │
+│ Moderator reviews questions in PENDING or REVISION_SUBMITTED  │
+│   ├── approveQuestion() → status: APPROVED                    │
+│   ├── rejectQuestion()  → status: REJECTED                    │
+│   └── requestRevision() → status: REVISION_REQUESTED          │
+└──────────────────────────────────────────────────────────────┘
+
+APPROVAL PHASE
+┌──────────────────────────────────────────────────────────────┐
+│ Coordinator advances: MODERATION → APPROVAL                   │
+│   └── Readiness: all questions moderated, AI report complete  │
+│                                                               │
+│ Coordinator triggers AI analysis → AiReport created           │
+│ Coordinator reviews AI report                                 │
+│ Coordinator makes decision:                                    │
+│   ├── APPROVED → Bank phase: COMPLETE                         │
+│   └── REJECTED → Bank phase: MODERATION (feedback loop)      │
+└──────────────────────────────────────────────────────────────┘
+
+COMPLETE PHASE → PRODUCTION
+┌──────────────────────────────────────────────────────────────┐
+│ Coordinator triggers paper generation → 3 variants (A/B/C)   │
+│ Coordinator locks bank → snapshot created, immutable          │
+│                                                               │
+│ Dean reviews workspace → selects variant per exam slot        │
+│   └── Creates DeanReview record                               │
+│                                                               │
+│ COE exports → PDF/DOCX/ZIP via DocumentService                │
+│   └── Uploaded to MinIO/S3 storage                            │
+│   └── Creates ExportArtifact record                           │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Term Explanations
+
+| Term | What it is | Why it exists |
+|------|-----------|---------------|
+| **AcademicUnit** | Curriculum-offering body (e.g. "ES&H", "COMP", "IT"). This is **not** the same as a Department — a Department is an HR/faculty entity, while AcademicUnit owns what is taught. | Separates "who teaches it" (Department) from "what is taught" (AcademicUnit). One department can offer subjects from multiple academic units. |
+| **Programme** | Degree definition (e.g. "BE Computer Science", "BTECH Information Technology"). | The degree a batch of students is pursuing. Every batch belongs to exactly one programme. |
+| **CurriculumScheme** | A named curriculum plan for a programme (e.g. "2025 Scheme", "NEP 2026 Scheme"). | Programmes get revised over time. The scheme captures which version of the curriculum applies to which batch. |
+| **CurriculumSubject** | The authoritative mapping that says "Subject X is taught in Semester Y of Scheme Z under AcademicUnit W." | A subject like "Mathematics" can appear in different semesters under different schemes. This entity disambiguates. |
+| **AcademicYear** | A time period (e.g. "2026-2027") that spans all semesters. | The temporal container for exam cycles. Each academic year generates 8 semesters automatically. |
+| **Batch** | A cohort descriptor (e.g. "2024-2028 BE Computer batch"). | A group of students that started together and progresses through semesters together. No student roster is stored — the batch is a label. |
+| **BatchSemester** | A single semester within a batch (e.g. "Batch 2024-28, Semester 3"). Has its own dates and status. | The actual timebox for teaching. Activating a BatchSemester sets the Batch's `currentSemester` — this is how the system knows which semester a batch is in right now. |
+| **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Department-scoped. | The reason the entire question bank pipeline exists. An exam cycle is the target event for which question banks are created and papers generated. |
+| **QuestionBank** | The container for all questions, slots, and workflow state for one (Subject, ExamCycle) pair. | The central operational unit. Every action — contribution, moderation, approval, paper generation — happens within a question bank. |
+| **QuestionSlot** | A single position in the question paper defined by `(moduleNumber, marks, slotNumber)`. | The linkage between a bank and its questions. There is no `QuestionBankQuestion` join table — slots are the only bridge. |
+| **PaperPattern** | The template that defines how many slots exist per module and mark value. | Different exam types (ISE vs ENDSEM) have different slot counts. The pattern is set once at bank initialization. |
+| **SubjectVersion** | A versioned syllabus of a Subject. Questions belong to a SubjectVersion, not directly to a Subject. | Syllabi change. SubjectVersion lets the system track which version of the syllabus a question was written for. |
+| **QuestionLibraryItem** | A single reusable question. Can be in multiple banks simultaneously. | A well-written question shouldn't need to be re-created for every exam cycle. Library items can be shared across banks. |
+| **GeneratedPaper** | One of three variants (A, B, or C) produced for a bank. | The final deliverable. Three variants allow the dean to select different papers for regular, supplementary, and KT exams. |
+| **DeanReview** | A record of the dean's selection: which variant goes to which exam slot (Regular/Supp/KT). | The authorization record. Without a DeanReview, no paper is authorized for use. |
+| **ExportArtifact** | The final ZIP/DOCX/PDF package stored in MinIO. | The distributable deliverable. COE downloads this for printing and distribution. |
+
+### Concrete Example: "ENDSEM Nov 2026 — Computer Networks"
+
+Here is the full walkthrough from nothing to exported exam papers, using a single concrete scenario.
+
+**Characters:**
+- **Dr. Sharma** — COE (system admin)
+- **Prof. Patil** — Coordinator (dept: Computer Engineering)
+- **Ms. Iyer** — Contributor (junior faculty)
+- **Dr. Mehta** — Moderator (senior faculty)
+- **Prof. Desai** — Dean (academic dean)
+
+**Setup: The university wants to conduct ENDSEM exams in Nov 2026 for the 2024-28 BE Computer batch.**
+
+#### Step 1: COE sets up the institutional structure
+
+Dr. Sharma logs in as COE and creates:
+
+1. **AcademicUnit "COMP"** — because the Computer Engineering programme needs a curriculum-owning body.
+2. **Programme "BE Computer"** under AcademicUnit "COMP" — the degree definition.
+3. **CurriculumScheme "2024 Scheme"** under Programme "BE Computer" — the curriculum plan for this batch.
+4. **AcademicYear "2026-2027"** — this auto-generates 8 semesters (Sem 1 through Sem 8).
+5. **Batch "2024-28 BE Computer"** linked to Programme "BE Computer" + Scheme "2024 Scheme".
+6. **Activate BatchSemester for Sem 5** (Nov 2026 is the 5th semester for a 2024-entry batch) — this sets `Batch.currentSemester = 5`.
+7. **ExamCycle "ENDSEM Nov 2026"** for Semester 5, Department "Computer Engineering" — the target examination event.
+8. **CurriculumSubject:** links Subject "Computer Networks" to Semester 5 of Scheme "2024 Scheme" under AcademicUnit "COMP".
+9. **Assigns Prof. Patil** as Coordinator for Department "Computer Engineering".
+
+The exam cycle now exists. The coordinator can see it in their dashboard.
+
+#### Step 2: Coordinator prepares the question bank
+
+Prof. Patil logs in as Coordinator. In her dashboard, she sees "Computer Networks" is a subject without a question bank for "ENDSEM Nov 2026". She:
+
+1. **Creates Subject "Computer Networks"** — this auto-creates `SubjectVersion v1`.
+2. **Initializes QuestionBank** for (Computer Networks, ENDSEM Nov 2026):
+   - Bank is created with phase `DRAFTING`, status `ACTIVE`.
+   - `PaperPattern` is created for ENDSEM (6 modules × 21 slots = 126 total).
+   - 126 `QuestionSlots` are instantiated: 42 two-mark slots, 42 five-mark slots, 42 ten-mark slots, spread across 6 modules.
+3. **Assigns Contributors:** Adds Ms. Iyer and two other faculty as contributors to the bank.
+4. **Assigns Moderator:** Adds Dr. Mehta as moderator for the bank.
+
+Ms. Iyer now sees "Computer Networks — 126 slots need questions" on her dashboard.
+
+#### Step 3: Contributors write questions
+
+Ms. Iyer logs in as Contributor. Her dashboard shows: "Computer Networks (ENDSEM Nov 2026): 42 slots assigned to you." She:
+
+1. **Clicks the bank.** She sees a grid of 126 slots color-coded: white = empty, green = filled, yellow = pending moderation.
+2. **Filters by her assigned slots.** She sees 42 empty white cells.
+3. **Clicks an empty slot** (Module 3, 10 marks, slot 5 of 7).
+4. **Creates a question** — the form pre-fills module=3, marks=10, slot=5. She types the question text, RBT level (L3), CO (CO2), and uploads a diagram.
+5. **Saves as DRAFT** → the question appears in the slot. The slot turns yellow (occupied but not submitted).
+6. **Reviews and Submits** → status changes to `PENDING`. The slot turns blue (under moderation).
+
+She repeats this over several days until all 42 of her slots are filled and submitted.
+
+Other contributors do the same for their assigned 42 slots each.
+
+#### Step 4: Coordinator advances bank to moderation
+
+Prof. Patil checks the bank. The readiness panel shows "126/126 slots filled — ready for moderation." She clicks **Advance to MODERATION**. The bank phase changes from `DRAFTING` to `MODERATION`.
+
+Dr. Mehta receives a notification: "Computer Networks: 126 questions awaiting moderation."
+
+#### Step 5: Moderator reviews questions
+
+Dr. Mehta logs in as Moderator. His queue shows 126 questions for Computer Networks. He:
+
+1. **Reviews a question** — sees the question text, RBT level, CO mapping, and any attached diagram.
+2. **Finds a well-written question** → clicks **Approve**. Status: `APPROVED`. The slot turns green. Auto-advances to the next question.
+3. **Finds a vague question** → clicks **Request Revision** with a comment "Clarify the network topology diagram." Status: `REVISION_REQUESTED`. The slot turns orange.
+4. **Finds a duplicate question** → clicks **Reject** with a comment "Question is identical to Slot 14." Status: `REJECTED`. The slot turns red.
+
+Over the week, Dr. Mehta moderates all 126 questions. Ms. Iyer revises her 3 revision-requested questions and resubmits them. Dr. Mehta approves those too.
+
+#### Step 6: Coordinator approves the bank
+
+Prof. Patil sees the readiness panel: "126/126 slots moderated. Ready for APPROVAL." She advances the bank to `APPROVAL`.
+
+She triggers the **AI analysis**: the system evaluates CO coverage, RBT level distribution, difficulty balance, and quality scoring. An `AiReport` is generated showing:
+- CO coverage: CO1-CO6 all covered (80-100% each)
+- RBT distribution: L1(5%), L2(20%), L3(40%), L4(25%), L5(8%), L6(2%) — good spread
+- Quality score: 87/100
+- Warning: "Module 2 has 60% L3 questions — consider adding an L4 or L5 question."
+
+Prof. Patil reviews the report, decides the warning is acceptable, and clicks **Approve**. The bank phase changes to `COMPLETE`. An `ApprovalDecision` record is created.
+
+#### Step 7: Paper generation and locking
+
+Prof. Patil triggers **Generate Papers**:
+
+1. The system selects one approved question per (module, marks) pair per variant.
+2. Three variants (A, B, C) are generated, each with 18 questions (6 modules × 3 marks values × 1 question).
+3. PDFs are created via `PdfService` and uploaded to MinIO `generated-papers` bucket.
+4. `GeneratedPaper` records are created for variants A, B, C.
+5. `PaperSnapshot` captures the final state with coverage, difficulty, and quality scores.
+
+Prof. Patil reviews the generated papers, then **Locks the bank**:
+- `recordStatus` → `LOCKED`
+- `lockedAt` is set
+- A `QuestionBankSnapshot` captures all slot assignments immutably
+- No further mutations allowed — `ensureQuestionBankMutable()` will reject all writes
+
+#### Step 8: Dean reviews and selects
+
+Prof. Desai logs in as Dean. His dashboard shows "Computer Networks (ENDSEM Nov 2026) — ready for review." He opens the review workspace:
+
+1. Sees three paper variants side-by-side with coverage, difficulty, and quality metrics.
+2. Variant A: balanced difficulty (good for regular exam)
+3. Variant B: slightly harder (good for supplementary exam)
+4. Variant C: similar to A but different question selection (good for KT exam)
+5. The AI recommends: "Variant A for Regular, Variant B for Supplementary, Variant C for KT."
+6. Prof. Desai selects:
+   - Regular → **Variant A**
+   - Supplementary → **Variant B**
+   - KT → **Variant C**
+7. Clicks **Submit** — a `DeanReview` record is created with the selections.
+
+#### Step 9: COE exports
+
+Dr. Sharma logs in as COE. The exam cycle "ENDSEM Nov 2026" shows "Computer Networks — Ready for Export." He:
+
+1. Clicks **Export** for Computer Networks.
+2. The system packages the selected variant PDFs (A, B, C) into a single ZIP.
+3. The ZIP is uploaded to MinIO `exports` bucket.
+4. An `ExportArtifact` record is created with metadata (bank ID, dean review ID, file URL, generated at).
+
+Dr. Sharma downloads the ZIP and sends it to the print shop.
+
+**The full lifecycle from institutional setup to printed exam papers is complete.**
+
+---
+
 ## Cross-References
 
 | Topic | Document |
