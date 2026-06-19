@@ -25,12 +25,13 @@ export class ModeratorDashboardService {
     const rejected = questionCounts.find((item) => item.status === QuestionStatus.REJECTED)?._count._all ?? 0;
     const revisionRequested = questionCounts.find((item) => item.status === QuestionStatus.REVISION_REQUESTED)?._count._all ?? 0;
 
-    const [awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks, pendingQuestionsByBank, perBankStats, notifications] = await Promise.all([
+    const [awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks, pendingQuestionsByBank, perBankStats, pendingQueue, notifications] = await Promise.all([
       this.getAwaitingRevisionResubmission(bankIds),
       this.getRecentModerationActivity(actor),
       this.getQuickAccessBanks(bankIds),
       this.getPendingQuestionsByBank(bankIds),
       this.getPerBankStats(bankIds),
+      this.getPendingQueue(bankIds),
       this.notifications.listForUser(actor.id, 50),
     ]);
 
@@ -40,6 +41,7 @@ export class ModeratorDashboardService {
       recentModerationActivity,
       quickAccessBanks,
       pendingQuestionsByBank,
+      pendingQueue,
       perBankStats,
       notifications: notifications.map((n) => ({
         id: n.id,
@@ -136,7 +138,7 @@ export class ModeratorDashboardService {
           where: { assignedQuestion: { status: QuestionStatus.PENDING } },
           include: {
             assignedQuestion: {
-              select: { id: true, creator: { select: { name: true } } },
+              select: { id: true, submittedAt: true, creator: { select: { name: true } } },
             },
           },
           orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }],
@@ -154,9 +156,49 @@ export class ModeratorDashboardService {
           moduleNumber: s.moduleNumber,
           marks: s.marks,
           submitterName: s.assignedQuestion!.creator.name,
+          submittedAt: s.assignedQuestion!.submittedAt?.toISOString() ?? null,
         })),
         count: b.slots.length,
       }));
+  }
+
+  private async getPendingQueue(bankIds: string[]) {
+    const banks = await prisma.questionBank.findMany({
+      where: { id: { in: bankIds } },
+      include: {
+        subject: { select: { subjectName: true, subjectCode: true } },
+        slots: {
+          where: { assignedQuestion: { status: QuestionStatus.PENDING } },
+          include: {
+            assignedQuestion: {
+              select: { id: true, submittedAt: true, createdAt: true, creator: { select: { name: true } } },
+            },
+          },
+          orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }],
+        },
+      },
+    });
+
+    return banks
+      .filter((b) => b.slots.length > 0)
+      .flatMap((b) =>
+        b.slots.map((s) => {
+          const submittedAt = s.assignedQuestion!.submittedAt ?? s.assignedQuestion!.createdAt;
+          return {
+            id: s.assignedQuestion!.id,
+            bankId: b.id,
+            subjectName: b.subject.subjectName,
+            subjectCode: b.subject.subjectCode,
+            moduleNumber: s.moduleNumber,
+            marks: s.marks,
+            submitterName: s.assignedQuestion!.creator.name,
+            submittedAt: submittedAt.toISOString(),
+            // ponytail: oldest pending = highest priority
+            priorityScore: Math.max(0, Math.floor((Date.now() - submittedAt.getTime()) / (1000 * 60 * 60 * 24))),
+          };
+        }),
+      )
+      .sort((a, b) => b.priorityScore - a.priorityScore);
   }
 
   private async getPerBankStats(bankIds: string[]) {

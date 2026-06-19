@@ -33,6 +33,7 @@ export type DeanDashboardItem = {
   coverageScore: number | null;
   aiSummary: string | null;
   reviewedAt: string | null;
+  daysWaiting: number;
 };
 
 export type DeanDashboardData = {
@@ -136,7 +137,7 @@ export class DeanReviewService {
       }));
 
     return {
-      pendingReviews: items.filter((item) => !item.reviewSubmitted),
+      pendingReviews: items.filter((item) => !item.reviewSubmitted).sort((a, b) => b.daysWaiting - a.daysWaiting),
       completedReviews: items.filter((item) => item.reviewSubmitted),
       approvalHistory,
       notifications: notifications.map((notification) => ({
@@ -363,12 +364,15 @@ export class DeanReviewService {
     const avgCoverage = scoredCoverage.length > 0
       ? scoredCoverage.reduce((acc, p) => acc + (p.coverageScore ?? 0), 0) / scoredCoverage.length
       : null;
+    const generationDate = getGenerationDate(questionBank.generatedPapers);
+    const daysWaiting = generationDate ? Math.floor((Date.now() - generationDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+
     return {
       id: questionBank.id,
       subjectName: questionBank.subject.subjectName,
       subjectCode: questionBank.subject.subjectCode,
       examCycleLabel: formatExamCycleLabel(questionBank.examCycle.batchSemester.academicYear.code, questionBank.examCycle.batchSemester.semesterNumber, questionBank.examCycle.examType),
-      generationTimestamp: getGenerationTimestamp(questionBank.generatedPapers),
+      generationTimestamp: generationDate?.toISOString() ?? null,
       reviewSubmitted: Boolean(questionBank.deanReview),
       reviewSummary: questionBank.deanReview ? {
         regularPaper: questionBank.deanReview.regularPaper,
@@ -379,6 +383,7 @@ export class DeanReviewService {
       coverageScore: avgCoverage != null ? Math.round(avgCoverage * 10) / 10 : null,
       aiSummary: aiReport?.summary ?? null,
       reviewedAt: questionBank.deanReview?.reviewedAt.toISOString() ?? null,
+      daysWaiting,
     };
   }
 

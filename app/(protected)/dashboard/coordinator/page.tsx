@@ -4,15 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MetricTile } from "@/components/ui/metric-tile";
+import { NextActions } from "@/components/dashboard/next-actions";
+import { AttentionSection } from "@/components/dashboard/attention-card";
+import type { Severity } from "@/components/dashboard/types";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { CoordinatorService, type AttentionItem, type BankStatusItem } from "@/modules/coordinator/service";
 import { questionBankPhaseLabels } from "@/lib/constants";
 
-const SIDEBAR_STYLES: Record<AttentionItem["type"], { label: string; borderColor: string }> = {
-  stalled: { label: "Stalled", borderColor: "border-l-red-500" },
-  missing_moderator: { label: "Missing Moderator", borderColor: "border-l-amber-500" },
-  ready_to_advance: { label: "Ready to Advance", borderColor: "border-l-green-500" },
+const ATTENTION_SEVERITY: Record<AttentionItem["type"], Severity> = {
+  stalled: "critical",
+  missing_moderator: "warning",
+  ready_to_advance: "success",
+  low_fill: "info",
 };
+
 
 function BankCard({ bank }: { bank: BankStatusItem }) {
   const fillBarColor =
@@ -22,19 +27,13 @@ function BankCard({ bank }: { bank: BankStatusItem }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
       <div className="mb-2 flex items-center justify-between">
-        <Link
-          href={`/dashboard/coordinator/question-banks/${bank.id}`}
-          className="font-semibold hover:underline"
-        >
+        <Link href={`/dashboard/coordinator/question-banks/${bank.id}`} className="font-semibold hover:underline">
           {bank.subjectName}
         </Link>
         <Badge>{phaseLabel}</Badge>
       </div>
       <div className="mb-3 h-2 rounded-full bg-[var(--surface-hover)]">
-        <div
-          className={`h-2 rounded-full ${fillBarColor} transition-all`}
-          style={{ width: `${bank.fillPercentage}%` }}
-        />
+        <div className={`h-2 rounded-full ${fillBarColor} transition-all`} style={{ width: `${bank.fillPercentage}%` }} />
       </div>
       <div className="text-sm text-[var(--text-tertiary)]">
         {bank.filledCount}/{bank.totalSlots} filled
@@ -42,26 +41,10 @@ function BankCard({ bank }: { bank: BankStatusItem }) {
         {" · "}{bank.pendingModerationCount} pending
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-        <span>{bank.daysInPhase > 0 ? `${bank.daysInPhase}d in phase` : "&lt;1d in phase"}</span>
+        <span>{bank.daysInPhase > 0 ? `${bank.daysInPhase}d in phase` : "<1d in phase"}</span>
         <span className="font-medium text-[var(--text-primary)]">{bank.nextAction}</span>
       </div>
     </div>
-  );
-}
-
-function AttentionSidebarItem({ item }: { item: AttentionItem }) {
-  const style = SIDEBAR_STYLES[item.type] ?? { label: item.type, borderColor: "border-l-gray-400" };
-  return (
-    <Link
-      href={`/dashboard/coordinator/question-banks/${item.bankId}`}
-      className={`block rounded-lg border border-[var(--border)] border-l-4 ${style.borderColor} bg-[var(--card)] p-3 text-sm transition-colors hover:bg-[var(--surface-hover)]`}
-    >
-      <div className="font-medium">{item.subjectCode}</div>
-      <div className="mt-0.5 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
-        {style.label}
-      </div>
-      <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{item.detail}</p>
-    </Link>
   );
 }
 
@@ -70,14 +53,44 @@ export default async function CoordinatorDashboardPage() {
   const service = new CoordinatorService();
   const data = await service.getDashboard(actor);
 
+  // Map attention items to shared format
+  const attentionItems = data.attentionItems.map((item) => ({
+    id: `${item.bankId}-${item.type}`,
+    title: `${item.subject} (${item.subjectCode})`,
+    description: item.detail,
+    href: `/dashboard/coordinator/question-banks/${item.bankId}`,
+    severity: ATTENTION_SEVERITY[item.type] ?? "info" as Severity,
+  }));
+
+  // Top 3 attention items as next actions, using service-calculated priorityScore
+  const bankPriorityMap = new Map(data.bankStatuses.map((b) => [b.id, b.priorityScore]));
+  const nextActions = [...data.attentionItems]
+    .sort((a, b) => (bankPriorityMap.get(b.bankId) ?? 0) - (bankPriorityMap.get(a.bankId) ?? 0))
+    .slice(0, 3)
+    .map((item, idx) => ({
+      id: `action-${idx}`,
+      title: `${item.subjectCode}`,
+      description: item.detail,
+      href: `/dashboard/coordinator/question-banks/${item.bankId}`,
+      priority: idx + 1,
+      severity: ATTENTION_SEVERITY[item.type] ?? "info" as Severity,
+    }));
+
   return (
     <div className="space-y-6">
+      {/* ZONE 1 */}
       <PageHeader
         title="Coordinator Dashboard"
         description="Overview of your assigned departments and active question banks."
       />
 
-      {/* Stat row */}
+      {/* ZONE 2: What Needs My Attention */}
+      <AttentionSection items={attentionItems} />
+
+      {/* ZONE 3: What Should I Do Next */}
+      <NextActions actions={nextActions} max={3} />
+
+      {/* ZONE 4: Current Workload */}
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <MetricTile value={data.phaseDistribution.drafting} label="In Drafting" />
         <MetricTile value={data.phaseDistribution.moderation} label="In Moderation" />
@@ -87,42 +100,19 @@ export default async function CoordinatorDashboardPage() {
         <MetricTile value={data.attentionItems.length} label="Needs Attention" />
       </div>
 
-      {/* Bank cards grid + attention sidebar */}
-      <div
-        className="grid gap-6"
-        style={{ gridTemplateColumns: data.attentionItems.length > 0 ? "1fr 320px" : "1fr" }}
-      >
-        {/* Bank cards */}
-        <div>
-          {data.bankStatuses.length === 0 ? (
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center text-[var(--text-tertiary)]">
-              No question banks found in your assigned departments.
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {data.bankStatuses.map((bank) => (
-                <BankCard key={bank.id} bank={bank} />
-              ))}
-            </div>
-          )}
+      {/* ZONE 5: Everything Else */}
+      {data.bankStatuses.length === 0 ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center text-[var(--text-tertiary)]">
+          No question banks found in your assigned departments.
         </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {data.bankStatuses.map((bank) => (
+            <BankCard key={bank.id} bank={bank} />
+          ))}
+        </div>
+      )}
 
-        {/* Attention sidebar */}
-        {data.attentionItems.length > 0 && (
-          <div>
-            <h3 className="mb-3 text-sm font-semibold text-[var(--text-primary)]">
-              &#9888;&#65039; Needs Attention ({data.attentionItems.length})
-            </h3>
-            <div className="space-y-2">
-              {data.attentionItems.map((item) => (
-                <AttentionSidebarItem key={`${item.bankId}-${item.type}`} item={item} />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Active exam cycles */}
       {data.activeExamCycles.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
@@ -153,7 +143,6 @@ export default async function CoordinatorDashboardPage() {
         </Card>
       )}
 
-      {/* Bottom: activity + notifications */}
       <div className="grid gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader><CardTitle>Recent Contribution Activity</CardTitle></CardHeader>
@@ -161,10 +150,10 @@ export default async function CoordinatorDashboardPage() {
             {data.recentContributionActivity.length === 0 ? (
               <p className="text-sm text-[var(--text-tertiary)]">No recent contribution activity.</p>
             ) : (
-              data.recentContributionActivity.map((question: { id: string; subjectName: string; contributorName: string; status: string; submittedAt: string }) => (
-                <div key={question.id} className="rounded-lg border border-[var(--border)] p-3">
-                  <p className="font-medium">{question.subjectName}</p>
-                  <p className="text-[var(--text-tertiary)]">{question.contributorName} &middot; {question.status}</p>
+              data.recentContributionActivity.map((q) => (
+                <div key={q.id} className="rounded-lg border border-[var(--border)] p-3">
+                  <p className="font-medium">{q.subjectName}</p>
+                  <p className="text-[var(--text-tertiary)]">{q.contributorName} &middot; {q.status}</p>
                 </div>
               ))
             )}
@@ -178,10 +167,10 @@ export default async function CoordinatorDashboardPage() {
             {data.notifications.length === 0 ? (
               <p className="text-sm text-[var(--text-tertiary)]">No notifications.</p>
             ) : (
-              data.notifications.slice(0, 5).map((notification: { id: string; title: string; message: string; createdAt: string }) => (
-                <div key={notification.id} className="rounded-lg border border-[var(--border)] p-3">
-                  <p className="font-medium">{notification.title}</p>
-                  <p className="text-[var(--text-tertiary)]">{notification.message}</p>
+              data.notifications.slice(0, 5).map((n) => (
+                <div key={n.id} className="rounded-lg border border-[var(--border)] p-3">
+                  <p className="font-medium">{n.title}</p>
+                  <p className="text-[var(--text-tertiary)]">{n.message}</p>
                 </div>
               ))
             )}

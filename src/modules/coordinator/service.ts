@@ -39,10 +39,11 @@ export type BankStatusItem = {
   hasModerator: boolean;
   aiReportStatus: string | null;
   attentionFlags?: Array<"stalled" | "missing_moderator" | "low_fill" | "ready_to_advance" | "readiness_flagged">;
+  priorityScore: number;
 };
 
 export type AttentionItem = {
-  type: "stalled" | "missing_moderator" | "ready_to_advance";
+  type: "stalled" | "missing_moderator" | "ready_to_advance" | "low_fill";
   bankId: string;
   subject: string;
   subjectCode: string;
@@ -230,6 +231,16 @@ export class CoordinatorService {
         (bank.phase === QuestionBankPhase.APPROVAL && aiReportStatus === "COMPLETED")
       ) attentionFlags.push("ready_to_advance");
 
+      // ponytail: priorityScore = stalled (highest) > missing_mod > ready_advance > low_fill > normal
+      let priorityScore = 0;
+      if (attentionFlags.includes("stalled")) priorityScore = 1000 + daysInPhase;
+      else if (attentionFlags.includes("missing_moderator")) priorityScore = 800;
+      else if (attentionFlags.includes("ready_to_advance")) {
+        if (bank.phase === QuestionBankPhase.APPROVAL) priorityScore = 700;
+        else if (bank.phase === QuestionBankPhase.MODERATION) priorityScore = 600;
+        else priorityScore = 500;
+      } else if (attentionFlags.includes("low_fill")) priorityScore = 400;
+
       return {
         id: bank.id,
         subjectName: bank.subject.subjectName,
@@ -251,6 +262,7 @@ export class CoordinatorService {
         hasModerator,
         aiReportStatus,
         attentionFlags,
+        priorityScore,
       };
     });
 
@@ -305,6 +317,18 @@ export class CoordinatorService {
           phase: bank.phase,
           daysInPhase: bank.daysInPhase,
           detail: `Ready to advance from ${bank.phase.toLowerCase()}`,
+        });
+      }
+
+      if (bank.attentionFlags?.includes("low_fill")) {
+        attentionItems.push({
+          type: "low_fill",
+          bankId: bank.id,
+          subject: bank.subjectName,
+          subjectCode: bank.subjectCode,
+          phase: bank.phase,
+          daysInPhase: bank.daysInPhase,
+          detail: `${bank.fillPercentage}% filled — assign more questions`,
         });
       }
     }
