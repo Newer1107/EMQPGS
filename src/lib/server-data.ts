@@ -1,17 +1,9 @@
-import { Role } from "@prisma/client";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { prisma } from "@/lib/db";
-import { DashboardService } from "@/modules/dashboard/service";
 import { DeanReviewService } from "@/modules/production/dean-review.service";
 import { ExportService } from "@/modules/production/export.service";
 import { MonitoringService } from "@/modules/production/monitoring.service";
 import { paginatedResponse, type CursorPaginationInput } from "@/lib/pagination";
-
-export async function getDashboardSeed(role: Role) {
-  const user = await getCurrentUserFromCookies();
-  if (user.role !== role) return null;
-  return new DashboardService().getRoleDashboard(role, user.id);
-}
 
 export async function getAdminData(input: CursorPaginationInput = {}) {
   const take = Math.min(Math.max(input.take ?? 25, 1), 200);
