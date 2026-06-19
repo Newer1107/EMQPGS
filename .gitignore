@@ -49,6 +49,12 @@ next-env.d.ts
 
 .opencode
 opencode.json
+opencode.jsonc
+
+.mcp.json
+.graymatter
+.cursor
+
 
 .omo
 .commandcode

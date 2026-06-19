@@ -16,6 +16,11 @@ export default async function ProgrammesPage() {
     include: { homeAcademicUnit: true, firstYearAcademicUnit: true },
   });
 
+  const academicUnits = await prisma.academicUnit.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, code: true },
+  });
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -73,6 +78,7 @@ export default async function ProgrammesPage() {
               { name: "name", label: "Programme Name", type: "text", placeholder: "e.g. BE Computer Engineering" },
               { name: "code", label: "Programme Code", type: "text", placeholder: "e.g. BECO" },
               { name: "degreeType", label: "Degree Type", type: "select", options: [{ value: "BE", label: "BE" }, { value: "BTECH", label: "BTech" }, { value: "MTECH", label: "MTech" }, { value: "PHD", label: "PhD" }, { value: "DIPLOMA", label: "Diploma" }] },
+              { name: "homeAcademicUnitId", label: "Home Academic Unit", type: "select", options: academicUnits.map((u) => ({ value: u.id, label: `${u.name} (${u.code})` })) },
               { name: "durationYears", label: "Duration (years)", type: "number", placeholder: "e.g. 4" },
               { name: "durationSemesters", label: "Duration (semesters)", type: "number", placeholder: "e.g. 8" },
             ]}

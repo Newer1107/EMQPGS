@@ -12,13 +12,15 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "Curriculum — EMQPGS" };
 
 const groupLabels: Record<string, string> = { ALL: "All Groups", GROUP_1: "Group 1", GROUP_2: "Group 2" };
-const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII"] as const;
 
-export default async function CurriculumPage({ searchParams }: { searchParams: Promise<{ schemeId?: string; semester?: string }> }) {
-  const { schemeId, semester } = await searchParams;
+export default async function CurriculumPage({ searchParams }: { searchParams: Promise<{ programmeId?: string; schemeId?: string; semester?: string }> }) {
+  const { programmeId, schemeId, semester } = await searchParams;
 
   const programmes = await prisma.programme.findMany({ orderBy: { name: "asc" }, include: { homeAcademicUnit: true } });
+  const activeProgrammeId = programmeId || null;
+
   const schemes = await prisma.curriculumScheme.findMany({
+    where: activeProgrammeId ? { programmeId: activeProgrammeId } : undefined,
     orderBy: [{ year: "desc" }, { name: "asc" }],
     include: { programme: true, _count: { select: { curriculumSubjects: true } } },
   });
@@ -34,10 +36,6 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
       })
     : [];
 
-  const semestersInScheme = activeScheme
-    ? [...new Set((await prisma.curriculumSubject.findMany({ where: { curriculumSchemeId: activeScheme.id }, select: { semesterNumber: true }, distinct: ["semesterNumber"] })).map((s) => s.semesterNumber))].sort()
-    : [];
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -49,8 +47,8 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
         {programmes.map((p) => (
           <Link
             key={p.id}
-            href={`/dashboard/coe/curriculum`}
-            className="rounded-lg border px-3 py-1.5 text-sm text-[var(--text-tertiary)]"
+            href={`/dashboard/coe/curriculum${activeProgrammeId === p.id ? '' : `?programmeId=${p.id}`}`}
+            className={`rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 ${activeProgrammeId === p.id ? 'border-black bg-gray-50 font-medium' : 'text-[var(--text-tertiary)]'}`}
           >
             {p.name}
           </Link>
@@ -61,7 +59,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
         {schemes.map((s) => (
           <Link
             key={s.id}
-            href={`/dashboard/coe/curriculum?schemeId=${s.id}`}
+            href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${s.id}`}
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 ${activeScheme?.id === s.id ? 'border-black bg-gray-50' : ''}`}
           >
             {s.name} ({s.year}) — {s.programme?.name ?? '-'} ({s._count.curriculumSubjects} subjects)
@@ -72,7 +70,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
       {activeScheme && (
         <div className="flex flex-wrap gap-2 border-b pb-2">
           <Link
-            href={`/dashboard/coe/curriculum?schemeId=${activeScheme.id}`}
+            href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${activeScheme.id}`}
             className={`rounded-t-lg px-4 py-2 text-sm font-medium ${!selectedSemester ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
           >
             All Semesters
@@ -80,7 +78,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
           {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
             <Link
               key={sem}
-              href={`/dashboard/coe/curriculum?schemeId=${activeScheme.id}&semester=${sem}`}
+              href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${activeScheme.id}&semester=${sem}`}
               className={`rounded-t-lg px-4 py-2 text-sm font-medium ${selectedSemester === sem ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
             >
               Sem {sem}
