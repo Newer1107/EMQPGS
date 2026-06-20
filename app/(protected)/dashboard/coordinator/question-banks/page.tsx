@@ -11,7 +11,7 @@ import { questionBankPhaseLabels } from "@/lib/constants";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
-import { SimpleForm } from "@/components/dashboard/simple-form";
+import { CreateBankForm } from "./create-bank-form";
 
 const phaseVariants: Record<string, "success" | "warning" | "info" | "default"> = {
   COMPLETE: "success",
@@ -74,15 +74,7 @@ export default async function QuestionBanksManagementPage() {
             </TBody>
           </Table>
         </DataTableCard>
-        <SimpleForm
-          title="Create Question Bank"
-          submitLabel="Create Question Bank"
-          endpoint="/api/question-banks"
-          fields={[
-            { name: "subjectId", label: "Subject", type: "select", options: (subjects as Array<{ id: string; subjectCode: string; subjectName: string }>).map((subject) => ({ value: subject.id, label: `${subject.subjectCode} - ${subject.subjectName}` })) },
-            { name: "examCycleId", label: "Exam Cycle", type: "select", options: (examCycles).map((cycle) => ({ value: cycle.id, label: `Sem ${cycle.batchSemester?.semesterNumber ?? '-'} · ${cycle.batchSemester?.academicYear?.code ?? '-'} / ${cycle.examType}` })) },
-          ]}
-        />
+        <CreateBankForm subjects={subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; examCycleLinks: Array<{ examCycleId: string }> }>} examCycles={examCycles} />
       </div>
     </div>
   );
