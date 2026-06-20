@@ -11,6 +11,15 @@ import {
   UserStatus,
 } from "@prisma/client";
 
+// ponytail: single source of truth for module ranges per exam type
+export const EXAM_MODULE_RANGES: Record<ExamType, number[]> = {
+  [ExamType.ISE_1]: [1, 2, 3],
+  [ExamType.ISE_2]: [4, 5, 6],
+  [ExamType.ENDSEM]: [1, 2, 3, 4, 5, 6],
+  [ExamType.SUPPLEMENTARY]: [1, 2, 3, 4, 5, 6],
+  [ExamType.KT]: [1, 2, 3, 4, 5, 6],
+};
+
 export const APP_NAME = "EMQPGS";
 export const ACCESS_COOKIE = "emqpgs_access_token";
 export const REFRESH_COOKIE = "emqpgs_refresh_token";

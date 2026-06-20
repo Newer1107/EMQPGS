@@ -179,7 +179,7 @@ describe("Question Governance Hardening", () => {
   describe("3. Usage recording via QuestionUsageService", () => {
     it("creates QuestionUsageHistory through recordUsage", async () => {
       (prisma.questionUsageHistory.create as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "uh-1" });
-      const result = await recordUsage("q-1", "ec-1", "GENERATED_PAPER", "gp-1");
+      const result = await recordUsage("q-1", "GENERATED_PAPER", "gp-1", "ec-1");
       expect(prisma.questionUsageHistory.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -194,7 +194,7 @@ describe("Question Governance Hardening", () => {
     });
 
     it("populates sourceType and sourceId", async () => {
-      await recordUsage("q-1", "ec-1", "MANUAL", "manual-entry-1");
+      await recordUsage("q-1", "MANUAL", "manual-entry-1", "ec-1");
       const call = (prisma.questionUsageHistory.create as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(call.data.sourceType).toBe("MANUAL");
       expect(call.data.sourceId).toBe("manual-entry-1");

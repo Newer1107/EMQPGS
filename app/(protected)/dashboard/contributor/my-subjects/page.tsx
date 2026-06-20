@@ -50,7 +50,7 @@ export default async function ContributorMySubjectsPage() {
                   <div>
                     <CardTitle className="text-base">{bank.subject.subjectName}</CardTitle>
                     <p className="text-sm text-[var(--text-tertiary)] mt-0.5">
-                      {bank.subject.subjectCode} · Sem {bank.examCycle.batchSemester.semesterNumber} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType.replaceAll("_", " ")}
+                      {bank.subject.subjectCode} · Sem {bank.batchSemester.semesterNumber} · {bank.batchSemester.academicYear.code}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

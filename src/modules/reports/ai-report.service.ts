@@ -11,7 +11,7 @@ import { AnalysisEngine } from "@/modules/reports/analysis-engine";
 
 const analysisInclude = {
   subject: true,
-  examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
+  batchSemester: { include: { academicYear: true } },
   slots: {
     include: { assignedQuestion: true },
     where: { assignedQuestionId: { not: null } },
@@ -116,9 +116,8 @@ export class AiReportService {
 You are analyzing a university question bank. Return strict JSON only.
 Context:
 - Subject: ${questionBank.subject.subjectCode} ${questionBank.subject.subjectName}
-- Academic Year: ${questionBank.examCycle.batchSemester.academicYear.code}
-- Semester: ${questionBank.examCycle.batchSemester.semesterNumber}
-- Exam Type: ${questionBank.examCycle.examType}
+      - Academic Year: ${questionBank.batchSemester.academicYear.code}
+      - Semester: ${questionBank.batchSemester.semesterNumber}
 - Approved Questions: ${report.inventory.approvedQuestions}
 
 Deterministic metrics:

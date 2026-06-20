@@ -12,9 +12,9 @@ import { apiFetch } from "@/lib/client-fetch";
 import { useRouter } from "next/navigation";
 
 type ModeratorAssignmentFormProps = {
-  questionBanks: Array<{ id: string; subject: { subjectCode: string; subjectName: string }; examCycle: { examType: string; semester: { name: string }; academicYear: { code: string } } }>;
+  questionBanks: Array<{ id: string; subject: { subjectCode: string; subjectName: string }; batchSemester: { semesterNumber: number; academicYear: { code: string } } }>;
   moderators: Array<{ id: string; name: string; email: string }>;
-  existingAssignments: Array<{ id: string; questionBankId: string; moderatorId: string; moderator: { name: string }; questionBank: { subject: { subjectCode: string }; examCycle: { examType: string } } }>;
+  existingAssignments: Array<{ id: string; questionBankId: string; moderatorId: string; moderator: { name: string }; questionBank: { subject: { subjectCode: string }; batchSemester: { semesterNumber: number } } }>;
 };
 
 export function ModeratorAssignmentForm({ questionBanks, moderators, existingAssignments }: ModeratorAssignmentFormProps) {
@@ -67,7 +67,7 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
                   <option value="">Select</option>
                   {questionBanks.map((qb) => (
                     <option key={qb.id} value={qb.id}>
-                      {qb.subject.subjectCode} - {qb.subject.subjectName} ({qb.examCycle.examType} · {qb.examCycle.semester.name} {qb.examCycle.academicYear.code})
+                      {qb.subject.subjectCode} - {qb.subject.subjectName} (Sem {qb.batchSemester.semesterNumber} · {qb.batchSemester.academicYear.code})
                     </option>
                   ))}
                 </Select>
@@ -101,7 +101,7 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
                 {existingAssignments.map((a) => (
                   <TR key={a.id}>
                     <TD className="font-medium">{a.questionBank.subject.subjectCode}</TD>
-                    <TD>{a.questionBank.examCycle.examType}</TD>
+                    <TD>Sem {a.questionBank.batchSemester.semesterNumber}</TD>
                     <TD><Badge>{a.moderator.name}</Badge></TD>
                   </TR>
                 ))}

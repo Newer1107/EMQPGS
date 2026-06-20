@@ -10,7 +10,7 @@ export default async function AssignmentsPage() {
   const [banks, moderators, existingModeratorAssignments, contributors, existingContributorAssignments] = await Promise.all([
     prisma.questionBank.findMany({
       orderBy: { createdAt: "desc" },
-      include: { subject: { select: { subjectCode: true, subjectName: true } }, examCycle: { include: { batchSemester: { include: { academicYear: true } } } } },
+      include: { subject: { select: { subjectCode: true, subjectName: true } }, batchSemester: { include: { academicYear: true } } },
       take: 100,
     }),
     prisma.user.findMany({
@@ -18,24 +18,21 @@ export default async function AssignmentsPage() {
       orderBy: { name: "asc" },
     }),
     prisma.moderatorBankAssignment.findMany({
-      include: { moderator: { select: { name: true } }, questionBank: { select: { subject: { select: { subjectCode: true } }, examCycle: { select: { examType: true } } } } },
+      include: { moderator: { select: { name: true } }, questionBank: { select: { subject: { select: { subjectCode: true } }, batchSemester: { select: { semesterNumber: true } } } } },
     }),
     prisma.user.findMany({
       where: { role: Role.CONTRIBUTOR, status: "ACTIVE" },
       orderBy: { name: "asc" },
     }),
     prisma.contributorBankAssignment.findMany({
-      include: { contributor: { select: { name: true } }, questionBank: { select: { subject: { select: { subjectCode: true } }, examCycle: { select: { examType: true } } } } },
+      include: { contributor: { select: { name: true } }, questionBank: { select: { subject: { select: { subjectCode: true } }, batchSemester: { select: { semesterNumber: true } } } } },
     }),
   ]);
 
   const questionBanks = banks.map((b) => ({
-    ...b,
-    examCycle: {
-      ...b.examCycle,
-      semester: { name: `Semester ${b.examCycle.batchSemester.semesterNumber}` },
-      academicYear: { code: b.examCycle.batchSemester.academicYear.code },
-    },
+    id: b.id,
+    subject: b.subject,
+    batchSemester: { semesterNumber: b.batchSemester.semesterNumber, academicYear: { code: b.batchSemester.academicYear.code } },
   }));
 
   return (
@@ -54,4 +51,3 @@ export default async function AssignmentsPage() {
     </div>
   );
 }
-

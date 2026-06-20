@@ -1,4 +1,4 @@
-import { NotificationType } from "@prisma/client";
+import { ExamType, NotificationType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
@@ -46,14 +46,14 @@ export class ReportingCoordinatorService {
     return this.aiReportService.listAiReports(questionBankId);
   }
 
-  async triggerPaperGeneration(actor: Actor, questionBankId: string) {
+  async triggerPaperGeneration(actor: Actor, questionBankId: string, examType?: ExamType) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: { subject: true },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
     await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
-    const generatedPapers = await this.paperService.generatePapers(questionBankId, actor, ["PAPER_A", "PAPER_B", "PAPER_C"]);
+    const generatedPapers = await this.paperService.generatePapers(questionBankId, examType ?? ExamType.ENDSEM, actor, ["PAPER_A", "PAPER_B", "PAPER_C"]);
     await this.notifications.create(
       actor.id,
       "Paper generation complete",

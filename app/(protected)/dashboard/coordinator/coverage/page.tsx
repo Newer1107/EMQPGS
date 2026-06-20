@@ -23,7 +23,7 @@ export default async function CoveragePage() {
     prisma.questionBank.findMany({
       where: { subject: { departmentId: { in: departmentIds } } },
       orderBy: { createdAt: "desc" },
-      select: { id: true, subjectId: true, examCycleId: true, phase: true, recordStatus: true },
+      select: { id: true, subjectId: true, batchSemesterId: true, phase: true, recordStatus: true },
     }),
   ]);
 

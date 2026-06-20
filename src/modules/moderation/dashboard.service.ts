@@ -105,7 +105,7 @@ export class ModeratorDashboardService {
       where: { id: { in: bankIds } },
       include: {
         subject: { select: { subjectName: true } },
-        examCycle: { select: { examType: true } },
+        batchSemester: { select: { semesterNumber: true } },
         slots: {
           include: {
             assignedQuestion: { select: { status: true } },
@@ -121,7 +121,7 @@ export class ModeratorDashboardService {
       return {
         id: b.id,
         subjectName: b.subject.subjectName,
-        examCycle: b.examCycle.examType,
+        semester: b.batchSemester?.semesterNumber ?? 0,
         pendingCount,
         revisionSubmittedCount,
         urgency: pendingCount + revisionSubmittedCount,

@@ -8,7 +8,7 @@ import { Search } from "lucide-react";
 type QuestionBank = {
   id: string;
   subject: { subjectCode: string; subjectName: string };
-  examCycle: { examType: string; semester: { name: string }; academicYear: { code: string } };
+  batchSemester: { semesterNumber: number; academicYear: { code: string } };
 };
 
 type ModeratorAssignment = {
@@ -16,7 +16,7 @@ type ModeratorAssignment = {
   questionBankId: string;
   moderatorId: string;
   moderator: { name: string };
-  questionBank: { subject: { subjectCode: string }; examCycle: { examType: string } };
+  questionBank: { subject: { subjectCode: string }; batchSemester: { semesterNumber: number } };
 };
 
 type ContributorAssignment = {
@@ -24,7 +24,7 @@ type ContributorAssignment = {
   questionBankId: string;
   contributorId: string;
   contributor: { name: string };
-  questionBank: { subject: { subjectCode: string }; examCycle: { examType: string } };
+  questionBank: { subject: { subjectCode: string }; batchSemester: { semesterNumber: number } };
 };
 
 export function AssignmentsClient({

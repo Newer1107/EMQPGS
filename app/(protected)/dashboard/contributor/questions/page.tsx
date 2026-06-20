@@ -16,7 +16,7 @@ export default async function ContributorQuestionsPage() {
         include: { subject: true, effectiveFromAcademicYear: true },
       },
       slotAssignments: {
-        include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } },
+        include: { questionBank: { select: { id: true, batchSemester: { select: { semesterNumber: true } } } } },
       },
     },
   });
@@ -39,7 +39,7 @@ export default async function ContributorQuestionsPage() {
         <NextStepGuidance context="question_submitted" />
       )}
 
-      <QuestionsList questions={questions} latestQuestionId={latestQuestion?.id} />
+      <QuestionsList questions={questions as never} latestQuestionId={latestQuestion?.id} />
     </div>
   );
 }

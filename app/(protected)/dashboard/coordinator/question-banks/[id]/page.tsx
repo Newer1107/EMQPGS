@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { BankDetailClient, type SlotItem, type AiReportItem, type GeneratedPaperItem, type DeanReviewItem, type ModeratorInfo, type ContributorInfo } from "./bank-detail-client";
-import { examTypeLabels } from "@/lib/constants";
 
 export default async function QuestionBankDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,7 +78,7 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
     email: a.contributor.email,
   }));
 
-  const bs = bank.examCycle.batchSemester;
+  const bs = bank.batchSemester;
 
   return (
     <BankDetailClient
@@ -90,8 +89,8 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       semesterNumber={bs.semesterNumber}
       departmentName={bs.department?.name ?? ""}
       academicYearCode={bs.academicYear?.code ?? ""}
-      examType={examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}
-      examCycleLabel={bs.academicYear?.code ? `${bs.academicYear.code} · Sem ${bs.semesterNumber} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}` : ""}
+      examType="Annual Bank"
+      examCycleLabel={bs.academicYear?.code ? `${bs.academicYear.code} · Sem ${bs.semesterNumber} · Annual Bank` : ""}
       phase={bank.phase}
       recordStatus={bank.recordStatus}
       userRole={actor.role}

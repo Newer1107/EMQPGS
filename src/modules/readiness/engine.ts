@@ -42,9 +42,13 @@ export class ReadinessEngine {
 
     switch (targetPhase) {
       case QuestionBankPhase.MODERATION: {
-        const emptySlots = totalSlots - filledSlots;
-        if (emptySlots > 0) {
-          issues.push(`${emptySlots} of ${totalSlots} slots have no question assigned.`);
+        if (filledSlots === 0) {
+          issues.push("No questions have been submitted yet. Add questions before sending to moderation.");
+        } else {
+          const emptySlots = totalSlots - filledSlots;
+          if (emptySlots > 0) {
+            warnings.push(`${emptySlots} of ${totalSlots} slots are empty. You can send to moderation now and fill remaining slots later.`);
+          }
         }
         break;
       }

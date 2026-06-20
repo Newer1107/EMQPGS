@@ -38,7 +38,7 @@ type QuestionItem = {
     subject: { subjectCode: string };
   };
   slotAssignments: Array<{
-    questionBank: { examCycle: { examType: string } };
+    questionBank: { batchSemester: { semesterNumber: number } };
   }>;
 };
 
@@ -88,7 +88,7 @@ export function QuestionsList({ questions, latestQuestionId }: { questions: Ques
                   <TD>{question.moduleNumber}</TD>
                   <TD>{question.marks}</TD>
                   <TD><Badge variant={statusVariants[question.status] ?? "default"}>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
-                  <TD>{question.slotAssignments.map((s) => s.questionBank.examCycle.examType).join(", ") || "None"}</TD>
+                  <TD>{question.slotAssignments.map((s) => `Sem ${s.questionBank.batchSemester.semesterNumber}`).join(", ") || "None"}</TD>
                   <TD>
                     <div className="flex gap-2">
                       <Link href={`/dashboard/contributor/questions/${question.id}/edit`}>

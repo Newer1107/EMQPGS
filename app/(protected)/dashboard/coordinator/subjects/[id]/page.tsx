@@ -22,7 +22,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
       department: true,
       versions: { orderBy: { versionNumber: "desc" }, include: { effectiveFromAcademicYear: true } },
       examCycleLinks: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } },
-      questionBanks: { include: { examCycle: true } },
+      questionBanks: { include: { batchSemester: { include: { academicYear: true } } } },
       curriculumSubjects: {
         include: { curriculumScheme: { select: { name: true, year: true } }, department: { select: { name: true } } },
       },

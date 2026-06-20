@@ -8,9 +8,9 @@ import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guar
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
 
-export async function recordUsage(questionId: string, examCycleId: string, sourceType: string, sourceId: string) {
+export async function recordUsage(questionId: string, sourceType: string, sourceId: string, examCycleId?: string | null) {
   return prisma.questionUsageHistory.create({
-    data: { questionId, examCycleId, sourceType, sourceId },
+    data: { questionId, examCycleId: examCycleId ?? null, sourceType, sourceId },
   });
 }
 

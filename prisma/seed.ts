@@ -138,15 +138,19 @@ async function main() {
     for (const sd of ALL_SUBJECTS) {
       if (subjectMap.has(sd.code)) continue;
       const deptId = sd.code.includes("COMP") ? comp.id : sd.code.includes("EXTC") ? extc.id : hns.id;
-      const s = await prisma.subject.create({
-        data: {
+      const s = await prisma.subject.upsert({
+        where: { subjectCode_departmentId: { subjectCode: sd.code, departmentId: deptId } },
+        update: {},
+        create: {
           subjectCode: sd.code, subjectName: sd.name, credits: sd.credits,
           questionBankDueDate: dt(2026, 12, 15), departmentId: deptId, status: SubjectStatus.ACTIVE,
         },
       });
       subjectMap.set(sd.code, s.id);
-      await prisma.subjectVersion.create({
-        data: { subjectId: s.id, versionNumber: 1, title: sd.name, effectiveFromAcademicYearId: ay2425.id },
+      await prisma.subjectVersion.upsert({
+        where: { subjectId_versionNumber: { subjectId: s.id, versionNumber: 1 } },
+        update: {},
+        create: { subjectId: s.id, versionNumber: 1, title: sd.name, effectiveFromAcademicYearId: ay2425.id },
       });
     }
   }
@@ -289,8 +293,10 @@ async function main() {
   });
 
   // ──────────────────────────────────────────────
-  // 9. EXAM CYCLES (structural only — no banks)
+  // 9. EXAM CYCLES + BANKS (auto-init via service)
   // ──────────────────────────────────────────────
+  const coeUser = await prisma.user.findFirst({ where: { role: Role.COE } });
+  const coeId = coeUser?.id ?? "";
   const subjectsBySem: Record<number, string[]> = {
     1: ["BSC103", "BSC101", "ESC101", "ESC104", "BSC102", "ESC103", "ESC102", "ESC105"],
     2: ["BSC104", "HSMC101", "BSC102", "ESC103", "ESC102", "BSC101", "ESC101", "ESC104", "ESC105"],
@@ -302,6 +308,9 @@ async function main() {
         "PCC-EXTC-501", "PCC-EXTC-502", "PCC-EXTC-503", "PCC-EXTC-504", "HSMC-EXTC-501"],
   };
 
+  let banksCreated = 0;
+  let examCyclesCreated = 0;
+
   for (const bd of BATCH_SEMESTERS) {
     const bsId = batchSemesterMap.get(`${bd.batchId}_sem${bd.sem}`)!;
     const ecStatus = bd.status === BatchSemesterStatus.COMPLETED ? ExamCycleStatus.CLOSED : ExamCycleStatus.ACTIVE;
@@ -312,6 +321,7 @@ async function main() {
         update: {},
         create: { examType, status: ecStatus, version: 1, batchSemesterId: bsId },
       });
+      examCyclesCreated++;
 
       for (const subjCode of subjectsBySem[bd.sem] || []) {
         const subjId = subjectMap.get(subjCode);
@@ -323,6 +333,43 @@ async function main() {
           });
         }
       }
+    }
+
+    for (const subjCode of subjectsBySem[bd.sem] || []) {
+      const subjId = subjectMap.get(subjCode);
+      if (!subjId) continue;
+
+      const existingBank = await prisma.questionBank.findUnique({
+        where: { batchSemesterId_subjectId: { batchSemesterId: bsId, subjectId: subjId } },
+      });
+      if (existingBank) continue;
+
+      const slotData: Array<{ moduleNumber: number; marks: number; slotNumber: number }> = [];
+      for (let mod = 1; mod <= 6; mod++) {
+        for (const marks of [2, 5, 10]) {
+          for (let sn = 1; sn <= 7; sn++) {
+            slotData.push({ moduleNumber: mod, marks, slotNumber: sn });
+          }
+        }
+      }
+
+      const deptId = bd.deptId;
+      const yearId = bd.ayId;
+      await prisma.questionBank.create({
+        data: {
+          subjectId: subjId,
+          batchSemesterId: bsId,
+          academicYearId: yearId,
+          phase: "DRAFTING",
+          recordStatus: "ACTIVE",
+          createdById: coeId,
+          pattern: {
+            create: { examType: ExamType.ENDSEM, totalModules: 6, marksPattern: [2, 5, 10], slotsPerModule: 7, totalSlots: 126 },
+          },
+          slots: { createMany: { data: slotData } },
+        },
+      });
+      banksCreated++;
     }
   }
 
@@ -339,7 +386,8 @@ async function main() {
   console.log(`   Users:           ${FACULTY.length} (real TCET names)`);
   console.log(`   Batches:         2 (COMP 2024-28, EXTC 2024-28)`);
   console.log(`   Teaching Groups: COMP→Group 1, EXTC→Group 2`);
-  console.log(`   Exam Cycles:     30 (3 per batch-sem × 10)`);
+  console.log(`   Exam Cycles:     ${examCyclesCreated}`);
+  console.log(`   Question Banks:  ${banksCreated} (annual, 1 per subject per batch-semester)`);
 
   console.log("\n   FE group structure:");
   console.log("     Common (ALL): Math I, Math II, Communication Skills, Workshop");

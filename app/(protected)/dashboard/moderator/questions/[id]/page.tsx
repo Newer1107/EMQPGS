@@ -20,11 +20,11 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
       creator: { select: { id: true, name: true, email: true } },
       owner: { select: { id: true, name: true, email: true } },
       slotAssignments: {
-        include: { questionBank: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } } },
+        include: { questionBank: { include: { batchSemester: { select: { semesterNumber: true, academicYear: { select: { code: true } } } }, pattern: { select: { examType: true } } } } },
       },
       moderationEvents: {
-        orderBy: { createdAt: "desc" },
-        include: { moderator: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+        include: { moderator: { select: { id: true, name: true } } },
       },
     },
   });
@@ -77,7 +77,7 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
                 <ul className="space-y-1 text-sm">
                   {question.slotAssignments.map((s) => (
                     <li key={s.id}>
-                      {s.questionBank.examCycle.examType} · Sem {s.questionBank.examCycle.batchSemester.semesterNumber} ({s.questionBank.examCycle.batchSemester.academicYear.code})
+                      Sem {s.questionBank.batchSemester.semesterNumber} ({s.questionBank.batchSemester.academicYear.code})
                     </li>
                   ))}
                 </ul>

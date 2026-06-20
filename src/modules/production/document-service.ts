@@ -14,7 +14,6 @@ type SelectedPaper = {
   label: string;
   subjectName: string;
   subjectCode: string;
-  examType: string;
   examDate: string;
   duration: string;
   maximumMarks: number;
@@ -62,7 +61,7 @@ export class DocumentService {
 
       ensureSpace(14);
       page.drawText(
-        `${paper.examType} • ${paper.examDate} • ${paper.duration} • ${paper.maximumMarks} Marks`,
+        `${paper.label} • ${paper.examDate} • ${paper.duration} • ${paper.maximumMarks} Marks`,
         { x: MARGIN_X, y, size: 12, font: mono },
       );
       y -= 24;
@@ -123,7 +122,7 @@ export class DocumentService {
             children: [new TextRun({ text: paper.label, bold: true })],
           }),
           new Paragraph(`${paper.subjectName} (${paper.subjectCode})`),
-          new Paragraph(`${paper.examType} | ${paper.examDate} | ${paper.duration} | ${paper.maximumMarks} Marks`),
+          new Paragraph(`${paper.label} | ${paper.examDate} | ${paper.duration} | ${paper.maximumMarks} Marks`),
           new Paragraph({ heading: HeadingLevel.HEADING_2, text: "Instructions" }),
           ...paper.instructions.map((instruction) => new Paragraph({ text: instruction, bullet: { level: 0 } })),
           new Paragraph({ heading: HeadingLevel.HEADING_2, text: "Questions" }),

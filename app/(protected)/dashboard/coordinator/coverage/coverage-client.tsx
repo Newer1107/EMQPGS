@@ -13,7 +13,7 @@ type AcademicYear = { id: string; code: string;  };
 type Semester = { id: string; number: number; name: string; academicYearId: string };
 type Subject = { id: string; subjectCode: string; subjectName: string };
 type SubjectVersion = { id: string; versionNumber: number; title: string; subjectId: string; effectiveFromAcademicYearId: string };
-type QuestionBank = { id: string; subjectId: string; examCycleId: string; phase: string; recordStatus: string };
+type QuestionBank = { id: string; subjectId: string; batchSemesterId: string; phase: string; recordStatus: string };
 
 type Coverage = {
   moduleCoverage: { moduleNumber: number; count: number; status: "adequate" | "partial" | "missing" }[];

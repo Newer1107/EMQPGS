@@ -23,7 +23,7 @@ export default async function CoeExamCyclesPage() {
           department: { select: { id: true, name: true } },
         },
       },
-      _count: { select: { questionBanks: true, subjectLinks: true } },
+      _count: { select: { subjectLinks: true } },
     },
   });
 

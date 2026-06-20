@@ -47,15 +47,10 @@ export class ModeratorService {
               select: {
                 id: true,
                 subject: { select: { subjectCode: true, subjectName: true } },
-                examCycle: {
+                batchSemester: {
                   select: {
-                    examType: true,
-                    batchSemester: {
-                      select: {
-                        semesterNumber: true,
-                        academicYear: { select: { code: true } },
-                      },
-                    },
+                    semesterNumber: true,
+                    academicYear: { select: { code: true } },
                   },
                 },
               },

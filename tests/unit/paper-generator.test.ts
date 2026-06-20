@@ -37,11 +37,12 @@ describe("PaperGenerator", () => {
     const generated = generator.generate(
       {
         subject: { subjectCode: "CS501" },
-        examCycle: { academicYear: { code: "2026-2027" }, semester: { number: 5 }, examType: "ENDSEM" },
+        batchSemester: { academicYear: { code: "2026-2027" }, semesterNumber: 5 },
         slots,
         generatedPapers: [],
       } as never,
       ["PAPER_A", "PAPER_B", "PAPER_C"],
+      [1, 2, 3, 4, 5, 6],
     );
 
     expect(generated).toHaveLength(3);

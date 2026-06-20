@@ -12,7 +12,7 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
     prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { batchSemester: { include: { academicYear: true } } } }),
     prisma.subject.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
-    prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, examCycle: true } }),
+    prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, batchSemester: { include: { academicYear: true } } } }),
     prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, include: { actor: true }, take: 25 }),
     prisma.department.count(),
     prisma.user.count(),
@@ -51,7 +51,7 @@ export async function getContributorAssignedBanks(contributorId: string) {
     },
     include: {
       subject: { include: { versions: { where: { status: "ACTIVE" }, take: 1 } } },
-      examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
+      batchSemester: { include: { academicYear: true } },
       pattern: true,
       slots: {
         include: {

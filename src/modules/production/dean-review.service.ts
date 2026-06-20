@@ -162,7 +162,7 @@ export class DeanReviewService {
       bankId: questionBank.id,
       subjectName: questionBank.subject.subjectName,
       subjectCode: questionBank.subject.subjectCode,
-      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.batchSemester.academicYear.code, questionBank.examCycle.batchSemester.semesterNumber, questionBank.examCycle.examType),
+      examCycleLabel: `${questionBank.batchSemester.academicYear.code} · Sem ${questionBank.batchSemester.semesterNumber}`,
       generationTimestamp: getGenerationTimestamp(questionBank.generatedPapers),
       papers: questionBank.generatedPapers.map((paper) => ({
         paperId: paper.variant,
@@ -371,7 +371,7 @@ export class DeanReviewService {
       id: questionBank.id,
       subjectName: questionBank.subject.subjectName,
       subjectCode: questionBank.subject.subjectCode,
-      examCycleLabel: formatExamCycleLabel(questionBank.examCycle.batchSemester.academicYear.code, questionBank.examCycle.batchSemester.semesterNumber, questionBank.examCycle.examType),
+      examCycleLabel: `${questionBank.batchSemester.academicYear.code} · Sem ${questionBank.batchSemester.semesterNumber}`,
       generationTimestamp: generationDate?.toISOString() ?? null,
       reviewSubmitted: Boolean(questionBank.deanReview),
       reviewSummary: questionBank.deanReview ? {
@@ -439,7 +439,7 @@ export class DeanReviewService {
 
 const deanDashboardInclude = {
   subject: true,
-  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } },
+  batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } },
   generatedPapers: {
     orderBy: [{ generatedAt: "desc" as const }, { createdAt: "desc" as const }],
   },
@@ -456,7 +456,7 @@ const deanDashboardInclude = {
 
 const deanWorkspaceInclude = {
   subject: true,
-  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } },
+  batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } },
   aiReports: { orderBy: { createdAt: "desc" as const }, take: 1 },
   generatedPapers: {
     orderBy: { variant: "asc" as const },
@@ -472,10 +472,6 @@ const deanWorkspaceInclude = {
     },
   },
 } satisfies Prisma.QuestionBankInclude;
-
-function formatExamCycleLabel(academicYearCode: string, semesterNumber: number, examType: string) {
-  return `${academicYearCode} · Sem ${semesterNumber} · ${examType.replaceAll("_", " ")}`;
-}
 
 function getGenerationDate(
   generatedPapers: Array<{

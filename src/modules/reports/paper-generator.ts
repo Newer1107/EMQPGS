@@ -5,7 +5,7 @@ import { AppError } from "@/lib/errors";
 type QuestionBankForPaper = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: { include: { batchSemester: { include: { academicYear: true } } } };
+    batchSemester: { include: { academicYear: true } };
     slots: {
       include: { assignedQuestion: true };
       where: { assignedQuestionId: { not: null } };
@@ -26,11 +26,10 @@ export type GeneratedPaperPayload = {
   inventoryWarnings: string[];
 };
 
-const modules = [1, 2, 3, 4, 5, 6];
 const marksPattern = [2, 5, 10] as const;
 
 export class PaperGenerator {
-  generate(questionBank: QuestionBankForPaper, variants: PaperVariant[]) {
+  generate(questionBank: QuestionBankForPaper, variants: PaperVariant[], moduleRange: number[]) {
     const assignedQuestions = questionBank.slots
       .map((slot) => slot.assignedQuestion)
       .filter((q): q is QuestionLibraryItem => q !== null);
@@ -45,7 +44,7 @@ export class PaperGenerator {
     const generated = variants.map((variant) => {
       const selectedQuestions: QuestionLibraryItem[] = [];
 
-      for (const moduleNumber of modules) {
+      for (const moduleNumber of moduleRange) {
         for (const marks of marksPattern) {
           const candidate = approvedQuestions
             .filter((question) => question.moduleNumber === moduleNumber && question.marks === marks)
@@ -83,4 +82,3 @@ export class PaperGenerator {
     return warnings;
   }
 }
-

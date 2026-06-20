@@ -178,6 +178,7 @@ model AcademicYear {
   updatedAt       DateTime           @updatedAt
   subjectVersions SubjectVersion[]   @relation("subjectVersionAcademicYear")
   batchSemesters  BatchSemester[]
+  questionBanks   QuestionBank[]
 }
 
 model SubjectVersion {
@@ -212,41 +213,41 @@ model Department {
   curriculumSchemes      CurriculumScheme[]
   batches                Batch[]
   curriculumSubjects     CurriculumSubject[]
-  batchSemesters         BatchSemester[]      @relation("batchSemesterAcademicUnit")
+  batchSemesters         BatchSemester[]                   @relation("batchSemesterAcademicUnit")
 }
 
 model User {
-  id                       String                            @id @default(cuid())
-  name                     String
-  email                    String                            @unique
-  passwordHash             String
-  role                     Role
-  status                   UserStatus                        @default(ACTIVE)
-  lastLoginAt              DateTime?
-  departmentId             String?
-  resetTokenHash           String?
-  resetTokenExpiry         DateTime?
-  createdAt                DateTime                          @default(now())
-  updatedAt                DateTime                          @updatedAt
-  department               Department?                       @relation(fields: [departmentId], references: [id])
-  coordinatorDepartments   CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
-  moderatorBankAssignments ModeratorBankAssignment[]         @relation("moderatorBankUser")
-  contributorBankAssignments ContributorBankAssignment[]     @relation("contributorBankUser")
-  notifications            Notification[]
-  auditLogs                AuditLog[]
-  questionBanks            QuestionBank[]                    @relation("questionBankCreator")
-  createdQuestions         QuestionLibraryItem[]             @relation("questionCreator")
-  ownedQuestions           QuestionLibraryItem[]             @relation("questionOwner")
-  moderationEvents         ModerationEvent[]                 @relation("moderationEventActor")
-  revisionChanges          QuestionRevision[]                @relation("revisionChangedBy")
-  ownershipToUser          QuestionOwnershipHistory[]        @relation("ownershipToUser")
-  ownershipFromUser        QuestionOwnershipHistory[]        @relation("ownershipFromUser")
-  ownershipTransferredBy   QuestionOwnershipHistory[]        @relation("ownershipTransferredBy")
-  deanReviews              DeanReview[]                      @relation("deanReviewSelector")
-  slotReservations         QuestionSlot[]
-  approvalDecisionsCreated ApprovalDecision[]
-  exportArtifacts          ExportArtifact[]                  @relation("exportArtifactGenerator")
-  backupsTriggered         SystemBackup[]                    @relation("backupTrigger")
+  id                         String                            @id @default(cuid())
+  name                       String
+  email                      String                            @unique
+  passwordHash               String
+  role                       Role
+  status                     UserStatus                        @default(ACTIVE)
+  lastLoginAt                DateTime?
+  departmentId               String?
+  resetTokenHash             String?
+  resetTokenExpiry           DateTime?
+  createdAt                  DateTime                          @default(now())
+  updatedAt                  DateTime                          @updatedAt
+  department                 Department?                       @relation(fields: [departmentId], references: [id])
+  coordinatorDepartments     CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
+  moderatorBankAssignments   ModeratorBankAssignment[]         @relation("moderatorBankUser")
+  contributorBankAssignments ContributorBankAssignment[]       @relation("contributorBankUser")
+  notifications              Notification[]
+  auditLogs                  AuditLog[]
+  questionBanks              QuestionBank[]                    @relation("questionBankCreator")
+  createdQuestions           QuestionLibraryItem[]             @relation("questionCreator")
+  ownedQuestions             QuestionLibraryItem[]             @relation("questionOwner")
+  moderationEvents           ModerationEvent[]                 @relation("moderationEventActor")
+  revisionChanges            QuestionRevision[]                @relation("revisionChangedBy")
+  ownershipToUser            QuestionOwnershipHistory[]        @relation("ownershipToUser")
+  ownershipFromUser          QuestionOwnershipHistory[]        @relation("ownershipFromUser")
+  ownershipTransferredBy     QuestionOwnershipHistory[]        @relation("ownershipTransferredBy")
+  deanReviews                DeanReview[]                      @relation("deanReviewSelector")
+  slotReservations           QuestionSlot[]
+  approvalDecisionsCreated   ApprovalDecision[]
+  exportArtifacts            ExportArtifact[]                  @relation("exportArtifactGenerator")
+  backupsTriggered           SystemBackup[]                    @relation("backupTrigger")
 
   @@index([role])
   @@index([departmentId])
@@ -270,7 +271,6 @@ model ExamCycle {
   updatedAt            DateTime               @updatedAt
   batchSemester        BatchSemester          @relation(fields: [batchSemesterId], references: [id])
   subjectLinks         SubjectExamCycleLink[]
-  questionBanks        QuestionBank[]
   questionUsageHistory QuestionUsageHistory[] @relation("usageHistoryExamCycle")
 
   @@unique([batchSemesterId, examType])
@@ -298,27 +298,29 @@ model Subject {
 }
 
 model QuestionBank {
-  id           String            @id @default(cuid())
-  subjectId    String
-  examCycleId  String
-  phase        QuestionBankPhase @default(DRAFTING)
-  recordStatus RecordStatus      @default(ACTIVE)
-  version      Int               @default(0)
-  createdById  String
-  lockedAt     DateTime?
-  lockedReason String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id              String            @id @default(cuid())
+  subjectId       String
+  batchSemesterId String
+  academicYearId  String
+  phase           QuestionBankPhase @default(DRAFTING)
+  recordStatus    RecordStatus      @default(ACTIVE)
+  version         Int               @default(0)
+  createdById     String
+  lockedAt        DateTime?
+  lockedReason    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
-  subject              Subject                   @relation(fields: [subjectId], references: [id])
-  examCycle            ExamCycle                 @relation(fields: [examCycleId], references: [id])
-  createdBy            User                      @relation("questionBankCreator", fields: [createdById], references: [id])
-  moderatorAssignments ModeratorBankAssignment[]
+  subject                Subject                     @relation(fields: [subjectId], references: [id])
+  batchSemester          BatchSemester               @relation(fields: [batchSemesterId], references: [id])
+  academicYear           AcademicYear                @relation(fields: [academicYearId], references: [id])
+  createdBy              User                        @relation("questionBankCreator", fields: [createdById], references: [id])
+  moderatorAssignments   ModeratorBankAssignment[]
   contributorAssignments ContributorBankAssignment[]
-  aiReports            AiReport[]
-  generatedPapers      GeneratedPaper[]
-  deanReview           DeanReview?
-  exportArtifacts      ExportArtifact[]
+  aiReports              AiReport[]
+  generatedPapers        GeneratedPaper[]
+  deanReview             DeanReview?
+  exportArtifacts        ExportArtifact[]
 
   slots             QuestionSlot[]
   pattern           PaperPattern?
@@ -326,9 +328,10 @@ model QuestionBank {
   paperSnapshots    PaperSnapshot[]
   approvalDecisions ApprovalDecision[]
 
-  @@unique([subjectId, examCycleId])
+  @@unique([batchSemesterId, subjectId])
   @@index([subjectId])
   @@index([phase, recordStatus])
+  @@index([batchSemesterId])
 }
 
 model QuestionLibraryItem {
@@ -473,14 +476,14 @@ model ApprovalDecision {
 }
 
 model QuestionBankSnapshot {
-  id               String            @id @default(cuid())
-  questionBankId   String
-  snapshotType     SnapshotType
-  phase            QuestionBankPhase
-  status           RecordStatus
-  slotAssignments  Json
-  version          Int
-  createdAt        DateTime          @default(now())
+  id              String            @id @default(cuid())
+  questionBankId  String
+  snapshotType    SnapshotType
+  phase           QuestionBankPhase
+  status          RecordStatus
+  slotAssignments Json
+  version         Int
+  createdAt       DateTime          @default(now())
 
   questionBank QuestionBank @relation(fields: [questionBankId], references: [id], onDelete: Cascade)
 
@@ -601,12 +604,12 @@ model ModeratorBankAssignment {
 }
 
 model ContributorBankAssignment {
-  id               String       @id @default(cuid())
-  contributorId    String
-  questionBankId   String
-  assignedAt       DateTime     @default(now())
-  contributor      User         @relation("contributorBankUser", fields: [contributorId], references: [id])
-  questionBank     QuestionBank @relation(fields: [questionBankId], references: [id])
+  id             String       @id @default(cuid())
+  contributorId  String
+  questionBankId String
+  assignedAt     DateTime     @default(now())
+  contributor    User         @relation("contributorBankUser", fields: [contributorId], references: [id])
+  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
 
   @@unique([contributorId, questionBankId])
 }
@@ -785,9 +788,9 @@ model Batch {
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 
-  department           Department         @relation(fields: [departmentId], references: [id])
-  curriculumScheme     CurriculumScheme   @relation(fields: [curriculumSchemeId], references: [id])
-  currentBatchSemester BatchSemester?     @relation("BatchToBatchSemesterCurrent", fields: [currentBatchSemesterId], references: [id])
+  department           Department       @relation(fields: [departmentId], references: [id])
+  curriculumScheme     CurriculumScheme @relation(fields: [curriculumSchemeId], references: [id])
+  currentBatchSemester BatchSemester?   @relation("BatchToBatchSemesterCurrent", fields: [currentBatchSemesterId], references: [id])
 
   batchSemesters BatchSemester[]
   teachingGroups TeachingGroup[]
@@ -811,11 +814,12 @@ model BatchSemester {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
-  batch          Batch        @relation(fields: [batchId], references: [id])
-  batchCurrentOf Batch[]      @relation("BatchToBatchSemesterCurrent")
-  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  department     Department   @relation("batchSemesterAcademicUnit", fields: [departmentId], references: [id])
+  batch          Batch          @relation(fields: [batchId], references: [id])
+  batchCurrentOf Batch[]        @relation("BatchToBatchSemesterCurrent")
+  academicYear   AcademicYear   @relation(fields: [academicYearId], references: [id])
+  department     Department     @relation("batchSemesterAcademicUnit", fields: [departmentId], references: [id])
   examCycles     ExamCycle[]
+  questionBanks  QuestionBank[]
 
   @@unique([batchId, semesterNumber])
   @@index([academicYearId])

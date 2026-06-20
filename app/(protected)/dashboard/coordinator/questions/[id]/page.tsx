@@ -19,7 +19,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
       subjectVersion: { include: { subject: { include: { department: true } }, effectiveFromAcademicYear: true } },
       creator: { select: { id: true, name: true, email: true } },
       owner: { select: { id: true, name: true, email: true } },
-      slotAssignments: { include: { questionBank: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } } } },
+      slotAssignments: { include: { questionBank: { include: { batchSemester: { include: { academicYear: true } } } } } },
     },
   });
   if (!question) notFound();

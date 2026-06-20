@@ -4,7 +4,6 @@ import type { AiQuestionBankReport, CoverageMetric, DistributionMetric } from "@
 type QuestionBankWithQuestions = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: true;
     slots: {
       include: { assignedQuestion: true };
       where: { assignedQuestionId: { not: null } };

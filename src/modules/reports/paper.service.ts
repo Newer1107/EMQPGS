@@ -1,5 +1,6 @@
 import {
   AiReportStatus,
+  ExamType,
   NotificationType,
   PaperGenerationStatus,
   PaperVariant,
@@ -13,7 +14,7 @@ import { prisma } from "@/lib/db";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
-import { ENTITY_TYPES } from "@/lib/constants";
+import { ENTITY_TYPES, EXAM_MODULE_RANGES } from "@/lib/constants";
 import { PaperGenerator } from "@/modules/reports/paper-generator";
 import { PdfService } from "@/modules/reports/pdf-service";
 import { recordUsage } from "@/modules/question-library/service";
@@ -27,20 +28,21 @@ export class PaperGenerationService {
     private readonly pdfService = new PdfService(),
   ) {}
 
-  async generatePapers(questionBankId: string, actor: Actor, variants: PaperVariant[]) {
+  async generatePapers(questionBankId: string, examType: ExamType, actor: Actor, variants: PaperVariant[]) {
     const questionBank = await this.getQuestionBankForPaperGeneration(questionBankId);
     if (!questionBank) throw new NotFoundError("Question bank not found");
     if (questionBank.phase !== QuestionBankPhase.APPROVAL && questionBank.phase !== QuestionBankPhase.COMPLETE) {
       throw new AppError("Question bank must be in APPROVAL or COMPLETE phase before generating papers", 409);
     }
 
-    const generatedPayloads = this.paperGenerator.generate(questionBank, variants);
+    const moduleRange = EXAM_MODULE_RANGES[examType];
+    const generatedPayloads = this.paperGenerator.generate(questionBank, variants, moduleRange);
     const outputs = [];
 
     for (const payload of generatedPayloads) {
       const pdfBytes = await this.pdfService.createPaperPdf({
         title: `${questionBank.subject.subjectCode} ${payload.variant.replace("_", " ")}`,
-        subtitle: `Semester ${questionBank.examCycle.batchSemester.semesterNumber} · ${questionBank.examCycle.batchSemester.academicYear.code} · ${questionBank.examCycle.examType}`,
+        subtitle: `Semester ${questionBank.batchSemester.semesterNumber} · ${questionBank.batchSemester.academicYear.code} · ${examType}`,
         questions: payload.selectedQuestions.map((question) => ({
           moduleNumber: question.moduleNumber,
           marks: question.marks,
@@ -65,7 +67,7 @@ export class PaperGenerationService {
           status: PaperGenerationStatus.COMPLETED,
           generatedById: actor.id,
           generatedAt: new Date(),
-          coverageScore: this.calculateCoverageScore(payload.selectedQuestions),
+          coverageScore: this.calculateCoverageScore(payload.selectedQuestions, moduleRange),
           difficultyScore: this.calculateDifficultyScore(payload.selectedQuestions),
           qualityScore: this.calculateQualityScore(payload.selectedQuestions),
           duplicateRisk: this.calculateDuplicateRisk(payload.selectedQuestions),
@@ -87,7 +89,7 @@ export class PaperGenerationService {
           status: PaperGenerationStatus.COMPLETED,
           generatedById: actor.id,
           generatedAt: new Date(),
-          coverageScore: this.calculateCoverageScore(payload.selectedQuestions),
+          coverageScore: this.calculateCoverageScore(payload.selectedQuestions, moduleRange),
           difficultyScore: this.calculateDifficultyScore(payload.selectedQuestions),
           qualityScore: this.calculateQualityScore(payload.selectedQuestions),
           duplicateRisk: this.calculateDuplicateRisk(payload.selectedQuestions),
@@ -109,7 +111,7 @@ export class PaperGenerationService {
 
       await Promise.all(
         payload.selectedQuestions.map((question) =>
-          recordUsage(question.id, questionBank.examCycle.id, "GENERATED_PAPER", record.id),
+          recordUsage(question.id, "GENERATED_PAPER", record.id),
         ),
       );
 
@@ -179,7 +181,7 @@ export class PaperGenerationService {
       where: { id: questionBankId },
       include: {
         subject: true,
-        examCycle: { include: { batchSemester: { include: { academicYear: true } } } },
+        batchSemester: { include: { academicYear: true } },
         aiReports: {
           where: { status: AiReportStatus.COMPLETED },
         },
@@ -198,9 +200,9 @@ export class PaperGenerationService {
     });
   }
 
-  private calculateCoverageScore(questions: Array<{ moduleNumber: number }>) {
+  private calculateCoverageScore(questions: Array<{ moduleNumber: number }>, moduleRange: number[]) {
     const coveredModules = new Set(questions.map((question) => question.moduleNumber)).size;
-    return Number(((coveredModules / 6) * 100).toFixed(2));
+    return Number(((coveredModules / moduleRange.length) * 100).toFixed(2));
   }
 
   private calculateDifficultyScore(questions: Array<{ difficultyLevel: string | null }>) {

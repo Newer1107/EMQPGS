@@ -27,7 +27,7 @@ type ExportInput = {
 export type CoeOverviewItem = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } };
+    batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } };
     aiReports: { orderBy: { createdAt: "desc" }; take: 1; include: { pdfFileAsset: true; jsonFileAsset: true } };
     generatedPapers: { orderBy: { variant: "asc" }; include: { paperFileAsset: true } };
     deanReview: {
@@ -50,7 +50,7 @@ export class ExportService {
       orderBy: { updatedAt: "desc" },
       include: {
         subject: true,
-  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } },
+  batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } },
         aiReports: { orderBy: { createdAt: "desc" }, take: 1, include: { pdfFileAsset: true, jsonFileAsset: true } },
         generatedPapers: { orderBy: { variant: "asc" }, include: { paperFileAsset: true } },
         deanReview: {
@@ -69,7 +69,7 @@ export class ExportService {
       orderBy: { createdAt: "desc" },
       include: {
         fileAsset: true,
-        questionBank: { include: { subject: true, examCycle: true } },
+        questionBank: { include: { subject: true, batchSemester: { include: { academicYear: true } } } },
       },
     });
   }
@@ -183,7 +183,7 @@ export class ExportService {
 
 const exportQuestionBankInclude = {
   subject: true,
-  examCycle: true,
+  batchSemester: { include: { academicYear: true } },
   generatedPapers: {
     include: {
       items: {
@@ -221,7 +221,6 @@ function buildSelectedPapers(
     label,
     subjectName: questionBank.subject.subjectName,
     subjectCode: questionBank.subject.subjectCode,
-    examType: questionBank.examCycle.examType,
     examDate: input.examDate,
     duration: input.duration,
     maximumMarks: input.maximumMarks,

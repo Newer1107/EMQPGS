@@ -6,7 +6,7 @@ const listInclude = {
   subjectVersion: { include: { subject: true, effectiveFromAcademicYear: true } },
   creator: { select: { id: true, name: true, email: true } },
   owner: { select: { id: true, name: true, email: true } },
-  slotAssignments: { include: { questionBank: { select: { id: true, examCycle: { select: { examType: true } } } } } },
+  slotAssignments: { include: { questionBank: { select: { id: true, batchSemester: { select: { semesterNumber: true } } } } } },
 } as const;
 
 export class QuestionLibraryRepository {

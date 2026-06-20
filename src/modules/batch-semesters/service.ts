@@ -4,6 +4,7 @@ import { BatchSemesterRepository } from "@/modules/batch-semesters/repository";
 import type { BatchSemesterUpdateInput, BatchSemesterActivateInput } from "@/modules/batch-semesters/validation";
 import { BatchSemesterStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
+import { AutoInitializeService } from "@/modules/auto-initialize/service";
 
 export class BatchSemesterService {
   constructor(private readonly repository = new BatchSemesterRepository()) {}
@@ -62,6 +63,9 @@ export class BatchSemesterService {
       data: { currentBatchSemesterId: id, currentSemesterNumber: entity.semesterNumber },
     });
 
+    const autoInit = new AutoInitializeService();
+    await autoInit.initializeForBatchSemester(id);
+
     return result;
   }
 
@@ -71,6 +75,11 @@ export class BatchSemesterService {
     if (entity.status === BatchSemesterStatus.COMPLETED) {
       throw new AppError("Semester is already completed", 409);
     }
+
+    await prisma.questionBank.updateMany({
+      where: { batchSemesterId: id, recordStatus: "ACTIVE" },
+      data: { recordStatus: "LOCKED", lockedAt: new Date(), lockedReason: "Batch semester completed" },
+    });
 
     const nextSem = await this.repository.findByBatchAndNumber(entity.batchId, entity.semesterNumber + 1);
     const result = await this.repository.update(id, {

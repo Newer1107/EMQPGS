@@ -113,10 +113,9 @@ describe("N14 — Zod .min(1) on ID fields", () => {
     expect(src).toContain("departmentId: z.string().min(1)");
   });
 
-  it("question-banks validation requires non-empty subjectId and examCycleId", () => {
+  it("question-banks validation validates advancePhase targetPhase", () => {
     const src = fs.readFileSync(path.resolve("src/modules/question-banks/validation.ts"), "utf-8");
-    expect(src).toContain("subjectId: z.string().min(1)");
-    expect(src).toContain("examCycleId: z.string().min(1)");
+    expect(src).toContain("targetPhase: z.nativeEnum(QuestionBankPhase)");
   });
 
   it("academic-years validation requires non-empty code", () => {

@@ -23,8 +23,7 @@ export type BankStatusItem = {
   subjectName: string;
   subjectCode: string;
   department: string;
-  examCycle: string;
-  examType: string;
+  semesterLabel: string;
   phase: string;
   recordStatus: string;
   fillPercentage: number;
@@ -120,7 +119,6 @@ export class CoordinatorService {
           startDate: true,
           endDate: true,
           batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } },
-          _count: { select: { questionBanks: true } },
         },
         orderBy: { createdAt: "desc" },
       }),
@@ -136,12 +134,8 @@ export class CoordinatorService {
               department: { select: { name: true } },
             },
           },
-          examCycle: {
-            select: {
-              id: true,
-              examType: true,
-              batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } },
-            },
+          batchSemester: {
+            select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } },
           },
           pattern: { select: { totalSlots: true } },
           slots: {
@@ -246,8 +240,7 @@ export class CoordinatorService {
         subjectName: bank.subject.subjectName,
         subjectCode: bank.subject?.subjectCode ?? '',
         department: bank.subject?.department?.name ?? '',
-        examCycle: `Sem ${bank.examCycle?.batchSemester?.semesterNumber ?? ''} · ${bank.examCycle?.batchSemester?.academicYear?.code ?? ''}`,
-        examType: bank.examCycle.examType.replaceAll("_", " "),
+        semesterLabel: `Sem ${bank.batchSemester?.semesterNumber ?? ''} · ${bank.batchSemester?.academicYear?.code ?? ''}`,
         phase: bank.phase,
         recordStatus: bank.recordStatus,
         fillPercentage,
@@ -348,7 +341,7 @@ export class CoordinatorService {
         startDate: cycle.startDate?.toISOString() ?? null,
         endDate: cycle.endDate?.toISOString() ?? null,
         department: "",
-        initializedBanks: cycle._count.questionBanks,
+
       })),
       phaseDistribution,
       attentionItems,

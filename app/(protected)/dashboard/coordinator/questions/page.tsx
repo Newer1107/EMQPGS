@@ -34,7 +34,7 @@ export default async function CoordinatorQuestionsPage() {
     include: {
       subjectVersion: { include: { subject: true } },
       creator: { select: { id: true, name: true } },
-      slotAssignments: { include: { questionBank: { include: { examCycle: { select: { examType: true } } } } } },
+      slotAssignments: { include: { questionBank: { include: { batchSemester: { select: { semesterNumber: true } } } } } },
     },
   });
 
@@ -55,7 +55,7 @@ export default async function CoordinatorQuestionsPage() {
                 <TD>{question.marks}</TD>
                 <TD><Badge variant={statusVariants[question.status] ?? "default"}>{questionStatusLabels[question.status as keyof typeof questionStatusLabels] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
-                <TD>{question.slotAssignments.map((s) => s.questionBank.examCycle.examType).join(", ") || "None"}</TD>
+                <TD>Bank</TD>
                 <TD>
                   <Link href={`/dashboard/coordinator/questions/${question.id}`}>
                     <Button variant="outline" size="sm">View</Button>

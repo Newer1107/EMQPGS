@@ -233,7 +233,7 @@ export default async function CoordinatorDashboardPage() {
                   <p className="text-sm font-medium">{cycle.name}</p>
                   <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
                     <Badge variant="success">Active</Badge>
-                    <span>{cycle.initializedBanks} banks</span>
+
                   </div>
                 </Link>
               ))}

@@ -6,6 +6,7 @@ import type { CurriculumSubjectInput, CurriculumSubjectUpdateInput } from "@/mod
 import type { Prisma } from "@prisma/client";
 import type { Actor } from "@/lib/types";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
+import { AutoInitializeService } from "@/modules/auto-initialize/service";
 
 export class CurriculumSubjectService {
   constructor(
@@ -83,7 +84,18 @@ export class CurriculumSubjectService {
       throw new AppError("Cannot use an inactive department for curriculum placement", 400);
     }
 
-    return withUniqueCheck(() => this.repository.create(data));
+    const result = await withUniqueCheck(() => this.repository.create(data));
+
+    // ponytail: mid-year subject addition → auto-create bank if any active batch semester exists
+    const activeSem = await prisma.batchSemester.findFirst({
+      where: { status: "ACTIVE", semesterNumber: data.semesterNumber, departmentId: data.departmentId, batch: { curriculumSchemeId: data.curriculumSchemeId } },
+    });
+    if (activeSem && subject.status === "ACTIVE") {
+      const autoInit = new AutoInitializeService();
+      await autoInit.initializeForBatchSemester(activeSem.id);
+    }
+
+    return result;
   }
 
   async update(id: string, data: CurriculumSubjectUpdateInput) {

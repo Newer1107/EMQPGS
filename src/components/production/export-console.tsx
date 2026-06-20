@@ -74,7 +74,7 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
               <Select id="questionBankId" name="questionBankId">
                 {banks.filter((bank) => bank.deanReview).map((bank) => (
                   <option key={bank.id} value={bank.id}>
-                    {bank.subject.subjectCode} · {bank.examCycle.batchSemester.academicYear.code} · {bank.examCycle.examType}
+                    {bank.subject.subjectCode} · {bank.batchSemester.academicYear.code} · Sem {bank.batchSemester.semesterNumber}
                   </option>
                 ))}
               </Select>
