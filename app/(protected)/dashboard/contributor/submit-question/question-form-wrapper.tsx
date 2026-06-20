@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { QuestionForm } from "@/components/forms/question-form";
 import type { SlotInfo } from "@/components/forms/slot-demand";
@@ -28,13 +27,6 @@ export function QuestionFormWrapper({
 }) {
   const router = useRouter();
 
-  const selectedSubjectVersionId = initialValues?.subjectVersionId ?? currentSubjectVersionId;
-
-  const bankId = useMemo(() => {
-    if (!selectedSubjectVersionId || !bankIdBySubjectVersionId) return undefined;
-    return bankIdBySubjectVersionId[selectedSubjectVersionId];
-  }, [selectedSubjectVersionId, bankIdBySubjectVersionId]);
-
   return (
     <QuestionForm
       subjectVersions={subjectVersions}
@@ -43,7 +35,7 @@ export function QuestionFormWrapper({
       redirectOnSuccess={redirectOnSuccess}
       initialValues={initialValues}
       slotDataMap={slotDataMap}
-      bankId={bankId}
+      bankIdBySubjectVersionId={bankIdBySubjectVersionId}
       onSuccessAction="stay"
       onSubmitAnother={() => {
         const params = new URLSearchParams();

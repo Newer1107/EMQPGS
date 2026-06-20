@@ -38,6 +38,7 @@ type QuestionFormProps = {
   endpoint: string;
   title: string;
   bankId?: string;
+  bankIdBySubjectVersionId?: Record<string, string>;
   method?: "POST" | "PATCH";
   redirectOnSuccess?: string;
   submitAfterSave?: boolean;
@@ -47,7 +48,7 @@ type QuestionFormProps = {
   onSubmitAnother?: () => void;
 };
 
-export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint, slotDataMap, onSuccessAction, onSubmitAnother }: QuestionFormProps) {
+export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, bankIdBySubjectVersionId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint, slotDataMap, onSuccessAction, onSubmitAnother }: QuestionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,7 +69,8 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
   }
 
   async function save(body: Record<string, unknown>, submitAfter: boolean) {
-    const url = bankId ? `${endpoint}?bankId=${bankId}` : endpoint;
+    const resolvedBankId = bankId ?? (bankIdBySubjectVersionId ? bankIdBySubjectVersionId[values.subjectVersionId] : undefined);
+    const url = resolvedBankId ? `${endpoint}?bankId=${resolvedBankId}` : endpoint;
     const response = await apiFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
