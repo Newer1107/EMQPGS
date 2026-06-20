@@ -1260,7 +1260,7 @@ A: The slot it occupied becomes empty. A different question must be submitted to
 A: Yes. When a coordinator edits an approved question, the system automatically reverts its status to REVISION_REQUESTED, signaling it needs re-moderation.
 
 **Q: What determines if a bank can advance from DRAFTING to MODERATION?**
-A: All 126 slots must have a question assigned. Even one empty slot blocks the transition.
+A: The coordinator decides when enough questions have been submitted. Empty slots generate warnings but do not block the transition.
 
 **Q: What determines if a bank can advance from MODERATION to APPROVAL?**
 A: Every filled question must have a moderation event. Questions with no moderation action block the transition.
@@ -1301,7 +1301,7 @@ A: The bank goes back to MODERATION phase for rework. Questions may need to be r
 
 | Term | Meaning |
 |------|---------|
-| **Question Bank** | A structured container for questions for one subject in one exam cycle. Contains 126 slots. |
+| **Question Bank** | An annual academic asset — one per (Batch Semester, Subject). Contains 126 slots reused across all exam types. Auto-created on batch semester activation. |
 | **Slot** | A position in a question bank defined by module number, marks, and slot number. |
 | **Module** | A syllabus unit (1-6 per subject). |
 | **Course Outcome (CO)** | A measurable learning outcome (CO1-CO6) mapped to each question. |
