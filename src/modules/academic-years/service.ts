@@ -12,7 +12,7 @@ export class AcademicYearService {
   }
 
   async create(data: AcademicYearInput) {
-    if (data.endDate <= data.startDate) {
+    if (data.startDate && data.endDate && data.endDate <= data.startDate) {
       throw new AppError("End date must be after start date", 400);
     }
     return withUniqueCheck(

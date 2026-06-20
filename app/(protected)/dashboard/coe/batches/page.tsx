@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { SimpleForm } from "@/components/dashboard/simple-form";
+import { BatchForm } from "@/components/forms/batch-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import Link from "next/link";
@@ -11,12 +11,14 @@ import Link from "next/link";
 export const metadata: Metadata = { title: "Batches — EMQPGS" };
 
 export default async function BatchesPage() {
-  const batches = await prisma.batch.findMany({
-    orderBy: [{ admissionYear: "desc" }, { name: "asc" }],
-    include: { department: true, curriculumScheme: true, _count: { select: { batchSemesters: true } } },
-  });
-  const departments = await prisma.department.findMany({ orderBy: { name: "asc" } });
-  const schemes = await prisma.curriculumScheme.findMany({ orderBy: { year: "desc" } });
+  const [batches, departments, schemes] = await Promise.all([
+    prisma.batch.findMany({
+      orderBy: [{ admissionYear: "desc" }, { name: "asc" }],
+      include: { department: true, curriculumScheme: true, _count: { select: { batchSemesters: true } } },
+    }),
+    prisma.department.findMany({ orderBy: { name: "asc" } }),
+    prisma.curriculumScheme.findMany({ orderBy: { year: "desc" }, select: { id: true, name: true, year: true, durationSemesters: true } }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -49,20 +51,7 @@ export default async function BatchesPage() {
             </TBody>
           </Table>
         </DataTableCard>
-        <SimpleForm
-          title="Create Batch"
-          submitLabel="Create Batch"
-          endpoint="/api/batches"
-          extraPayload={{ hasTeachingGroups: false }}
-          fields={[
-            { name: "name", label: "Batch Name", type: "text", placeholder: "e.g. BE CO 2025" },
-            { name: "code", label: "Batch Code", type: "text", placeholder: "e.g. BECO-2025" },
-            { name: "departmentId", label: "Department", type: "select", options: departments.map((d) => ({ value: d.id, label: d.name })) },
-            { name: "curriculumSchemeId", label: "Curriculum Scheme", type: "select", options: schemes.map((s) => ({ value: s.id, label: `${s.name} (${s.year})` })) },
-            { name: "admissionYear", label: "Admission Year", type: "number", placeholder: "e.g. 2025" },
-            { name: "graduationYear", label: "Expected Graduation Year", type: "number", placeholder: "e.g. 2029" },
-          ]}
-        />
+        <BatchForm departments={departments} schemes={schemes} />
       </div>
 
       <div className="flex items-center gap-4 rounded-lg border bg-gray-50 p-4">

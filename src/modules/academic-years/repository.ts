@@ -19,18 +19,18 @@ export class AcademicYearRepository {
     });
   }
 
-  create(data: { code: string; startDate: Date; endDate: Date; status?: import("@prisma/client").AcademicYearStatus }) {
+  create(data: { code: string; startDate?: Date | null; endDate?: Date | null; status?: import("@prisma/client").AcademicYearStatus }) {
     return prisma.academicYear.create({
       data: {
         code: data.code,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: data.startDate ?? null,
+        endDate: data.endDate ?? null,
         status: data.status ?? "ACTIVE",
       },
     });
   }
 
-  update(id: string, data: Partial<{ code: string; startDate: Date; endDate: Date; status: import("@prisma/client").AcademicYearStatus }>) {
+  update(id: string, data: Partial<{ code: string; startDate?: Date | null; endDate?: Date | null; status: import("@prisma/client").AcademicYearStatus }>) {
     return prisma.academicYear.update({
       where: { id },
       data,

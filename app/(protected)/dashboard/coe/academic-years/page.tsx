@@ -37,8 +37,8 @@ export default async function CoeAcademicYearsPage() {
               {academicYears.map((ay) => (
                 <TR key={ay.id}>
                   <TD className="font-medium">{ay.code}</TD>
-                  <TD>{new Date(ay.startDate).toLocaleDateString()}</TD>
-                  <TD>{new Date(ay.endDate).toLocaleDateString()}</TD>
+                  <TD>{ay.startDate ? new Date(ay.startDate).toLocaleDateString() : '-'}</TD>
+                  <TD>{ay.endDate ? new Date(ay.endDate).toLocaleDateString() : '-'}</TD>
                   <TD><Badge variant={statusVariants[ay.status] ?? "default"}>{ay.status}</Badge></TD>
                 </TR>
               ))}

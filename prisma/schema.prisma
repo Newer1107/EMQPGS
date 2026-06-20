@@ -141,6 +141,7 @@ enum QuestionStatus {
 }
 
 enum AcademicYearStatus {
+  DRAFT
   ACTIVE
   CLOSED
 }
@@ -170,8 +171,8 @@ enum BatchSemesterStatus {
 model AcademicYear {
   id              String             @id @default(cuid())
   code            String             @unique
-  startDate       DateTime
-  endDate         DateTime
+  startDate       DateTime?
+  endDate         DateTime?
   status          AcademicYearStatus @default(ACTIVE)
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
