@@ -18,8 +18,8 @@ export class BatchSemesterService {
     return this.repository.findByBatch(batchId);
   }
 
-  async findActiveByAcademicUnit(academicUnitId: string) {
-    return this.repository.findActiveByAcademicUnit(academicUnitId);
+  async findActiveByDepartment(departmentId: string) {
+    return this.repository.findActiveByDepartment(departmentId);
   }
 
   async update(id: string, data: BatchSemesterUpdateInput) {

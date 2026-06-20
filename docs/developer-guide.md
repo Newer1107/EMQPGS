@@ -53,7 +53,7 @@ src/modules/<feature>/
 └── validation.ts     Zod schemas
 ```
 
-Modules following this pattern: `academic-years`, `semesters`, `subject-versions`, `exam-cycles`, `departments`, `users`, `question-library`, `question-banks`, `question-slots`, `coordinator-departments`, `moderator-assignments`, `academic-units`, `programmes`, `curriculum-schemes`, `curriculum-subjects`, `batches`, `batch-semesters`, `teaching-groups`.
+Modules following this pattern: `academic-years`, `semesters`, `subject-versions`, `exam-cycles`, `departments`, `users`, `question-library`, `question-banks`, `question-slots`, `coordinator-departments`, `moderator-assignments`, `curriculum-schemes`, `curriculum-subjects`, `batches`, `batch-semesters`, `teaching-groups`.
 
 Modules using direct Prisma calls: `coordinator/`, `reports/`, `readiness/`, `question-bank-metrics/`, `production/`, `moderation/`, `notifications/`, `dashboard/`, `ai/`.
 
@@ -85,7 +85,7 @@ Modules using direct Prisma calls: `coordinator/`, `reports/`, `readiness/`, `qu
 
 | File | What it is |
 |---|---|
-| `prisma/schema.prisma` | Complete data model (36 models, 28 enums) |
+| `prisma/schema.prisma` | Complete data model (34 models, 26 enums) |
 | `proxy.ts` | Middleware (route-level auth) |
 | `src/lib/api-handler.ts` | `withApiHandler` — all routes use this |
 | `src/lib/db.ts` | Prisma singleton |

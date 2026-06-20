@@ -87,9 +87,8 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       subjectName={(bank.subject).subjectName}
       subjectCode={(bank.subject).subjectCode}
       batchName={bs.batch?.name ?? ""}
-      programmeName={""}
       semesterNumber={bs.semesterNumber}
-      academicUnitName={bs.academicUnit?.name ?? ""}
+      departmentName={bs.department?.name ?? ""}
       academicYearCode={bs.academicYear?.code ?? ""}
       examType={examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}
       examCycleLabel={bs.academicYear?.code ? `${bs.academicYear.code} · Sem ${bs.semesterNumber} · ${examTypeLabels[bank.examCycle.examType as keyof typeof examTypeLabels] ?? bank.examCycle.examType.replaceAll("_", " ")}` : ""}

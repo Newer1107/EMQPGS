@@ -5,15 +5,15 @@ export class CurriculumSchemeRepository {
   list() {
     return prisma.curriculumScheme.findMany({
       orderBy: [{ year: "desc" }, { name: "asc" }],
-      include: { programme: { include: { homeAcademicUnit: true } } },
+      include: { department: true },
     });
   }
 
-  findByProgramme(programmeId: string) {
+  findByDepartment(departmentId: string) {
     return prisma.curriculumScheme.findMany({
-      where: { programmeId },
+      where: { departmentId },
       orderBy: { year: "desc" },
-      include: { programme: true, _count: { select: { curriculumSubjects: true, batches: true } } },
+      include: { department: true, _count: { select: { curriculumSubjects: true, batches: true } } },
     });
   }
 
@@ -21,32 +21,32 @@ export class CurriculumSchemeRepository {
     return prisma.curriculumScheme.findUnique({
       where: { id },
       include: {
-        programme: { include: { homeAcademicUnit: true } },
+        department: true,
         curriculumSubjects: {
-          include: { subject: true, academicUnit: true },
+          include: { subject: true, department: true },
           orderBy: [{ semesterNumber: "asc" }, { subject: { subjectName: "asc" } }],
         },
       },
     });
   }
 
-  findActiveByProgramme(programmeId: string) {
+  findActiveByDepartment(departmentId: string) {
     return prisma.curriculumScheme.findFirst({
-      where: { programmeId, isActive: true },
+      where: { departmentId, isActive: true },
     });
   }
 
   create(data: CurriculumSchemeInput) {
     return prisma.curriculumScheme.create({
       data,
-      include: { programme: true },
+      include: { department: true },
     });
   }
 
-  deactivateAllForProgramme(programmeId: string, excludeId?: string) {
+  deactivateAllForDepartment(departmentId: string, excludeId?: string) {
     return prisma.curriculumScheme.updateMany({
       where: {
-        programmeId,
+        departmentId,
         isActive: true,
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
@@ -58,7 +58,7 @@ export class CurriculumSchemeRepository {
     return prisma.curriculumScheme.update({
       where: { id },
       data,
-      include: { programme: true },
+      include: { department: true },
     });
   }
 

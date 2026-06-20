@@ -12,7 +12,7 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
   const { id } = await params;
   const batch = await prisma.batch.findUnique({
     where: { id },
-    include: { programme: { include: { homeAcademicUnit: true } }, curriculumScheme: true },
+    include: { department: true, curriculumScheme: true },
   });
   if (!batch) notFound();
 
@@ -35,8 +35,8 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Programme</CardTitle></CardHeader>
-          <CardContent><p className="text-lg font-semibold">{batch.programme?.name ?? '-'}</p></CardContent>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Department</CardTitle></CardHeader>
+          <CardContent><p className="text-lg font-semibold">{batch.department?.name ?? '-'}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Curriculum Scheme</CardTitle></CardHeader>
@@ -45,10 +45,6 @@ export default async function BatchOverviewPage({ params }: { params: Promise<{ 
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Current Semester</CardTitle></CardHeader>
           <CardContent><p className="text-lg font-semibold">{batch.currentSemesterNumber ? `Semester ${batch.currentSemesterNumber}` : 'Not started'}</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Current Academic Unit</CardTitle></CardHeader>
-          <CardContent><p className="text-lg font-semibold">{batch.currentSemesterNumber && batch.currentSemesterNumber <= 2 ? batch.programme?.firstYearAcademicUnitId : batch.programme?.homeAcademicUnit?.name ?? '-'}</p></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)]">Admission Year</CardTitle></CardHeader>

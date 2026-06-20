@@ -1,50 +1,24 @@
 # Database Schema
 
-> 36 models, 28 enums. MySQL 8 via Prisma ORM.
+> 34 models, 26 enums. MySQL 8 via Prisma ORM.
 > Source of truth: `prisma/schema.prisma`
 
 ---
 
 ## 1. Academic domain
 
-### AcademicUnit
-
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| name | String | Full name |
-| code | String | Unique short code |
-| type | AcademicUnitType | ES_H or DEPARTMENT |
-| hodName | String | Head of unit |
-| isActive | Boolean | Default true |
-
-**Purpose:** Represents a curriculum-offering body (ES&H, COMP, IT). Distinct from `Department` (faculty HR).
-
-### Programme
-
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| name | String | e.g. "BE Computer Engineering" |
-| code | String | Unique |
-| degreeType | DegreeType | BE, BTECH, MTECH, PHD, DIPLOMA |
-| durationYears | Int | Default 4 |
-| durationSemesters | Int | Default 8 |
-| homeAcademicUnitId | String | FK → AcademicUnit |
-| firstYearAcademicUnitId | String? | FK → AcademicUnit (optional) |
-| isActive | Boolean | Default true |
-
 ### CurriculumScheme
 
 | Field | Type | Notes |
 |---|---|---|
 | id | String (cuid) | PK |
-| programmeId | String | FK → Programme |
+| departmentId | String | FK → Department |
 | name | String | e.g. "2025 Scheme" |
 | year | Int | |
+| durationSemesters | Int | Default 8 |
 | isActive | Boolean | Default true |
 
-**Unique:** `@@unique([programmeId, year])` — one scheme per programme per year.
+**Unique:** `@@unique([departmentId, year])` — one scheme per department per year.
 
 ### CurriculumSubject
 
@@ -54,12 +28,12 @@
 | curriculumSchemeId | String | FK → CurriculumScheme |
 | subjectId | String | FK → Subject |
 | semesterNumber | Int | 1-8. Authoritative semester placement. |
-| academicUnitId | String | FK → AcademicUnit |
+| departmentId | String | FK → Department |
 | groupAssignment | GroupAssignment | ALL, GROUP_1, or GROUP_2 |
 
 **Unique:** `@@unique([curriculumSchemeId, subjectId, semesterNumber, groupAssignment])`
 
-**Purpose:** Authoritative mapping: "Subject X is in Semester N, offered by Unit Y, for Group Z." This entity connects the academic domain to the existing operational pipeline via `subjectId`.
+**Purpose:** Authoritative mapping: "Subject X is in Semester N, offered by Department Y, for Group Z." This entity connects the academic domain to the existing operational pipeline via `subjectId`.
 
 ### Batch
 
@@ -68,13 +42,13 @@
 | id | String (cuid) | PK |
 | name | String | e.g. "2024-28" |
 | code | String | Unique |
-| programmeId | String | FK → Programme |
+| departmentId | String | FK → Department |
 | curriculumSchemeId | String | FK → CurriculumScheme |
 | admissionYear | Int | |
 | graduationYear | Int | |
 | status | BatchStatus | ACTIVE or GRADUATED |
 
-**Auto-creation:** When a Batch is created, `n` BatchSemester records are auto-generated (where `n = programme.durationSemesters`).
+**Auto-creation:** When a Batch is created, `n` BatchSemester records are auto-generated (where `n = curriculumScheme.durationSemesters`).
 
 ### BatchSemester
 
@@ -84,7 +58,7 @@
 | batchId | String | FK → Batch |
 | semesterNumber | Int | 1-8 |
 | academicYearId | String | FK → AcademicYear |
-| academicUnitId | String | FK → AcademicUnit |
+| departmentId | String | FK → Department |
 | startDate | DateTime? | Nullable — COE sets dates manually |
 | endDate | DateTime? | Nullable |
 | status | BatchSemesterStatus | UPCOMING, ACTIVE, or COMPLETED |
@@ -146,10 +120,11 @@ When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The
 | id | String (cuid) | PK |
 | name | String | e.g. "Computer Science & Engineering" |
 | code | String | Unique. e.g. "CSE" |
-| hodName | String | |
+| hodName | String |
 | isActive | Boolean | For soft-delete |
 
-**Relationships:** Has many Users, CoordinatorDepartmentAssignments, Subjects, ExamCycles.
+**Relationships:** Has many Users, CoordinatorDepartmentAssignments, Subjects, ExamCycles, CurriculumSchemes, Batches, CurriculumSubjects, BatchSemesters.
+**Note:** Department is now the single organizational entity — handles both faculty administration and curriculum ownership.
 
 ### Subject
 
@@ -626,8 +601,6 @@ Invariant: One dean review per bank. Write-once (no update path). State is deter
 | QuestionStatus | DRAFT, PENDING, APPROVED, REJECTED, REVISION_REQUESTED, REVISION_SUBMITTED | QuestionLibraryItem |
 | AcademicYearStatus | ACTIVE, CLOSED | AcademicYear |
 | SubjectVersionStatus | ACTIVE, ARCHIVED | SubjectVersion |
-| AcademicUnitType | ES_H, DEPARTMENT | AcademicUnit |
-| DegreeType | BE, BTECH, MTECH, PHD, DIPLOMA | Programme |
 | GroupAssignment | ALL, GROUP_1, GROUP_2 | CurriculumSubject |
 | BatchStatus | ACTIVE, GRADUATED | Batch |
 | BatchSemesterStatus | UPCOMING, ACTIVE, COMPLETED | BatchSemester |

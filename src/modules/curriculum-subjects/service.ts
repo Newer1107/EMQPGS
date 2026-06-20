@@ -13,11 +13,11 @@ export class CurriculumSubjectService {
     private readonly deptUtils = new DepartmentAccessUtils(),
   ) {}
 
-  list(filters?: { curriculumSchemeId?: string; semesterNumber?: number; academicUnitId?: string; subjectId?: string }) {
+  list(filters?: { curriculumSchemeId?: string; semesterNumber?: number; departmentId?: string; subjectId?: string }) {
     const where: Record<string, unknown> = {};
     if (filters?.curriculumSchemeId) where.curriculumSchemeId = filters.curriculumSchemeId;
     if (filters?.semesterNumber) where.semesterNumber = filters.semesterNumber;
-    if (filters?.academicUnitId) where.academicUnitId = filters.academicUnitId;
+    if (filters?.departmentId) where.departmentId = filters.departmentId;
     if (filters?.subjectId) where.subjectId = filters.subjectId;
     return this.repository.list(where as Prisma.CurriculumSubjectWhereInput);
   }
@@ -46,10 +46,10 @@ export class CurriculumSubjectService {
       throw new AppError("Cannot add subjects to an inactive curriculum scheme", 400);
     }
 
-    const unit = await prisma.academicUnit.findUnique({ where: { id: data.academicUnitId } });
-    if (!unit) throw new NotFoundError("Academic unit not found");
-    if (!unit.isActive) {
-      throw new AppError("Cannot use an inactive academic unit for curriculum placement", 400);
+    const dept = await prisma.department.findUnique({ where: { id: data.departmentId } });
+    if (!dept) throw new NotFoundError("Department not found");
+    if (!dept.isActive) {
+      throw new AppError("Cannot use an inactive department for curriculum placement", 400);
     }
 
     return withUniqueCheck(() => this.repository.create(data));
@@ -77,10 +77,10 @@ export class CurriculumSubjectService {
       throw new AppError("Cannot add subjects to an inactive curriculum scheme", 400);
     }
 
-    const unit = await prisma.academicUnit.findUnique({ where: { id: data.academicUnitId } });
-    if (!unit) throw new NotFoundError("Academic unit not found");
-    if (!unit.isActive) {
-      throw new AppError("Cannot use an inactive academic unit for curriculum placement", 400);
+    const dept = await prisma.department.findUnique({ where: { id: data.departmentId } });
+    if (!dept) throw new NotFoundError("Department not found");
+    if (!dept.isActive) {
+      throw new AppError("Cannot use an inactive department for curriculum placement", 400);
     }
 
     return withUniqueCheck(() => this.repository.create(data));

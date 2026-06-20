@@ -24,7 +24,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
       examCycleLinks: { include: { examCycle: { include: { batchSemester: { include: { academicYear: true } } } } } },
       questionBanks: { include: { examCycle: true } },
       curriculumSubjects: {
-        include: { curriculumScheme: { select: { name: true, year: true } }, academicUnit: { select: { name: true } } },
+        include: { curriculumScheme: { select: { name: true, year: true } }, department: { select: { name: true } } },
       },
     },
   });
@@ -113,7 +113,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
                     {cp.curriculumScheme.name} ({cp.curriculumScheme.year})
                   </span>
                   <span>
-                    Sem {cp.semesterNumber} · {cp.academicUnit.name}
+                    Sem {cp.semesterNumber} · {cp.department?.name ?? '-'}
                   </span>
                 </div>
               ))}

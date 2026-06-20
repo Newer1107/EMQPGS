@@ -60,15 +60,14 @@ ExamCycle 1─N QuestionBank
 
 `ContributorBankAssignment` mirrors `ModeratorBankAssignment`. It provides an explicit contributor-to-bank assignment, used by `getContributorAssignedBanks()` alongside the existing slots-based inference. POST/DELETE/GET API at `/api/question-banks/{id}/assignments/contributor`. Coordinator UI for managing assignments.
 
-### Academic domain (June 2026)
+### Curriculum & batch management
 
 Added for curriculum and batch management, independent of the existing QuestionBank pipeline:
 
-- **AcademicUnit** — curriculum ownership body (ES&H, COMP, IT). Distinct from Department (faculty HR).
-- **Programme** — degree definition (BE, BTECH, etc.). Belongs to an AcademicUnit.
-- **CurriculumScheme** — named curriculum plan per programme (e.g. "2025 Scheme").
-- **CurriculumSubject** — authoritative mapping: Subject → (Semester, Scheme, AcademicUnit, Group).
-- **Batch** — cohort descriptor (no student table). Links to Programme + CurriculumScheme.
+- **Department** — single organizational entity (faculty and curriculum ownership combined).
+- **CurriculumScheme** — named curriculum plan per department (e.g. "2025 Scheme"). Has `durationSemesters`.
+- **CurriculumSubject** — authoritative mapping: Subject → (Semester, Department, Group).
+- **Batch** — cohort descriptor (no student table). Links to Department + CurriculumScheme.
 - **BatchSemester** — per-batch semester with independent dates, status (UPCOMING/ACTIVE/COMPLETED).
 - **TeachingGroup** — records groups (1 or 2) per batch.
 
@@ -166,7 +165,7 @@ Below is the full operational pipeline with term explanations and a concrete exa
 ```
 COE SETUP PHASE
 ┌──────────────────────────────────────────────────────────────┐
-│ AcademicUnit → Programme → CurriculumScheme → CurriculumSubject│
+│ Department → CurriculumScheme → CurriculumSubject              │
 │ AcademicYear → Batch → BatchSemester → ExamCycle              │
 │   └── BatchSemester activation sets Batch.currentSemester     │
 │   └── ExamCycle creation auto-links subjects from curriculum  │
@@ -233,12 +232,11 @@ COMPLETE PHASE → PRODUCTION
 
 | Term | What it is | Why it exists |
 |------|-----------|---------------|
-| **AcademicUnit** | Curriculum-offering body (e.g. "ES&H", "COMP", "IT"). This is **not** the same as a Department — a Department is an HR/faculty entity, while AcademicUnit owns what is taught. | Separates "who teaches it" (Department) from "what is taught" (AcademicUnit). One department can offer subjects from multiple academic units. |
-| **Programme** | Degree definition (e.g. "BE Computer Science", "BTECH Information Technology"). | The degree a batch of students is pursuing. Every batch belongs to exactly one programme. |
-| **CurriculumScheme** | A named curriculum plan for a programme (e.g. "2025 Scheme", "NEP 2026 Scheme"). | Programmes get revised over time. The scheme captures which version of the curriculum applies to which batch. |
-| **CurriculumSubject** | The authoritative mapping that says "Subject X is taught in Semester Y of Scheme Z under AcademicUnit W." | A subject like "Mathematics" can appear in different semesters under different schemes. This entity disambiguates. |
+| **Department** | Single organizational entity — handles both faculty administration and curriculum ownership. | Unified model: a department both teaches and owns its curriculum. Replaces separate AcademicUnit (curriculum) and Department (HR) models. |
+| **CurriculumScheme** | A named curriculum plan for a department (e.g. "2025 Scheme", "NEP 2026 Scheme"). Has `durationSemesters`. | Curriculum plans get revised over time. The scheme captures which version applies to which batch. |
+| **CurriculumSubject** | The authoritative mapping that says "Subject X is taught in Semester Y of Department Z for Group W." | A subject like "Mathematics" can appear in different semesters under different schemes. This entity disambiguates. |
 | **AcademicYear** | A time period (e.g. "2026-2027") that spans all semesters. | The temporal container for exam cycles. Each academic year generates 8 semesters automatically. |
-| **Batch** | A cohort descriptor (e.g. "2024-2028 BE Computer batch"). | A group of students that started together and progresses through semesters together. No student roster is stored — the batch is a label. |
+| **Batch** | A cohort descriptor (e.g. "2024-2028 BE Computer batch"). Belongs to a Department and CurriculumScheme. | A group of students that started together and progresses through semesters together. No student roster is stored — the batch is a label. |
 | **BatchSemester** | A single semester within a batch (e.g. "Batch 2024-28, Semester 3"). Has its own dates and status. | The actual timebox for teaching. Activating a BatchSemester sets the Batch's `currentSemester` — this is how the system knows which semester a batch is in right now. |
 | **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Department-scoped. | The reason the entire question bank pipeline exists. An exam cycle is the target event for which question banks are created and papers generated. |
 | **QuestionBank** | The container for all questions, slots, and workflow state for one (Subject, ExamCycle) pair. | The central operational unit. Every action — contribution, moderation, approval, paper generation — happens within a question bank. |
@@ -267,15 +265,14 @@ Here is the full walkthrough from nothing to exported exam papers, using a singl
 
 Dr. Sharma logs in as COE and creates:
 
-1. **AcademicUnit "COMP"** — because the Computer Engineering programme needs a curriculum-owning body.
-2. **Programme "BE Computer"** under AcademicUnit "COMP" — the degree definition.
-3. **CurriculumScheme "2024 Scheme"** under Programme "BE Computer" — the curriculum plan for this batch.
-4. **AcademicYear "2026-2027"** — this auto-generates 8 semesters (Sem 1 through Sem 8).
-5. **Batch "2024-28 BE Computer"** linked to Programme "BE Computer" + Scheme "2024 Scheme".
-6. **Activate BatchSemester for Sem 5** (Nov 2026 is the 5th semester for a 2024-entry batch) — this sets `Batch.currentSemester = 5`.
-7. **ExamCycle "ENDSEM Nov 2026"** for Semester 5, Department "Computer Engineering" — the target examination event.
-8. **CurriculumSubject:** links Subject "Computer Networks" to Semester 5 of Scheme "2024 Scheme" under AcademicUnit "COMP".
-9. **Assigns Prof. Patil** as Coordinator for Department "Computer Engineering".
+1. **Department "Computer Engineering"** — the single organizational entity owning curriculum and faculty.
+2. **CurriculumScheme "2024 Scheme"** for Department "Computer Engineering" — the curriculum plan for this batch.
+3. **AcademicYear "2026-2027"** — this auto-generates 8 semesters (Sem 1 through Sem 8).
+4. **Batch "2024-28 BE Computer"** linked to Department "Computer Engineering" + Scheme "2024 Scheme".
+5. **Activate BatchSemester for Sem 5** (Nov 2026 is the 5th semester for a 2024-entry batch) — this sets `Batch.currentSemester = 5`.
+6. **ExamCycle "ENDSEM Nov 2026"** for Semester 5, Department "Computer Engineering" — the target examination event.
+7. **CurriculumSubject:** links Subject "Computer Networks" to Semester 5 of Scheme "2024 Scheme" under Department "Computer Engineering".
+8. **Assigns Prof. Patil** as Coordinator for Department "Computer Engineering".
 
 The exam cycle now exists. The coordinator can see it in their dashboard.
 

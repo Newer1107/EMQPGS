@@ -18,8 +18,8 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
     include: {
       batchSemester: {
         include: {
-          batch: { include: { programme: true, curriculumScheme: true } },
-          academicUnit: { select: { name: true, code: true } },
+          batch: { include: { department: true, curriculumScheme: true } },
+          department: { select: { name: true, code: true } },
           academicYear: { select: { code: true } },
         },
       },
@@ -40,17 +40,16 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
     <div className="space-y-6">
       <PageHeader
         title={`${examTypeLabels[cycle.examType as keyof typeof examTypeLabels] ?? cycle.examType} — ${batch?.name ?? ''}`}
-        description={`Semester ${bs?.semesterNumber} · ${bs?.academicYear?.code ?? ''} · ${bs?.academicUnit?.name ?? ''}`}
+        description={`Semester ${bs?.semesterNumber} · ${bs?.academicYear?.code ?? ''} · ${bs?.department?.name ?? ''}`}
       />
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Programme</span><span className="font-medium">{batch?.programme?.name ?? '-'}</span></div>
+            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Department</span><span className="font-medium">{batch?.department?.name ?? '-'}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Batch</span><span className="font-medium">{batch?.name}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Semester</span><span className="font-medium">Semester {bs?.semesterNumber}</span></div>
-            <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Unit</span><span className="font-medium">{bs?.academicUnit?.name}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Year</span><span className="font-medium">{bs?.academicYear?.code}</span></div>
             <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Curriculum</span><span className="font-medium">{batch?.curriculumScheme?.name} ({batch?.curriculumScheme?.year})</span></div>
           </CardContent>

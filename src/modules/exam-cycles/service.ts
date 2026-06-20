@@ -24,7 +24,7 @@ export class ExamCycleService {
       where: { id: data.batchSemesterId },
       include: {
         batch: { include: { curriculumScheme: true } },
-        academicUnit: true,
+        department: true,
         academicYear: true,
       },
     });
@@ -37,7 +37,7 @@ export class ExamCycleService {
       where: {
         curriculumSchemeId: batchSemester.batch.curriculumSchemeId,
         semesterNumber: batchSemester.semesterNumber,
-        academicUnitId: batchSemester.academicUnitId,
+        departmentId: batchSemester.departmentId,
       },
       include: { subject: true },
     });
@@ -83,7 +83,7 @@ export class ExamCycleService {
           batchSemester: {
             include: {
               batch: { select: { id: true, name: true, code: true } },
-              academicUnit: { select: { id: true, name: true, code: true } },
+              department: { select: { id: true, name: true, code: true } },
             },
           },
           subjectLinks: { include: { subject: { select: { id: true, subjectCode: true, subjectName: true } } } },

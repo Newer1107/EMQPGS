@@ -84,8 +84,7 @@ flowchart TB
 
 ```mermaid
 erDiagram
-    AcademicUnit ||--o{ Programme : owns
-    Programme ||--o{ CurriculumScheme : defines
+    Department ||--o{ CurriculumScheme : defines
     CurriculumScheme ||--o{ CurriculumSubject : maps
     CurriculumSubject }o--|| Subject : places
     Subject ||--o{ QuestionBank : contains
@@ -98,6 +97,7 @@ erDiagram
     QuestionBank ||--o{ GeneratedPaper : papers
     QuestionBank ||--o{ DeanReview : review
     QuestionBank ||--o{ ApprovalDecision : decision
+    Department ||--o{ Batch : cohorts
     Batch ||--o{ BatchSemester : semesters
     BatchSemester ||--o{ ExamCycle : cycles
     ExamCycle ||--o{ SubjectExamCycleLink : links
@@ -273,7 +273,7 @@ emqpgs/
 │   ├── lib/                 # Utilities, auth, audit, errors
 │   └── modules/             # 28 service modules
 ├── prisma/
-│   ├── schema.prisma        # 37 models, 27 enums
+│   ├── schema.prisma        # 34 models, 26 enums
 │   ├── migrations/          # 2 production migrations
 │   └── seed.ts              # Demo data seeder
 ├── tests/

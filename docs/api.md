@@ -33,31 +33,11 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 
 ## Academic domain
 
-### Academic units
-
-| Method | Path | Roles | Purpose |
-|---|---|---|---|
-| GET | `/api/academic-units` | COE, COORDINATOR | List all |
-| POST | `/api/academic-units` | COE | Create |
-| GET | `/api/academic-units/[id]` | COE, COORDINATOR | Get by ID |
-| PATCH | `/api/academic-units/[id]` | COE | Update |
-| DELETE | `/api/academic-units/[id]` | COE | Deactivate |
-
-### Programmes
-
-| Method | Path | Roles | Purpose |
-|---|---|---|---|
-| GET | `/api/programmes` | COE, COORDINATOR | List all |
-| POST | `/api/programmes` | COE | Create |
-| GET | `/api/programmes/[id]` | COE, COORDINATOR | Get detail |
-| PATCH | `/api/programmes/[id]` | COE | Update |
-| DELETE | `/api/programmes/[id]` | COE | Delete (if no references) |
-
 ### Curriculum schemes
 
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
-| GET | `/api/curriculum-schemes` | COE, COORDINATOR | List (filter by `?programmeId=`) |
+| GET | `/api/curriculum-schemes` | COE, COORDINATOR | List (filter by `?departmentId=`) |
 | POST | `/api/curriculum-schemes` | COE | Create |
 | GET | `/api/curriculum-schemes/[id]` | COE, COORDINATOR | Get detail with subjects |
 | PATCH | `/api/curriculum-schemes/[id]` | COE | Update |
@@ -77,7 +57,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
-| GET | `/api/batches` | COE, COORDINATOR | List (filter by `?programmeId=`) |
+| GET | `/api/batches` | COE, COORDINATOR | List (filter by `?departmentId=`) |
 | POST | `/api/batches` | COE | Create (auto-creates BatchSemesters) |
 | GET | `/api/batches/[id]` | COE, COORDINATOR | Get detail with semesters and groups |
 | PATCH | `/api/batches/[id]` | COE | Update |
@@ -87,7 +67,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
-| GET | `/api/batch-semesters` | COE, COORDINATOR | List by `?batchId=` or active by `?academicUnitId=` |
+| GET | `/api/batch-semesters` | COE, COORDINATOR | List by `?batchId=` or active by `?departmentId=` |
 | GET | `/api/batch-semesters/[id]` | COE, COORDINATOR | Get detail |
 | PATCH | `/api/batch-semesters/[id]` | COE | Update dates/status/unit |
 | POST | `/api/batch-semesters/[id]?action=activate` | COE | Activate semester |

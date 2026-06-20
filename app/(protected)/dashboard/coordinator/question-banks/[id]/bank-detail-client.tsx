@@ -75,9 +75,8 @@ type BankDetailClientProps = {
   subjectName: string;
   subjectCode: string;
   batchName: string;
-  programmeName: string;
   semesterNumber: number;
-  academicUnitName: string;
+  departmentName: string;
   academicYearCode: string;
   examType: string;
   examCycleLabel: string;
@@ -908,7 +907,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
             </Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-            {props.examType} · {props.batchName} · Sem {props.semesterNumber} · {props.academicYearCode} · {props.academicUnitName}
+            {props.examType} · {props.batchName} · Sem {props.semesterNumber} · {props.academicYearCode} · {props.departmentName}
           </p>
         </div>
       </div>

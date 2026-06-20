@@ -17,7 +17,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", roles: ["COE", "COORDINATOR", "MODERATOR", "CONTRIBUTOR", "DEAN"] },
   // COE
-  { href: "/dashboard/coe", label: "COE Dashboard", roles: ["COE"] },
+  { href: "/dashboard/coe", label: "Overview", roles: ["COE"] },
   { href: "/dashboard/coe/users", label: "Users", roles: ["COE"] },
   { href: "/dashboard/coe/departments", label: "Departments", roles: ["COE"] },
   { href: "/dashboard/coe/exam-cycles", label: "Exam Cycles", roles: ["COE"] },
@@ -25,11 +25,10 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/monitoring", label: "Monitoring", roles: ["COE"] },
   { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },
-  { href: "/dashboard/coe/coordinator-assignments", label: "Coordinator Assignments", roles: ["COE"] },
+  { href: "/dashboard/coe/coordinator-assignments", label: "Coordinators", roles: ["COE"] },
   // Academic Setup
   { href: "/dashboard/coe/academic-setup", label: "Academic Setup", roles: ["COE"] },
-  { href: "/dashboard/coe/academic-units", label: "Academic Units", roles: ["COE"] },
-  { href: "/dashboard/coe/programmes", label: "Programmes", roles: ["COE"] },
+
   { href: "/dashboard/coe/curriculum", label: "Curriculum", roles: ["COE"] },
   { href: "/dashboard/coe/batches", label: "Batches", roles: ["COE"] },
   // Coordinator
@@ -70,8 +69,6 @@ function getSection(href: string): string {
   if (
     [
       "/dashboard/coe/academic-setup",
-      "/dashboard/coe/academic-units",
-      "/dashboard/coe/programmes",
       "/dashboard/coe/curriculum",
       "/dashboard/coe/batches",
     ].includes(href)

@@ -11,9 +11,9 @@ import { WizardProgress } from "@/components/exam-cycles/wizard-progress";
 import { examTypeLabels } from "@/lib/constants";
 import { getSubjectsForBatchSemester } from "@/modules/exam-cycles/actions";
 
-type Batch = { id: string; name: string; code: string; admissionYear: number; programme: { id: string; name: string; code: string } | null; curriculumScheme: { id: string; name: string; year: number } | null };
-type BatchSemester = { id: string; semesterNumber: number; status: string; academicUnit: { id: string; name: string } | null; academicYear: { code: string } | null };
-type Subject = { subjectId: string; subjectCode: string; subjectName: string; credits: number; groupAssignment: string; academicUnitName: string };
+type Batch = { id: string; name: string; code: string; admissionYear: number; department: { id: string; name: string; code: string } | null; curriculumScheme: { id: string; name: string; year: number } | null };
+type BatchSemester = { id: string; semesterNumber: number; status: string; department: { id: string; name: string } | null; academicYear: { code: string } | null };
+type Subject = { subjectId: string; subjectCode: string; subjectName: string; credits: number; groupAssignment: string; departmentName: string };
 
 const EXAM_TYPES = ["ISE_1", "ISE_2", "ENDSEM", "SUPPLEMENTARY", "KT"] as const;
 
@@ -178,7 +178,7 @@ export function CreateExamCycleWizard() {
                 >
                   <option value="">{loadingBatches ? "Loading..." : "Select a batch..."}</option>
                   {batches.filter((b) => b.curriculumScheme).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name} ({b.programme?.name ?? '-'})</option>
+                    <option key={b.id} value={b.id}>{b.name} ({b.department?.name ?? '-'})</option>
                   ))}
                 </select>
               </div>
@@ -222,8 +222,8 @@ export function CreateExamCycleWizard() {
                 <Card>
                   <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--text-tertiary)]">Programme</span>
-                      <span className="text-sm font-medium">{selectedBatch.programme?.name ?? '-'}</span>
+                      <span className="text-sm text-[var(--text-tertiary)]">Department</span>
+                      <span className="text-sm font-medium">{selectedBatch.department?.name ?? '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-[var(--text-tertiary)]">Batch</span>
@@ -232,10 +232,6 @@ export function CreateExamCycleWizard() {
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-[var(--text-tertiary)]">Semester</span>
                       <span className="text-sm font-medium">Semester {selectedSemester.semesterNumber}</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-[var(--text-tertiary)]">Academic Unit</span>
-                      <span className="text-sm font-medium">{selectedSemester.academicUnit?.name ?? '-'}</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-[var(--text-tertiary)]">Curriculum Scheme</span>
@@ -251,7 +247,7 @@ export function CreateExamCycleWizard() {
                 </Card>
 
                 <p className="text-xs text-[var(--text-tertiary)]">
-                  The curriculum scheme shown is from the batch. Subjects will be loaded from this scheme for the selected semester and academic unit.
+                  The curriculum scheme shown is from the batch. Subjects will be loaded from this scheme for the selected semester and department.
                 </p>
               </div>
             )}
@@ -285,7 +281,7 @@ export function CreateExamCycleWizard() {
                 {selectedBatch?.name} — Semester {selectedSemester?.semesterNumber}
               </CardTitle>
               <CardDescription>
-                {selectedBatch?.programme?.name} · {selectedSemester?.academicUnit?.name}
+                {selectedBatch?.department?.name}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
@@ -325,7 +321,7 @@ export function CreateExamCycleWizard() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium">{subject.subjectName}</p>
                           <p className="text-xs text-[var(--text-tertiary)]">
-                            {subject.subjectCode} · {subject.credits} credits · {subject.academicUnitName}
+                            {subject.subjectCode} · {subject.credits} credits · {subject.departmentName}
                             {subject.groupAssignment !== "ALL" && ` · ${subject.groupAssignment.replace("_", " ")}`}
                           </p>
                         </div>
@@ -376,10 +372,9 @@ export function CreateExamCycleWizard() {
             <Card>
               <CardHeader className="pb-3"><CardTitle className="text-sm font-medium text-[var(--text-tertiary)] uppercase tracking-wider">Academic Information</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Programme</span><span className="font-medium">{selectedBatch?.programme?.name ?? '-'}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Department</span><span className="font-medium">{selectedBatch?.department?.name ?? '-'}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Batch</span><span className="font-medium">{selectedBatch?.name}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Semester</span><span className="font-medium">Semester {selectedSemester?.semesterNumber}</span></div>
-                <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Academic Unit</span><span className="font-medium">{selectedSemester?.academicUnit?.name}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Curriculum</span><span className="font-medium">{selectedBatch?.curriculumScheme?.name} ({selectedBatch?.curriculumScheme?.year})</span></div>
                 <div className="flex justify-between pt-2 border-t border-[var(--border)]"><span className="text-[var(--text-tertiary)]">Exam Type</span><Badge variant="info">{selectedExamType ? examTypeLabels[selectedExamType as keyof typeof examTypeLabels] ?? selectedExamType : '-'}</Badge></div>
                 <div className="flex justify-between"><span className="text-[var(--text-tertiary)]">Status</span><Badge variant="warning">Draft</Badge></div>

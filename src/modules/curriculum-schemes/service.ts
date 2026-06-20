@@ -10,8 +10,8 @@ export class CurriculumSchemeService {
     return this.repository.list();
   }
 
-  async findByProgramme(programmeId: string) {
-    return this.repository.findByProgramme(programmeId);
+  async findByDepartment(departmentId: string) {
+    return this.repository.findByDepartment(departmentId);
   }
 
   async findById(id: string) {
@@ -21,9 +21,9 @@ export class CurriculumSchemeService {
   }
 
   async create(data: CurriculumSchemeInput) {
-    const existing = await this.repository.findActiveByProgramme(data.programmeId);
+    const existing = await this.repository.findActiveByDepartment(data.departmentId);
     if (existing && data.isActive !== false) {
-      await this.repository.deactivateAllForProgramme(data.programmeId);
+      await this.repository.deactivateAllForDepartment(data.departmentId);
     }
     return withUniqueCheck(() => this.repository.create(data));
   }
@@ -33,7 +33,7 @@ export class CurriculumSchemeService {
     if (!entity) throw new NotFoundError("Curriculum scheme not found");
 
     if (data.isActive === true) {
-      await this.repository.deactivateAllForProgramme(entity.programmeId, id);
+      await this.repository.deactivateAllForDepartment(entity.departmentId, id);
     }
 
     return this.repository.update(id, data);
@@ -42,7 +42,7 @@ export class CurriculumSchemeService {
   async activate(id: string) {
     const entity = await this.repository.findById(id);
     if (!entity) throw new NotFoundError("Curriculum scheme not found");
-    await this.repository.deactivateAllForProgramme(entity.programmeId, id);
+    await this.repository.deactivateAllForDepartment(entity.departmentId, id);
     return this.repository.update(id, { isActive: true });
   }
 

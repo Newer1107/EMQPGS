@@ -7,7 +7,7 @@ export async function getSubjectsForBatchSemester(batchSemesterId: string) {
     where: { id: batchSemesterId },
     include: {
       batch: { select: { id: true, curriculumSchemeId: true } },
-      academicUnit: { select: { id: true, name: true, code: true } },
+      department: { select: { id: true, name: true, code: true } },
     },
   });
 
@@ -17,13 +17,13 @@ export async function getSubjectsForBatchSemester(batchSemesterId: string) {
     where: {
       curriculumSchemeId: batchSemester.batch.curriculumSchemeId,
       semesterNumber: batchSemester.semesterNumber,
-      academicUnitId: batchSemester.academicUnitId,
+      departmentId: batchSemester.departmentId,
     },
     include: {
       subject: {
         select: { id: true, subjectCode: true, subjectName: true, credits: true },
       },
-      academicUnit: {
+      department: {
         select: { id: true, name: true, code: true },
       },
     },
@@ -36,6 +36,6 @@ export async function getSubjectsForBatchSemester(batchSemesterId: string) {
     subjectName: cs.subject.subjectName,
     credits: cs.subject.credits,
     groupAssignment: cs.groupAssignment,
-    academicUnitName: cs.academicUnit?.name ?? cs.academicUnit?.name ?? "",
+    departmentName: cs.department?.name ?? "",
   }));
 }

@@ -27,7 +27,7 @@ type ExportInput = {
 export type CoeOverviewItem = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
-    examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } };
+    examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } };
     aiReports: { orderBy: { createdAt: "desc" }; take: 1; include: { pdfFileAsset: true; jsonFileAsset: true } };
     generatedPapers: { orderBy: { variant: "asc" }; include: { paperFileAsset: true } };
     deanReview: {
@@ -50,7 +50,7 @@ export class ExportService {
       orderBy: { updatedAt: "desc" },
       include: {
         subject: true,
-  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
+  examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } },
         aiReports: { orderBy: { createdAt: "desc" }, take: 1, include: { pdfFileAsset: true, jsonFileAsset: true } },
         generatedPapers: { orderBy: { variant: "asc" }, include: { paperFileAsset: true } },
         deanReview: {

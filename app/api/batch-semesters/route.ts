@@ -7,8 +7,8 @@ const service = new BatchSemesterService();
 export const GET = withApiHandler(
   async (request) => {
     const batchId = request.nextUrl.searchParams.get("batchId");
-    const academicUnitId = request.nextUrl.searchParams.get("academicUnitId");
-    if (academicUnitId) return service.findActiveByAcademicUnit(academicUnitId);
+    const departmentId = request.nextUrl.searchParams.get("departmentId");
+    if (departmentId) return service.findActiveByDepartment(departmentId);
     if (batchId) return service.findByBatch(batchId);
     return [];
   },

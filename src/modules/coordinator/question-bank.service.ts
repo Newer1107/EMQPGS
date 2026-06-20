@@ -79,7 +79,7 @@ export class QuestionBankWorkflowService {
       where: { id: questionBankId },
       include: {
         subject: { include: { department: true } },
-        examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, academicUnit: { select: { id: true, name: true } } } } } },
+        examCycle: { include: { batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } } } },
         slots: {
           include: {
             assignedQuestion: {

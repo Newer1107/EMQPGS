@@ -8,9 +8,7 @@ import { Badge } from "@/components/ui/badge";
 export const metadata: Metadata = { title: "Academic Setup — EMQPGS" };
 
 export default async function AcademicSetupPage() {
-  const [unitCount, programmeCount, schemeCount, subjectCount, batchCount, activeBatchCount, semesters, groupCount] = await Promise.all([
-    prisma.academicUnit.count(),
-    prisma.programme.count(),
+  const [schemeCount, subjectCount, batchCount, activeBatchCount, semesters, groupCount] = await Promise.all([
     prisma.curriculumScheme.count(),
     prisma.curriculumSubject.count(),
     prisma.batch.count(),
@@ -22,8 +20,6 @@ export default async function AcademicSetupPage() {
   const currentSemester = semesters.length > 0 ? `Semester ${semesters[0].semesterNumber} — ${semesters[0].batch.name}` : null;
 
   const steps = [
-    { label: "Academic Units", done: unitCount > 0, count: unitCount, href: "/dashboard/coe/academic-units", desc: "Who teaches the curriculum" },
-    { label: "Programmes", done: programmeCount > 0, count: programmeCount, href: "/dashboard/coe/programmes", desc: "Degrees students graduate with" },
     { label: "Curriculum", done: subjectCount > 0, count: schemeCount > 0 ? `${schemeCount} schemes, ${subjectCount} subjects` : "0 schemes", href: "/dashboard/coe/curriculum", desc: "Subjects arranged into semesters" },
     { label: "Batches", done: batchCount > 0, count: batchCount, href: "/dashboard/coe/batches", desc: "Student cohorts progressing through semesters" },
   ];
@@ -32,34 +28,10 @@ export default async function AcademicSetupPage() {
     <div className="space-y-8">
       <PageHeader
         title="Academic Setup"
-        description="Set up the foundation for question paper generation. Define who teaches, what degrees are offered, which subjects belong in each semester, and which cohorts of students are progressing through the programme."
+        description="Set up the foundation for question paper generation. Define which subjects belong in each semester and which cohorts of students are progressing through their curriculum."
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/dashboard/coe/academic-units" className="group">
-          <Card className="transition-colors hover:border-[var(--foreground)]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Academic Units</CardTitle>
-              <CardDescription>{unitCount} unit{unitCount !== 1 ? 's' : ''}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-[var(--text-tertiary)]">{unitCount > 0 ? 'ES&H, departments, and more' : 'Not yet configured'}</p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/dashboard/coe/programmes" className="group">
-          <Card className="transition-colors hover:border-[var(--foreground)]">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Programmes</CardTitle>
-              <CardDescription>{programmeCount} programme{programmeCount !== 1 ? 's' : ''}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-[var(--text-tertiary)]">{programmeCount > 0 ? 'BE, BTech, and more' : 'Not yet configured'}</p>
-            </CardContent>
-          </Card>
-        </Link>
-
+      <div className="grid gap-4 sm:grid-cols-2">
         <Link href="/dashboard/coe/curriculum" className="group">
           <Card className="transition-colors hover:border-[var(--foreground)]">
             <CardHeader className="pb-2">

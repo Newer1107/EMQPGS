@@ -15,13 +15,13 @@ const statusLabels: Record<string, string> = { UPCOMING: 'Upcoming', ACTIVE: 'Ac
 
 export default async function BatchSemestersPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const batch = await prisma.batch.findUnique({ where: { id }, include: { programme: true } });
+  const batch = await prisma.batch.findUnique({ where: { id }, include: { department: true } });
   if (!batch) notFound();
 
   const semesters = await prisma.batchSemester.findMany({
     where: { batchId: id },
     orderBy: { semesterNumber: "asc" },
-    include: { academicYear: true, academicUnit: true },
+    include: { academicYear: true, department: true },
   });
 
   return (
@@ -69,7 +69,7 @@ export default async function BatchSemestersPage({ params }: { params: Promise<{
                   <h3 className="text-lg font-semibold">Semester {sem.semesterNumber}</h3>
                   <div className="mt-1 space-y-0.5 text-sm text-[var(--text-tertiary)]">
                     <p>Academic Year: {sem.academicYear?.code ?? '-'}</p>
-                    <p>Academic Unit: {sem.academicUnit?.name ?? '-'}</p>
+                    <p>Department: {sem.department?.name ?? '-'}</p>
                     <p>Start: {sem.startDate ? new Date(sem.startDate).toLocaleDateString() : 'Not set'}</p>
                     <p>End: {sem.endDate ? new Date(sem.endDate).toLocaleDateString() : 'Not set'}</p>
                   </div>

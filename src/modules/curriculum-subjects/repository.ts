@@ -10,7 +10,7 @@ export class CurriculumSubjectRepository {
       include: {
         curriculumScheme: { select: { id: true, name: true, year: true } },
         subject: { select: { id: true, subjectCode: true, subjectName: true, credits: true } },
-        academicUnit: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, code: true } },
       },
     });
   }
@@ -19,9 +19,9 @@ export class CurriculumSubjectRepository {
     return prisma.curriculumSubject.findUnique({
       where: { id },
       include: {
-        curriculumScheme: { include: { programme: true } },
+        curriculumScheme: { include: { department: true } },
         subject: true,
-        academicUnit: true,
+        department: true,
       },
     });
   }
@@ -36,7 +36,7 @@ export class CurriculumSubjectRepository {
       include: {
         curriculumScheme: { select: { id: true, name: true, year: true } },
         subject: { select: { id: true, subjectCode: true, subjectName: true } },
-        academicUnit: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, code: true } },
       },
     });
   }
@@ -48,7 +48,7 @@ export class CurriculumSubjectRepository {
       include: {
         curriculumScheme: { select: { id: true, name: true, year: true } },
         subject: { select: { id: true, subjectCode: true, subjectName: true } },
-        academicUnit: { select: { id: true, name: true, code: true } },
+        department: { select: { id: true, name: true, code: true } },
       },
     });
   }

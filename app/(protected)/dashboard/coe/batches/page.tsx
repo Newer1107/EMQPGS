@@ -13,9 +13,9 @@ export const metadata: Metadata = { title: "Batches — EMQPGS" };
 export default async function BatchesPage() {
   const batches = await prisma.batch.findMany({
     orderBy: [{ admissionYear: "desc" }, { name: "asc" }],
-    include: { programme: true, curriculumScheme: true, _count: { select: { batchSemesters: true } } },
+    include: { department: true, curriculumScheme: true, _count: { select: { batchSemesters: true } } },
   });
-  const programmes = await prisma.programme.findMany({ orderBy: { name: "asc" } });
+  const departments = await prisma.department.findMany({ orderBy: { name: "asc" } });
   const schemes = await prisma.curriculumScheme.findMany({ orderBy: { year: "desc" } });
 
   return (
@@ -25,30 +25,11 @@ export default async function BatchesPage() {
         description="A batch is one intake of students. For example, BE Computer Engineering (2025–2029). Each batch follows a curriculum scheme and progresses through semesters."
       />
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Batches</p>
-          <p className="mt-1 text-2xl font-bold">{batches.length}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Active</p>
-          <p className="mt-1 text-2xl font-bold text-green-600">{batches.filter((b) => b.status === "ACTIVE").length}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Graduated</p>
-          <p className="mt-1 text-2xl font-bold text-blue-600">{batches.filter((b) => b.status === "GRADUATED").length}</p>
-        </div>
-        <div className="rounded-lg border bg-white p-4">
-          <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Total Semesters</p>
-          <p className="mt-1 text-2xl font-bold">{batches.reduce((sum, b) => sum + b._count.batchSemesters, 0)}</p>
-        </div>
-      </div>
-
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Batches">
           <Table>
             <THead>
-              <TR><TH>Name</TH><TH>Programme</TH><TH>Scheme</TH><TH>Current Sem</TH><TH>Period</TH><TH>Status</TH><TH>Semesters</TH></TR>
+              <TR><TH>Name</TH><TH>Department</TH><TH>Scheme</TH><TH>Current Sem</TH><TH>Period</TH><TH>Status</TH><TH>Semesters</TH></TR>
             </THead>
             <TBody>
               {batches.length === 0 && (
@@ -57,7 +38,7 @@ export default async function BatchesPage() {
               {batches.map((b) => (
                 <TR key={b.id}>
                   <TD className="font-medium"><Link href={`/dashboard/coe/batches/${b.id}`} className="underline">{b.name}</Link></TD>
-                  <TD>{b.programme?.name ?? '-'}</TD>
+                  <TD>{b.department?.name ?? '-'}</TD>
                   <TD>{b.curriculumScheme?.name} ({b.curriculumScheme?.year})</TD>
                   <TD>{b.currentSemesterNumber ? <Badge>Semester {b.currentSemesterNumber}</Badge> : '-'}</TD>
                   <TD>{b.admissionYear}–{b.graduationYear}</TD>
@@ -76,7 +57,7 @@ export default async function BatchesPage() {
           fields={[
             { name: "name", label: "Batch Name", type: "text", placeholder: "e.g. BE CO 2025" },
             { name: "code", label: "Batch Code", type: "text", placeholder: "e.g. BECO-2025" },
-            { name: "programmeId", label: "Programme", type: "select", options: programmes.map((p) => ({ value: p.id, label: p.name })) },
+            { name: "departmentId", label: "Department", type: "select", options: departments.map((d) => ({ value: d.id, label: d.name })) },
             { name: "curriculumSchemeId", label: "Curriculum Scheme", type: "select", options: schemes.map((s) => ({ value: s.id, label: `${s.name} (${s.year})` })) },
             { name: "admissionYear", label: "Admission Year", type: "number", placeholder: "e.g. 2025" },
             { name: "graduationYear", label: "Expected Graduation Year", type: "number", placeholder: "e.g. 2029" },

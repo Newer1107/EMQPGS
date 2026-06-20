@@ -19,8 +19,8 @@ export default async function CoeExamCyclesPage() {
     include: {
       batchSemester: {
         include: {
-          batch: { select: { id: true, name: true, code: true, programme: { select: { name: true } } } },
-          academicUnit: { select: { id: true, name: true } },
+          batch: { select: { id: true, name: true, code: true, department: { select: { name: true } } } },
+          department: { select: { id: true, name: true } },
         },
       },
       _count: { select: { questionBanks: true, subjectLinks: true } },
@@ -66,9 +66,8 @@ export default async function CoeExamCyclesPage() {
             <THead>
               <TR>
                 <TH>Batch</TH>
-                <TH>Programme</TH>
+                <TH>Department</TH>
                 <TH>Semester</TH>
-                <TH>Academic Unit</TH>
                 <TH>Exam Type</TH>
                 <TH>Subjects</TH>
                 <TH>Status</TH>
@@ -78,7 +77,7 @@ export default async function CoeExamCyclesPage() {
             <TBody>
               {cycles.length === 0 ? (
                 <TR>
-                  <TD colSpan={8}>
+                  <TD colSpan={7}>
                     <EmptyState
                       message="No exam cycles have been created yet"
                       description="Exam cycles represent examination events. Each cycle links to a batch semester and exam type, with subjects loaded from the curriculum."
@@ -98,9 +97,8 @@ export default async function CoeExamCyclesPage() {
                         {c.batchSemester?.batch?.name ?? '-'}
                       </Link>
                     </TD>
-                    <TD>{c.batchSemester?.batch?.programme?.name ?? '-'}</TD>
+                    <TD>{c.batchSemester?.batch?.department?.name ?? '-'}</TD>
                     <TD><Badge>Semester {c.batchSemester?.semesterNumber ?? '-'}</Badge></TD>
-                    <TD>{c.batchSemester?.academicUnit?.name ?? '-'}</TD>
                     <TD><Badge variant="info">{examTypeLabels[c.examType as keyof typeof examTypeLabels] ?? c.examType.replace('_', ' ')}</Badge></TD>
                     <TD>{c._count.subjectLinks}</TD>
                     <TD><Badge variant={statusVariants[c.status] ?? "default"}>{examCycleStatusLabels[c.status as keyof typeof examCycleStatusLabels] ?? c.status}</Badge></TD>

@@ -11,7 +11,7 @@ export class ExamCycleRepository {
         batchSemester: {
           include: {
             batch: { select: { id: true, name: true, code: true } },
-            academicUnit: { select: { id: true, name: true, code: true } },
+            department: { select: { id: true, name: true, code: true } },
           },
         },
         questionBanks: { select: { id: true } },
@@ -25,8 +25,8 @@ export class ExamCycleRepository {
       include: {
         batchSemester: {
           include: {
-            batch: { include: { programme: true } },
-            academicUnit: true,
+            batch: { include: { department: true } },
+            department: true,
           },
         },
         subjectLinks: { include: { subject: { select: { id: true, subjectCode: true, subjectName: true } } } },
@@ -42,7 +42,7 @@ export class ExamCycleRepository {
         batchSemester: {
           include: {
             batch: { select: { id: true, name: true } },
-            academicUnit: { select: { id: true, name: true } },
+            department: { select: { id: true, name: true } },
           },
         },
         _count: { select: { questionBanks: true, subjectLinks: true } },

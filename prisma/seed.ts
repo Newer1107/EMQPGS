@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ExamType, QuestionBankPhase, RecordStatus, QuestionStatus, RbtLevel, CourseOutcome, DifficultyLevel, ExamCycleStatus, UserStatus, SubjectStatus, BatchStatus, BatchSemesterStatus, AcademicYearStatus, AcademicUnitType, GroupAssignment, SnapshotType, NotificationType, PaperGenerationStatus, PaperVariant, AiReportStatus, CoordinatorDecision } from "@prisma/client";
+import { PrismaClient, Role, ExamType, QuestionBankPhase, RecordStatus, QuestionStatus, RbtLevel, CourseOutcome, DifficultyLevel, ExamCycleStatus, UserStatus, SubjectStatus, BatchStatus, BatchSemesterStatus, AcademicYearStatus, GroupAssignment, SnapshotType, NotificationType, PaperGenerationStatus, PaperVariant, AiReportStatus, CoordinatorDecision } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -198,17 +198,24 @@ async function main() {
   const pwh = await bcrypt.hash(PASSWORD, 12);
 
   // ═══════════════════════════════════════════════════════════════
-  // 1. FOUNDATION: Academic Units, Departments, Programmes, Schemes
+  // 1. FOUNDATION: Departments, Schemes
   // ═══════════════════════════════════════════════════════════════
-  const eshUnit = await prisma.academicUnit.create({ data: { name: "Engineering Sciences & Humanities", code: "ESH", type: AcademicUnitType.ES_H, hodName: "Dr. First Year Incharge" } });
-  const compUnit = await prisma.academicUnit.create({ data: { name: "Computer Engineering", code: "COMP", type: AcademicUnitType.DEPARTMENT, hodName: "Dr. Suresh Patil" } });
+  const compDept = await prisma.department.upsert({
+    where: { code: "COMP" },
+    update: {},
+    create: { name: "Computer Engineering", code: "COMP", hodName: "Dr. Suresh Patil" },
+  });
 
-  const dept = await prisma.department.create({ data: { name: "Computer Engineering", code: "COMP", hodName: "Dr. Suresh Patil" } });
+  const eshDept = await prisma.department.upsert({
+    where: { code: "ESH" },
+    update: {},
+    create: { name: "Engineering Sciences & Humanities", code: "ESH", hodName: "Dr. First Year Incharge" },
+  });
 
-  const progComp = await prisma.programme.create({ data: { name: "BE Computer Engineering", code: "BECOMP", homeAcademicUnitId: compUnit.id, firstYearAcademicUnitId: eshUnit.id } });
+  const dept = compDept;
 
-  const scheme2024 = await prisma.curriculumScheme.create({ data: { programmeId: progComp.id, name: "2024 Scheme (CBCGS-HME 2023)", year: 2024 } });
-  const scheme2025 = await prisma.curriculumScheme.create({ data: { programmeId: progComp.id, name: "2025 Scheme (CBCGS-HME 2023)", year: 2025 } });
+  const scheme2024 = await prisma.curriculumScheme.create({ data: { departmentId: compDept.id, name: "2024 Scheme (CBCGS-HME 2023)", year: 2024, durationSemesters: 8 } });
+  const scheme2025 = await prisma.curriculumScheme.create({ data: { departmentId: compDept.id, name: "2025 Scheme (CBCGS-HME 2023)", year: 2025, durationSemesters: 8 } });
 
   // ═══════════════════════════════════════════════════════════════
   // 2. ACADEMIC YEARS (3 years of history)
@@ -294,7 +301,7 @@ async function main() {
     const scheme = sd.scheme === 2024 ? scheme2024 : scheme2025;
     for (const sem of sd.semesters) {
       await prisma.curriculumSubject.create({
-        data: { curriculumSchemeId: scheme.id, subjectId: subjectMap.get(sd.code)!, semesterNumber: sem, academicUnitId: compUnit.id, groupAssignment: GroupAssignment.ALL },
+        data: { curriculumSchemeId: scheme.id, subjectId: subjectMap.get(sd.code)!, semesterNumber: sem, departmentId: compDept.id, groupAssignment: GroupAssignment.ALL },
       }).catch(() => {}); // skip dupes
     }
   }
@@ -303,36 +310,36 @@ async function main() {
   // 4. BATCHES (3 cohorts)
   // ═══════════════════════════════════════════════════════════════
   const batch2023 = await prisma.batch.create({
-    data: { name: "BE Computer 2023-27", code: "BECOMP2023", programmeId: progComp.id, curriculumSchemeId: scheme2024.id, admissionYear: 2023, graduationYear: 2027, status: BatchStatus.ACTIVE },
+    data: { name: "BE Computer 2023-27", code: "BECOMP2023", departmentId: compDept.id, curriculumSchemeId: scheme2024.id, admissionYear: 2023, graduationYear: 2027, status: BatchStatus.ACTIVE },
   });
   const batch2024 = await prisma.batch.create({
-    data: { name: "BE Computer 2024-28", code: "BECOMP2024", programmeId: progComp.id, curriculumSchemeId: scheme2024.id, admissionYear: 2024, graduationYear: 2028, status: BatchStatus.ACTIVE },
+    data: { name: "BE Computer 2024-28", code: "BECOMP2024", departmentId: compDept.id, curriculumSchemeId: scheme2024.id, admissionYear: 2024, graduationYear: 2028, status: BatchStatus.ACTIVE },
   });
   const batch2025 = await prisma.batch.create({
-    data: { name: "BE Computer 2025-29", code: "BECOMP2025", programmeId: progComp.id, curriculumSchemeId: scheme2025.id, admissionYear: 2025, graduationYear: 2029, status: BatchStatus.ACTIVE },
+    data: { name: "BE Computer 2025-29", code: "BECOMP2025", departmentId: compDept.id, curriculumSchemeId: scheme2025.id, admissionYear: 2025, graduationYear: 2029, status: BatchStatus.ACTIVE },
   });
 
   // Batch semesters
   const batchSemesters: Record<string, string> = {}; // `${batchCode}_semN` -> id
-  type BSDef = { batchId: string; sem: number; ayId: string; unitId: string; status: BatchSemesterStatus; start: Date; end: Date };
+  type BSDef = { batchId: string; sem: number; ayId: string; deptId: string; status: BatchSemesterStatus; start: Date; end: Date };
   const bsDefs: BSDef[] = [
     // 2023 batch: Sem III (2024-25 odd), Sem IV (2024-25 even), Sem V (2025-26 odd), Sem VI (2025-26 even), Sem VII (2026-27 odd)
-    { batchId: batch2023.id, sem: 3, ayId: ay24_25.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2024, 7, 15), end: dt(2024, 12, 20) },
-    { batchId: batch2023.id, sem: 4, ayId: ay24_25.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 1, 6), end: dt(2025, 6, 15) },
-    { batchId: batch2023.id, sem: 5, ayId: ay25_26.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 7, 14), end: dt(2025, 12, 20) },
-    { batchId: batch2023.id, sem: 6, ayId: ay25_26.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2026, 1, 5), end: dt(2026, 6, 15) },
-    { batchId: batch2023.id, sem: 7, ayId: ay26_27.id, unitId: compUnit.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
+    { batchId: batch2023.id, sem: 3, ayId: ay24_25.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2024, 7, 15), end: dt(2024, 12, 20) },
+    { batchId: batch2023.id, sem: 4, ayId: ay24_25.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 1, 6), end: dt(2025, 6, 15) },
+    { batchId: batch2023.id, sem: 5, ayId: ay25_26.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 7, 14), end: dt(2025, 12, 20) },
+    { batchId: batch2023.id, sem: 6, ayId: ay25_26.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2026, 1, 5), end: dt(2026, 6, 15) },
+    { batchId: batch2023.id, sem: 7, ayId: ay26_27.id, deptId: compDept.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
     // 2024 batch: Sem III (2025-26 odd), Sem IV (2025-26 even), Sem V (2026-27 odd)
-    { batchId: batch2024.id, sem: 3, ayId: ay25_26.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 7, 14), end: dt(2025, 12, 20) },
-    { batchId: batch2024.id, sem: 4, ayId: ay25_26.id, unitId: compUnit.id, status: BatchSemesterStatus.COMPLETED, start: dt(2026, 1, 5), end: dt(2026, 6, 15) },
-    { batchId: batch2024.id, sem: 5, ayId: ay26_27.id, unitId: compUnit.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
+    { batchId: batch2024.id, sem: 3, ayId: ay25_26.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2025, 7, 14), end: dt(2025, 12, 20) },
+    { batchId: batch2024.id, sem: 4, ayId: ay25_26.id, deptId: compDept.id, status: BatchSemesterStatus.COMPLETED, start: dt(2026, 1, 5), end: dt(2026, 6, 15) },
+    { batchId: batch2024.id, sem: 5, ayId: ay26_27.id, deptId: compDept.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
     // 2025 batch: Sem III (2026-27 odd)
-    { batchId: batch2025.id, sem: 3, ayId: ay26_27.id, unitId: compUnit.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
+    { batchId: batch2025.id, sem: 3, ayId: ay26_27.id, deptId: compDept.id, status: BatchSemesterStatus.ACTIVE, start: dt(2026, 7, 14), end: dt(2026, 12, 20) },
   ];
 
   for (const bd of bsDefs) {
     const bs = await prisma.batchSemester.create({
-      data: { batchId: bd.batchId, semesterNumber: bd.sem, academicYearId: bd.ayId, academicUnitId: bd.unitId, startDate: bd.start, endDate: bd.end, status: bd.status },
+      data: { batchId: bd.batchId, semesterNumber: bd.sem, academicYearId: bd.ayId, departmentId: bd.deptId, startDate: bd.start, endDate: bd.end, status: bd.status },
     });
     const bCode = bd.batchId === batch2023.id ? "BECOMP2023" : bd.batchId === batch2024.id ? "BECOMP2024" : "BECOMP2025";
     batchSemesters[`${bCode}_sem${bd.sem}`] = bs.id;

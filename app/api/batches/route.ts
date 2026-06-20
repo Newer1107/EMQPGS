@@ -8,8 +8,8 @@ const service = new BatchService();
 
 export const GET = withApiHandler(
   async (request) => {
-    const programmeId = request.nextUrl.searchParams.get("programmeId");
-    if (programmeId) return service.findByProgramme(programmeId);
+    const departmentId = request.nextUrl.searchParams.get("departmentId");
+    if (departmentId) return service.findByDepartment(departmentId);
     return service.list();
   },
   { roles: [Role.COE, Role.COORDINATOR] },

@@ -34,7 +34,7 @@ EMQPGS is a web-based system that manages the entire process of creating examina
 ```mermaid
 flowchart TD
     A["System Setup (COE)"] --> B["Departments & Users Created"]
-    B --> C["Academic Structure Built<br/>(Programmes, Schemes, Batches)"]
+    B --> C["Academic Structure Built<br/>(Schemes, Batches)"]
     C --> D["Subjects Created & Placed<br/>in Curriculum"]
     D --> E["Exam Cycle Created"]
     E --> F["Subjects Linked to Cycle"]
@@ -66,7 +66,7 @@ flowchart TD
 **Who they are:** The senior administrator who oversees the entire examination process at the institution level.
 
 **Responsibilities:**
-- Set up the academic structure (programmes, batches, semesters)
+- Set up the academic structure (curriculum schemes, batches, semesters)
 - Create and manage departments
 - Create and manage user accounts
 - Create exam cycles
@@ -79,8 +79,7 @@ flowchart TD
 - Audit logs of all actions
 
 **What they can do:**
-- Create academic units, programmes, curriculum schemes, batches
-- Create departments
+- Create departments, curriculum schemes, batches
 - Create and manage users (any role)
 - Assign coordinators to departments
 - Create exam cycles
@@ -220,12 +219,10 @@ There is no separate "Administrator" role. The **COE role** serves as the system
 ```mermaid
 flowchart TD
     subgraph Setup["PHASE 0: System Setup (COE)"]
-        A1["Create Academic Units"] --> A2["Create Programmes"]
-        A2 --> A3["Create Curriculum Schemes"]
-        A3 --> A4["Create Departments"]
-        A4 --> A5["Create Users & Assign Roles"]
-        A5 --> A6["Assign Coordinators<br/>to Departments"]
-        A6 --> A7["Create Academic Years"]
+        A1["Create Departments"] --> A2["Create Curriculum Schemes"]
+        A2 --> A3["Create Users & Assign Roles"]
+        A3 --> A4["Assign Coordinators<br/>to Departments"]
+        A4 --> A5["Create Academic Years"]
     end
 
     subgraph Curriculum["PHASE 1: Curriculum & Subjects (Coordinator + COE)"]
@@ -292,25 +289,19 @@ flowchart TD
 
 #### Phase 0: System Setup (COE only, done once)
 
-**Step 0.1 — Create Academic Units**
-The COE creates academic units (e.g., "Computer Engineering Department", "ES&H"). These represent curriculum ownership — who is responsible for teaching what.
+**Step 0.1 — Create Departments**
+The COE creates departments (e.g., "Computer Engineering", "AIDS"). Departments handle both faculty administration and curriculum ownership in a single unified model.
 
-**Step 0.2 — Create Programmes**
-The COE creates programmes (e.g., "BE Computer Engineering"). Each programme belongs to a home academic unit.
+**Step 0.2 — Create Curriculum Schemes**
+The COE creates curriculum schemes (e.g., "2025 Scheme") for each department. A scheme defines the curriculum plan with a specified `durationSemesters`.
 
-**Step 0.3 — Create Curriculum Schemes**
-The COE creates curriculum schemes (e.g., "2025 Scheme") for each programme. A scheme defines the curriculum plan.
-
-**Step 0.4 — Create Departments**
-The COE creates administrative departments (e.g., "AIDS", "Computer Engineering"). Departments represent faculty affiliation (different from academic units which represent curriculum ownership).
-
-**Step 0.5 — Create Users**
+**Step 0.3 — Create Users**
 The COE creates user accounts for all roles: coordinators, contributors, moderators, and dean. Each user has a name, email, password, and role. Users may optionally belong to a department.
 
-**Step 0.6 — Assign Coordinators to Departments**
+**Step 0.4 — Assign Coordinators to Departments**
 The COE assigns each coordinator to one or more departments. This determines what data each coordinator can see and manage.
 
-**Step 0.7 — Create Academic Years**
+**Step 0.5 — Create Academic Years**
 The COE creates academic years (e.g., "2025-26") with start and end dates.
 
 #### Phase 1: Curriculum & Subjects (Coordinator + COE)
@@ -319,10 +310,10 @@ The COE creates academic years (e.g., "2025-26") with start and end dates.
 Coordinators create subjects (e.g., "Data Structures", "Algorithms") for their departments. Each subject has a code, name, and credit load. When created, the system automatically creates version 1 of the subject.
 
 **Step 1.2 — COE Places Subjects in Curriculum**
-The COE adds subjects to the curriculum by specifying which semester they are taught in, which academic unit teaches them, and optionally which teaching group.
+The COE adds subjects to the curriculum by specifying which semester they are taught in, which department teaches them, and optionally which teaching group.
 
 **Step 1.3 — COE Creates Batches**
-The COE creates batches (e.g., "BE Computer 2025-29") linked to a programme and curriculum scheme.
+The COE creates batches (e.g., "BE Computer 2025-29") linked to a department and curriculum scheme.
 
 **Step 1.4 — COE Creates Batch Semesters**
 The COE creates semester instances for each batch (Semester 1, 2, 3, etc.), linked to academic years. These define when each semester starts and ends.
@@ -559,16 +550,12 @@ Review pending reviews. These are blocking the entire workflow.
 ### 5.1 COE Pages
 
 #### Academic Setup (`/dashboard/coe/academic-setup`)
-- **Purpose**: Central hub for creating Academic Units, Programmes, and Curriculum Schemes
-- **Typical actions**: Create first-time structure, add new programmes
+- **Purpose**: Central hub for creating Departments and Curriculum Schemes
+- **Typical actions**: Create first-time structure, add new schemes
 
-#### Academic Units (`/dashboard/coe/academic-units`)
-- **Purpose**: Manage teaching departments (ES&H, Computer Engineering, etc.)
-- **Typical actions**: Create, rename, deactivate academic units
-
-#### Programmes (`/dashboard/coe/programmes`)
-- **Purpose**: Manage degree programmes (BE, BTECH, etc.)
-- **Typical actions**: Create programmes, link to academic units
+#### Departments (`/dashboard/coe/departments`)
+- **Purpose**: Manage departments (Computer Engineering, AIDS, etc.)
+- **Typical actions**: Create, rename, deactivate departments
 
 #### Batches (`/dashboard/coe/batches`)
 - **Purpose**: Manage student cohorts
@@ -581,10 +568,6 @@ Review pending reviews. These are blocking the entire workflow.
 #### Users (`/dashboard/coe/users`)
 - **Purpose**: Manage all user accounts
 - **Typical actions**: Create users, change roles, disable accounts
-
-#### Departments (`/dashboard/coe/departments`)
-- **Purpose**: Manage administrative departments
-- **Typical actions**: Create departments, assign HOD names
 
 #### Coordinator Assignments (`/dashboard/coe/coordinator-assignments`)
 - **Purpose**: Link coordinators to departments
@@ -603,7 +586,7 @@ Review pending reviews. These are blocking the entire workflow.
 
 #### Curriculum (`/dashboard/coe/curriculum`)
 - **Purpose**: Place subjects into semester curriculum
-- **Sections**: Programme/scheme selector, semester tabs, subject listing table, add-subject form
+- **Sections**: Department/scheme selector, semester tabs, subject listing table, add-subject form
 - **Typical workflow**: Select scheme → select semester → add subjects
 
 ### 5.2 Coordinator Pages
@@ -1058,12 +1041,9 @@ flowchart TD
 
 Dr. Sharma logs in as COE. The system has nothing — no users, no departments, no subjects.
 
-She navigates to Academic Setup and creates:
-1. **Academic Unit**: "Computer Engineering"
-2. **Programme**: "BE Computer Engineering" (4 years, 8 semesters)
-3. **Curriculum Scheme**: "2026 Scheme" for this programme
-
-Then she goes to Departments and creates "Computer Engineering Department".
+She navigates to Departments and creates:
+1. **Department**: "Computer Engineering"
+2. **Curriculum Scheme**: "2026 Scheme" (8 semesters) for this department
 
 She goes to Users and creates accounts for:
 - Prof. Patel → Coordinator role
@@ -1330,9 +1310,8 @@ A: The bank goes back to MODERATION phase for rework. Questions may need to be r
 | **Exam Cycle** | An examination instance (ISE-1, ISE-2, ENDSEM, Supplementary, KT). |
 | **Phase** | Current stage of a question bank: DRAFTING, MODERATION, APPROVAL, or COMPLETE. |
 | **Record Status** | Whether a bank is ACTIVE (editable) or LOCKED (frozen). |
-| **Academic Unit** | A curriculum-owning entity (department or ES&H for first year). |
-| **Programme** | A degree programme (BE, BTECH, MTECH, etc.). |
-| **Curriculum Scheme** | A named curriculum plan (e.g., "2025 Scheme") for a programme. |
+| **Department** | Single organizational entity handling both faculty and curriculum ownership. |
+| **Curriculum Scheme** | A named curriculum plan (e.g., "2025 Scheme") with a specified number of semesters. |
 | **Batch** | A student cohort (e.g., "BE Computer 2025-29"). |
 | **Batch Semester** | A specific semester instance for a batch with its own dates. |
 | **Paper Variant** | One of three generated paper versions (Paper A, B, or C). |

@@ -69,7 +69,7 @@
 ```
 COE SETUP PHASE
 ┌──────────────────────────────────────────────────────────────┐
-│ AcademicUnit → Programme → CurriculumScheme → CurriculumSubject│
+│ Department → CurriculumScheme → CurriculumSubject              │
 │ AcademicYear → Batch → BatchSemester → ExamCycle              │
 │   └── BatchSemester activation sets Batch.currentSemester     │
 │   └── ExamCycle creation auto-links subjects from curriculum  │
@@ -174,25 +174,19 @@ BatchSemester Status:
 ## C. Entity Dependency Graph
 
 ```
-AcademicUnit ─────────────────────────────────────────────────────┐
-    ├── Programme (homeAcademicUnit)                               │
-    ├── Programme (firstYearAcademicUnit)                           │
-    ├── CurriculumSubject (which unit offers the subject)          │
-    └── BatchSemester (semester's owning unit)                     │
-                                                                    │
-Programme ───────────────────────────────────────────────────────┘│
-    ├── CurriculumScheme ── CurriculumSubject ── Subject          │
-    └── Batch ── BatchSemester ── ExamCycle ── QuestionBank ──┐   │
-              │         │                        │            │   │
-              │         │                   SubjectExamCycle  │   │
-              │         │                       Link          │   │
-              │    AcademicYear                               │   │
-              │         │                                     │   │
-              │    TeachingGroup                              │   │
-              │                                               │   │
-              └───────────────────────────────────────────────┘   │
-                                                                   │
-Department ── User ──────────────────────────────────────────┐    │
+Department ────────────────────────────────────────────────────┐
+    ├── CurriculumScheme ── CurriculumSubject ── Subject      │
+    ├── Batch ── BatchSemester ── ExamCycle ── QuestionBank ─┐│
+    │         │         │                        │           ││
+    │         │         │                   SubjectExamCycle ││
+    │         │         │                       Link         ││
+    │    AcademicYear                               │         ││
+    │         │                                     │         ││
+    │    TeachingGroup                              │         ││
+    │                                               │         ││
+    └───────────────────────────────────────────────┘         ││
+                                                               ││
+User ─────────────────────────────────────────────────────┐    ││
     │            ├── Notification                              │    │
     │            ├── AuditLog                                  │    │
     │            ├── ModeratorBankAssignment ──────────────────┤────┤
@@ -383,7 +377,7 @@ No evidence found — all defined endpoints appear to have corresponding UI func
 
 | Workflow | Status | Evidence |
 |----------|--------|----------|
-| COE setup (AcademicUnit → Programme → Scheme → Batch → Semester → ExamCycle) | ✅ Correct | `exam-cycles/service.ts` creates ExamCycle, validated by curriculum subjects |
+| COE setup (Department → CurriculumScheme → Batch → Semester → ExamCycle) | ✅ Correct | `exam-cycles/service.ts` creates ExamCycle, validated by curriculum subjects |
 | Coordinator creates question bank | ✅ Correct | `coordinator/question-bank.service.ts` initializes with pattern + all slots |
 | Contributor creates and submits question | ✅ Correct | `question-library/service.ts` enforces ownership, status gating, bank mutability |
 | Contributor assignment to slot | ✅ Correct | `question-slots/service.ts` 6-step guard chain including contributor check |
@@ -432,7 +426,7 @@ No evidence found — all defined endpoints appear to have corresponding UI func
 
 | Category | Score | Deductions |
 |----------|-------|------------|
-| **Domain Model** | 95 | Clean separation of academic (CurriculumSubject) from operational (QuestionBank). AcademicUnit/Programme/Batch hierarchy is well-designed. -5 for Subject.questionBankDueDate being defined but unused |
+| **Domain Model** | 95 | Clean separation of academic (CurriculumSubject) from operational (QuestionBank). Department/Batch hierarchy is well-designed. -5 for Subject.questionBankDueDate being defined but unused |
 | **Separation of Concerns** | 90 | Clean module-per-domain pattern (service/repository/validation). API routes are thin. -10 for DashboardService being dead code while pages do their own queries |
 | **Workflow Consistency** | 92 | 5-role workflow is complete end-to-end. Phase transitions are explicit. -8 for missing delete/archive path for rejected questions |
 | **Source of Truth** | 98 | Singular authoritative source for every concept. No dual-source drift detected. -2 for Batch.currentSemesterNumber being denormalized (intentional, minor) |
@@ -513,7 +507,7 @@ No evidence found — all defined endpoints appear to have corresponding UI func
 
 - The dual `RecordStatus` + `QuestionBankPhase` orthogonal model (phase = workflow step, record status = lock/active)
 - The assignment model (explicit `ModeratorBankAssignment`/`ContributorBankAssignment` join tables rather than inferred from role/department)
-- The curriculum model (AcademicUnit → Programme → CurriculumScheme → CurriculumSubject is well-designed)
+- The curriculum model (Department → CurriculumScheme → CurriculumSubject is well-designed)
 - The slot-based question bank structure (question containers separate from question content)
 - The cookie-based JWT auth (works well for same-origin deployment)
 

@@ -13,26 +13,30 @@ export const metadata: Metadata = { title: "Curriculum — EMQPGS" };
 
 const groupLabels: Record<string, string> = { ALL: "All Groups", GROUP_1: "Group 1", GROUP_2: "Group 2" };
 
-export default async function CurriculumPage({ searchParams }: { searchParams: Promise<{ programmeId?: string; schemeId?: string; semester?: string }> }) {
-  const { programmeId, schemeId, semester } = await searchParams;
+export default async function CurriculumPage({ searchParams }: { searchParams: Promise<{ departmentId?: string; schemeId?: string; semester?: string }> }) {
+  const { departmentId, schemeId, semester } = await searchParams;
 
-  const programmes = await prisma.programme.findMany({ orderBy: { name: "asc" }, include: { homeAcademicUnit: true } });
-  const activeProgrammeId = programmeId || null;
+  const departments = await prisma.department.findMany({ orderBy: { name: "asc" } });
+  const activeDepartmentId = departmentId || null;
 
   const schemes = await prisma.curriculumScheme.findMany({
-    where: activeProgrammeId ? { programmeId: activeProgrammeId } : undefined,
+    where: activeDepartmentId ? { departmentId: activeDepartmentId } : undefined,
     orderBy: [{ year: "desc" }, { name: "asc" }],
-    include: { programme: true, _count: { select: { curriculumSubjects: true } } },
+    include: { department: true, _count: { select: { curriculumSubjects: true } } },
   });
 
   const activeScheme = schemeId ? schemes.find((s) => s.id === schemeId) : null;
   const selectedSemester = semester ? Number(semester) : null;
 
+  const availableSubjects = activeDepartmentId
+    ? await prisma.subject.findMany({ where: { departmentId: activeDepartmentId, status: "ACTIVE" }, orderBy: { subjectName: "asc" }, select: { id: true, subjectCode: true, subjectName: true } })
+    : [];
+
   const subjects = activeScheme
     ? await prisma.curriculumSubject.findMany({
         where: { curriculumSchemeId: activeScheme.id, ...(selectedSemester ? { semesterNumber: selectedSemester } : {}) },
         orderBy: [{ semesterNumber: "asc" }, { subject: { subjectName: "asc" } }],
-        include: { subject: { select: { subjectCode: true, subjectName: true, credits: true } }, academicUnit: { select: { name: true, code: true } } },
+        include: { subject: { select: { subjectCode: true, subjectName: true, credits: true } }, department: { select: { name: true, code: true } } },
       })
     : [];
 
@@ -40,17 +44,17 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
     <div className="space-y-6">
       <PageHeader
         title="Curriculum"
-        description="This is where you decide which subjects are taught during each semester. Select a programme and scheme, then add subjects to each semester. Choose which academic unit teaches each subject and which teaching group takes it."
+        description="Arrange subjects into semesters for each curriculum scheme. Select a department and scheme, then add subjects to each semester."
       />
 
       <div className="flex flex-wrap gap-2">
-        {programmes.map((p) => (
+        {departments.map((d) => (
           <Link
-            key={p.id}
-            href={`/dashboard/coe/curriculum${activeProgrammeId === p.id ? '' : `?programmeId=${p.id}`}`}
-            className={`rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 ${activeProgrammeId === p.id ? 'border-black bg-gray-50 font-medium' : 'text-[var(--text-tertiary)]'}`}
+            key={d.id}
+            href={`/dashboard/coe/curriculum${activeDepartmentId === d.id ? '' : `?departmentId=${d.id}`}`}
+            className={`rounded-lg border px-3 py-1.5 text-sm transition-colors hover:bg-gray-100 ${activeDepartmentId === d.id ? 'border-black bg-gray-50 font-medium' : 'text-[var(--text-tertiary)]'}`}
           >
-            {p.name}
+            {d.name}
           </Link>
         ))}
       </div>
@@ -59,10 +63,10 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
         {schemes.map((s) => (
           <Link
             key={s.id}
-            href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${s.id}`}
+            href={`/dashboard/coe/curriculum${activeDepartmentId ? `?departmentId=${activeDepartmentId}&` : '?'}schemeId=${s.id}`}
             className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 ${activeScheme?.id === s.id ? 'border-black bg-gray-50' : ''}`}
           >
-            {s.name} ({s.year}) — {s.programme?.name ?? '-'} ({s._count.curriculumSubjects} subjects)
+            {s.name} ({s.year}) — {s.department?.name ?? '-'} ({s._count.curriculumSubjects} subjects)
           </Link>
         ))}
       </div>
@@ -70,7 +74,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
       {activeScheme && (
         <div className="flex flex-wrap gap-2 border-b pb-2">
           <Link
-            href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${activeScheme.id}`}
+            href={`/dashboard/coe/curriculum${activeDepartmentId ? `?departmentId=${activeDepartmentId}&` : '?'}schemeId=${activeScheme.id}`}
             className={`rounded-t-lg px-4 py-2 text-sm font-medium ${!selectedSemester ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
           >
             All Semesters
@@ -78,7 +82,7 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
           {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
             <Link
               key={sem}
-              href={`/dashboard/coe/curriculum${activeProgrammeId ? `?programmeId=${activeProgrammeId}&` : '?'}schemeId=${activeScheme.id}&semester=${sem}`}
+              href={`/dashboard/coe/curriculum${activeDepartmentId ? `?departmentId=${activeDepartmentId}&` : '?'}schemeId=${activeScheme.id}&semester=${sem}`}
               className={`rounded-t-lg px-4 py-2 text-sm font-medium ${selectedSemester === sem ? 'border-b-2 border-black' : 'text-[var(--text-tertiary)]'}`}
             >
               Sem {sem}
@@ -92,16 +96,15 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
           {activeScheme ? (
             <Table>
               <THead>
-                <TR><TH>Semester</TH><TH>Subject</TH><TH>Credits</TH><TH>Academic Unit</TH><TH>Teaching Group</TH></TR>
+                <TR><TH>Semester</TH><TH>Subject</TH><TH>Credits</TH><TH>Teaching Group</TH></TR>
               </THead>
               <TBody>
-                {subjects.length === 0 && <TR><TD colSpan={5}><EmptyState message="No subjects have been placed yet" description="Select a curriculum scheme and semester above, then add subjects to begin building the curriculum." /></TD></TR>}
+                {subjects.length === 0 && <TR><TD colSpan={4}><EmptyState message="No subjects have been placed yet" description="Select a curriculum scheme and semester above, then add subjects to begin building the curriculum." /></TD></TR>}
                 {subjects.map((s) => (
                   <TR key={s.id}>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">Semester {s.semesterNumber}</Badge></TD>
                     <TD className="font-medium">{s.subject?.subjectName} <span className="text-xs text-[var(--text-tertiary)]">({s.subject?.subjectCode})</span></TD>
                     <TD>{s.subject?.credits ?? '-'}</TD>
-                    <TD>{s.academicUnit?.name ?? '-'}</TD>
                     <TD><Badge className="bg-gray-100 text-gray-700 border-gray-200">{groupLabels[s.groupAssignment] ?? s.groupAssignment}</Badge></TD>
                   </TR>
                 ))}
@@ -118,11 +121,10 @@ export default async function CurriculumPage({ searchParams }: { searchParams: P
               title={selectedSemester ? `Add Subject to Semester ${selectedSemester}` : "Add Subject"}
               submitLabel="Add Subject"
               endpoint="/api/curriculum-subjects"
-              extraPayload={{ curriculumSchemeId: activeScheme.id, groupAssignment: "ALL" }}
+              extraPayload={{ curriculumSchemeId: activeScheme.id, groupAssignment: "ALL", ...(activeDepartmentId ? { departmentId: activeDepartmentId } : {}) }}
               fields={[
-                { name: "subjectId", label: "Subject", type: "text", placeholder: "Enter subject ID" },
+                { name: "subjectId", label: "Subject", type: "select", options: availableSubjects.map((s) => ({ value: s.id, label: `${s.subjectName} (${s.subjectCode})` })) },
                 { name: "semesterNumber", label: "Semester (1-8)", type: "number" },
-                { name: "academicUnitId", label: "Taught By (Academic Unit)", type: "text", placeholder: "Enter academic unit ID" },
               ]}
             />
           )}

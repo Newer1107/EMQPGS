@@ -6,7 +6,7 @@ export class BatchRepository {
     return prisma.batch.findMany({
       orderBy: [{ admissionYear: "desc" }, { name: "asc" }],
       include: {
-        programme: { include: { homeAcademicUnit: true } },
+        department: true,
         curriculumScheme: true,
         _count: { select: { batchSemesters: true, teachingGroups: true } },
       },
@@ -17,7 +17,7 @@ export class BatchRepository {
     return prisma.batch.findUnique({
       where: { id },
       include: {
-        programme: { include: { homeAcademicUnit: true, firstYearAcademicUnit: true } },
+        department: true,
         curriculumScheme: { include: { curriculumSubjects: true } },
         batchSemesters: { orderBy: { semesterNumber: "asc" } },
         teachingGroups: true,
@@ -29,12 +29,12 @@ export class BatchRepository {
     return prisma.batch.findUnique({ where: { code } });
   }
 
-  findByProgramme(programmeId: string) {
+  findByDepartment(departmentId: string) {
     return prisma.batch.findMany({
-      where: { programmeId },
+      where: { departmentId },
       orderBy: { admissionYear: "desc" },
       include: {
-        programme: true,
+        department: true,
         curriculumScheme: true,
         batchSemesters: { orderBy: { semesterNumber: "asc" } },
       },
@@ -45,7 +45,7 @@ export class BatchRepository {
     return prisma.batch.create({
       data,
       include: {
-        programme: { include: { homeAcademicUnit: true, firstYearAcademicUnit: true } },
+        department: true,
         curriculumScheme: true,
       },
     });
@@ -56,7 +56,7 @@ export class BatchRepository {
       where: { id },
       data,
       include: {
-        programme: true,
+        department: true,
         curriculumScheme: true,
       },
     });

@@ -19,8 +19,7 @@ const routeLabels: Record<string, string> = {
   audit: "Audit Log",
   "coordinator-assignments": "Coordinator Assignments",
   "academic-setup": "Academic Setup",
-  "academic-units": "Academic Units",
-  programmes: "Programmes",
+
   curriculum: "Curriculum",
   batches: "Batches",
   semesters: "Semesters",

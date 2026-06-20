@@ -12,7 +12,7 @@ import { apiFetch } from "@/lib/client-fetch";
 type PlacementFormProps = {
   subjectId: string;
   schemes: Array<{ id: string; label: string }>;
-  units: Array<{ id: string; name: string; code: string }>;
+  departments: Array<{ id: string; name: string; code: string }>;
   semesters: number[];
 };
 
@@ -22,12 +22,12 @@ const GROUP_OPTIONS = [
   { value: "GROUP_2", label: "Group 2" },
 ];
 
-export function PlacementForm({ subjectId, schemes, units, semesters }: PlacementFormProps) {
+export function PlacementForm({ subjectId, schemes, departments, semesters }: PlacementFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [schemeId, setSchemeId] = useState("");
   const [semester, setSemester] = useState("");
-  const [unitId, setUnitId] = useState(units.length > 0 ? units[0].id : "");
+  const [departmentId, setDepartmentId] = useState(departments.length > 0 ? departments[0].id : "");
   const [group, setGroup] = useState("ALL");
 
   async function onSubmit(event: React.FormEvent) {
@@ -46,7 +46,7 @@ export function PlacementForm({ subjectId, schemes, units, semesters }: Placemen
           curriculumSchemeId: schemeId,
           subjectId,
           semesterNumber: Number(semester),
-          academicUnitId: unitId,
+          departmentId: departmentId,
           groupAssignment: group,
         }),
       });
@@ -93,10 +93,10 @@ export function PlacementForm({ subjectId, schemes, units, semesters }: Placemen
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="unitId">Academic Unit</Label>
-            <Select id="unitId" value={unitId} onChange={(e) => setUnitId(e.target.value)} required>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>{u.name} ({u.code})</option>
+            <Label htmlFor="departmentId">Department</Label>
+            <Select id="departmentId" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} required>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
               ))}
             </Select>
           </div>

@@ -27,10 +27,10 @@ export default async function PlaceInCurriculumPage({ params }: { params: Promis
   const schemes = await prisma.curriculumScheme.findMany({
     where: { isActive: true },
     orderBy: [{ year: "desc" }, { name: "asc" }],
-    include: { programme: { select: { name: true } } },
+    include: { department: { select: { name: true } } },
   });
 
-  const units = await prisma.academicUnit.findMany({
+  const departments = await prisma.department.findMany({
     where: { isActive: true },
     orderBy: { name: "asc" },
   });
@@ -53,8 +53,8 @@ export default async function PlaceInCurriculumPage({ params }: { params: Promis
 
       <PlacementForm
         subjectId={id}
-        schemes={schemes.map((s) => ({ id: s.id, label: `${s.name} (${s.year}) — ${s.programme.name}` }))}
-        units={units.map((u) => ({ id: u.id, name: u.name, code: u.code }))}
+        schemes={schemes.map((s) => ({ id: s.id, label: `${s.name} (${s.year}) — ${s.department.name}` }))}
+        departments={departments.map((d) => ({ id: d.id, name: d.name, code: d.code }))}
         semesters={semesters}
       />
     </div>

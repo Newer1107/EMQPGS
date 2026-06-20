@@ -17,8 +17,8 @@ export class BatchService {
     return entity;
   }
 
-  async findByProgramme(programmeId: string) {
-    return this.repository.findByProgramme(programmeId);
+  async findByDepartment(departmentId: string) {
+    return this.repository.findByDepartment(departmentId);
   }
 
   async create(data: BatchInput) {
@@ -29,13 +29,12 @@ export class BatchService {
     const existing = await this.repository.findByCode(data.code);
     if (existing) throw new AppError("A batch with this code already exists", 409);
 
-    const programme = await prisma.programme.findUnique({
-      where: { id: data.programmeId },
-      include: { homeAcademicUnit: true, firstYearAcademicUnit: true },
+    const department = await prisma.department.findUnique({
+      where: { id: data.departmentId },
     });
-    if (!programme) throw new NotFoundError("Programme not found");
-    if (!programme.isActive) {
-      throw new AppError("Cannot create a batch for an inactive programme", 400);
+    if (!department) throw new NotFoundError("Department not found");
+    if (!department.isActive) {
+      throw new AppError("Cannot create a batch for an inactive department", 400);
     }
 
     const scheme = await prisma.curriculumScheme.findUnique({ where: { id: data.curriculumSchemeId } });
@@ -51,7 +50,7 @@ export class BatchService {
             data: {
               name: data.name,
               code: data.code,
-              programmeId: data.programmeId,
+              departmentId: data.departmentId,
               curriculumSchemeId: data.curriculumSchemeId,
               admissionYear: data.admissionYear,
               graduationYear: data.graduationYear,
@@ -60,12 +59,7 @@ export class BatchService {
           });
 
           const semesterData = [];
-          for (let sem = 1; sem <= programme.durationSemesters; sem++) {
-            const isFirstYear = sem <= 2;
-            const academicUnitId = isFirstYear && programme.firstYearAcademicUnitId
-              ? programme.firstYearAcademicUnitId
-              : programme.homeAcademicUnitId;
-
+          for (let sem = 1; sem <= scheme.durationSemesters; sem++) {
             const academicYearCode = `${data.admissionYear + Math.floor((sem - 1) / 2)}-${data.admissionYear + Math.floor((sem - 1) / 2) + 1}`;
             const academicYear = await tx.academicYear.findUnique({ where: { code: academicYearCode } });
             if (!academicYear) {
@@ -76,7 +70,7 @@ export class BatchService {
               batchId: batch.id,
               semesterNumber: sem,
               academicYearId: academicYear.id,
-              academicUnitId,
+              departmentId: department.id,
               startDate: null,
               endDate: null,
               status: "UPCOMING" as const,
@@ -97,7 +91,7 @@ export class BatchService {
           return tx.batch.findUnique({
             where: { id: batch.id },
             include: {
-              programme: true,
+              department: true,
               curriculumScheme: true,
               batchSemesters: { orderBy: { semesterNumber: "asc" } },
               teachingGroups: true,

@@ -150,11 +150,6 @@ enum SubjectVersionStatus {
   ARCHIVED
 }
 
-enum AcademicUnitType {
-  ES_H
-  DEPARTMENT
-}
-
 enum GroupAssignment {
   ALL
   GROUP_1
@@ -170,14 +165,6 @@ enum BatchSemesterStatus {
   UPCOMING
   ACTIVE
   COMPLETED
-}
-
-enum DegreeType {
-  BE
-  BTECH
-  MTECH
-  PHD
-  DIPLOMA
 }
 
 model AcademicYear {
@@ -221,6 +208,10 @@ model Department {
   users                  User[]
   coordinatorAssignments CoordinatorDepartmentAssignment[]
   subjects               Subject[]
+  curriculumSchemes      CurriculumScheme[]
+  batches                Batch[]
+  curriculumSubjects     CurriculumSubject[]
+  batchSemesters         BatchSemester[]      @relation("batchSemesterAcademicUnit")
 }
 
 model User {
@@ -735,68 +726,25 @@ model RevokedToken {
   @@index([expiresAt])
 }
 
-// ──────────────────────────────────────────────
-// Academic Domain — new foundation models
-// ──────────────────────────────────────────────
-
-/// AcademicUnit represents curriculum ownership (ES&H, Computer Engineering, IT, etc.).
-/// This is distinct from Department, which represents faculty HR affiliation.
-model AcademicUnit {
-  id        String           @id @default(cuid())
-  name      String
-  code      String           @unique
-  type      AcademicUnitType @default(DEPARTMENT)
-  hodName   String
-  isActive  Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-
-  programmes          Programme[]         @relation("programmeHomeUnit")
-  programmesFirstYear Programme[]         @relation("programmeFirstYearUnit")
-  curriculumSubjects  CurriculumSubject[]
-  batchSemesters      BatchSemester[]     @relation("batchSemesterAcademicUnit")
-}
-
-/// Programme represents a degree a student graduates with (BE Computer Engineering, BE IT, etc.).
-/// Owned by an AcademicUnit. Accreditation is per Programme.
-model Programme {
-  id                      String     @id @default(cuid())
-  name                    String
-  code                    String     @unique
-  degreeType              DegreeType @default(BE)
-  durationYears           Int        @default(4)
-  durationSemesters       Int        @default(8)
-  homeAcademicUnitId      String
-  firstYearAcademicUnitId String?
-  isActive                Boolean    @default(true)
-  createdAt               DateTime   @default(now())
-  updatedAt               DateTime   @updatedAt
-
-  homeAcademicUnit      AcademicUnit  @relation("programmeHomeUnit", fields: [homeAcademicUnitId], references: [id])
-  firstYearAcademicUnit AcademicUnit? @relation("programmeFirstYearUnit", fields: [firstYearAcademicUnitId], references: [id])
-
-  curriculumSchemes CurriculumScheme[]
-  batches           Batch[]
-}
-
-/// CurriculumScheme defines a named curriculum plan for a Programme (e.g. "2025 Scheme").
+/// CurriculumScheme defines a named curriculum plan for a Department (e.g. "2025 Scheme").
 model CurriculumScheme {
-  id          String   @id @default(cuid())
-  programmeId String
-  name        String
-  year        Int
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  departmentId      String
+  name              String
+  year              Int
+  durationSemesters Int      @default(8)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
-  programme          Programme           @relation(fields: [programmeId], references: [id])
+  department         Department          @relation(fields: [departmentId], references: [id])
   curriculumSubjects CurriculumSubject[]
   batches            Batch[]
 
-  @@unique([programmeId, year])
+  @@unique([departmentId, year])
 }
 
-/// CurriculumSubject is the authoritative mapping of Subject → (Semester, AcademicUnit, TeachingGroup).
+/// CurriculumSubject is the authoritative mapping of Subject → (Semester, Department, TeachingGroup).
 /// This is a pure curriculum entity — it describes what subjects are studied, not operational deadlines.
 /// A Subject can appear multiple times across different semesters and group assignments.
 model CurriculumSubject {
@@ -804,17 +752,17 @@ model CurriculumSubject {
   curriculumSchemeId String
   subjectId          String
   semesterNumber     Int // 1-8
-  academicUnitId     String // which unit offers this subject in this semester
+  departmentId       String // which department offers this subject in this semester
   groupAssignment    GroupAssignment @default(ALL)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
 
   curriculumScheme CurriculumScheme @relation(fields: [curriculumSchemeId], references: [id])
   subject          Subject          @relation(fields: [subjectId], references: [id])
-  academicUnit     AcademicUnit     @relation(fields: [academicUnitId], references: [id])
+  department       Department       @relation(fields: [departmentId], references: [id])
 
   @@unique([curriculumSchemeId, subjectId, semesterNumber, groupAssignment])
-  @@index([curriculumSchemeId, semesterNumber, academicUnitId])
+  @@index([curriculumSchemeId, semesterNumber, departmentId])
   @@index([subjectId])
 }
 
@@ -825,7 +773,7 @@ model Batch {
   id                     String      @id @default(cuid())
   name                   String
   code                   String      @unique
-  programmeId            String
+  departmentId           String
   curriculumSchemeId     String
   admissionYear          Int
   graduationYear         Int
@@ -836,9 +784,9 @@ model Batch {
   createdAt              DateTime    @default(now())
   updatedAt              DateTime    @updatedAt
 
-  programme            Programme        @relation(fields: [programmeId], references: [id])
-  curriculumScheme     CurriculumScheme @relation(fields: [curriculumSchemeId], references: [id])
-  currentBatchSemester BatchSemester?   @relation("BatchToBatchSemesterCurrent", fields: [currentBatchSemesterId], references: [id])
+  department           Department         @relation(fields: [departmentId], references: [id])
+  curriculumScheme     CurriculumScheme   @relation(fields: [curriculumSchemeId], references: [id])
+  currentBatchSemester BatchSemester?     @relation("BatchToBatchSemesterCurrent", fields: [currentBatchSemesterId], references: [id])
 
   batchSemesters BatchSemester[]
   teachingGroups TeachingGroup[]
@@ -855,7 +803,7 @@ model BatchSemester {
   batchId        String
   semesterNumber Int // 1-8
   academicYearId String
-  academicUnitId String // ES&H for sem 1-2, home unit for sem 3-8
+  departmentId   String
   startDate      DateTime?
   endDate        DateTime?
   status         BatchSemesterStatus @default(UPCOMING)
@@ -865,12 +813,12 @@ model BatchSemester {
   batch          Batch        @relation(fields: [batchId], references: [id])
   batchCurrentOf Batch[]      @relation("BatchToBatchSemesterCurrent")
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
-  academicUnit   AcademicUnit @relation("batchSemesterAcademicUnit", fields: [academicUnitId], references: [id])
+  department     Department   @relation("batchSemesterAcademicUnit", fields: [departmentId], references: [id])
   examCycles     ExamCycle[]
 
   @@unique([batchId, semesterNumber])
   @@index([academicYearId])
-  @@index([academicUnitId])
+  @@index([departmentId])
 }
 
 /// TeachingGroup records which teaching groups exist for a batch in first year.
