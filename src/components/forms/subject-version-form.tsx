@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,14 +37,14 @@ export function SubjectVersionForm({ subjectId, academicYears }: SubjectVersionF
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Subject version created");
+        feedback.success({ title: "Subject version created" });
         setValues({ title: "", syllabusDescription: "", effectiveFromAcademicYearId: "" });
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Failed to create version");
+        feedback.error(result.error?.message ?? "Failed to create version");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

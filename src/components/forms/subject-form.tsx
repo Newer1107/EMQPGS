@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,7 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
       const result = await response.json();
       if (response.ok && result.success) {
         const subjectId = result.data?.id;
-        toast.success("Subject created. Now place it in a curriculum to make it available for exam cycles.");
+        feedback.success({ title: "Subject created. Now place it in a curriculum to make it available for exam cycles." });
         if (subjectId && !initialValues) {
           router.push(`/dashboard/coordinator/subjects/${subjectId}`);
         } else {
@@ -64,10 +64,10 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
         }
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Failed to save subject");
+        feedback.error(result.error?.message ?? "Failed to save subject");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

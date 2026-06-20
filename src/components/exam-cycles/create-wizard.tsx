@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { apiFetch } from "@/lib/client-fetch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WizardProgress } from "@/components/exam-cycles/wizard-progress";
+import { EntityStatusBanner } from "@/components/shared/entity-status-banner";
 import { examTypeLabels } from "@/lib/constants";
 import { getSubjectsForBatchSemester } from "@/modules/exam-cycles/actions";
 
@@ -45,7 +46,7 @@ export function CreateExamCycleWizard() {
         const json = await res.json();
         setBatches(json.data ?? json);
       } catch {
-        toast.error("Failed to load batches");
+        feedback.error("Failed to load batches");
       } finally {
         setLoadingBatches(false);
       }
@@ -62,7 +63,7 @@ export function CreateExamCycleWizard() {
       const json = await res.json();
       setSemesters(json.data ?? json);
     } catch {
-      toast.error("Failed to load semesters");
+        feedback.error("Failed to load semesters");
     } finally {
       setLoadingSemesters(false);
     }
@@ -76,7 +77,7 @@ export function CreateExamCycleWizard() {
       const result = await getSubjectsForBatchSemester(batchSemesterId);
       setSubjects(result);
     } catch {
-      toast.error("Failed to load subjects");
+        feedback.error("Failed to load subjects");
     } finally {
       setLoadingSubjects(false);
     }
@@ -140,14 +141,14 @@ export function CreateExamCycleWizard() {
 
       if (!res.ok) {
         const msg = json.error?.message ?? json.error ?? "Failed to create exam cycle";
-        toast.error(msg);
+        feedback.error(msg);
         return;
       }
 
-      toast.success("Exam cycle created successfully");
+      feedback.success({ title: "Exam cycle created successfully" });
       router.push(`/dashboard/coe/exam-cycles/${json.data.id}`);
     } catch {
-      toast.error("Network error. Please try again.");
+      feedback.error("Network error. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -263,6 +264,17 @@ export function CreateExamCycleWizard() {
 
       {step === 2 && (
         <div className="space-y-6">
+          {selectedBatch && !selectedBatch.curriculumScheme && (
+            <EntityStatusBanner
+              items={[{
+                id: "no-curriculum",
+                title: "No Curriculum Scheme Assigned",
+                description: "This batch has no curriculum scheme assigned. Please ensure curriculum is set up before creating exam cycles.",
+                severity: "warning",
+              }]}
+            />
+          )}
+
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">Review Subjects</h2>

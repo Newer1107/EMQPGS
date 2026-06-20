@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -34,13 +34,13 @@ export function CoordinatorDecisionForm({ questionBankId }: CoordinatorDecisionF
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Decision recorded");
+        feedback.success({ title: "Decision recorded" });
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Failed to record decision");
+        feedback.error(result.error?.message ?? "Failed to record decision");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

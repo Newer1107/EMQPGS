@@ -64,14 +64,20 @@ export class QuestionBankWorkflowService {
           select: { id: true, examType: true, batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } } },
         },
         _count: { select: { slots: true } },
+        slots: { select: { id: true, assignedQuestionId: true } },
       },
       orderBy: { updatedAt: "desc" },
     });
 
-    return banks.map((bank) => ({
-      ...bank,
-      bankStatus: bank.recordStatus === RecordStatus.LOCKED ? "LOCKED" : "ACTIVE",
-    }));
+    return banks.map((bank) => {
+      const filledSlots = bank.slots.filter((s) => s.assignedQuestionId).length;
+      return {
+        ...bank,
+        filledSlots,
+        totalSlots: bank._count.slots,
+        bankStatus: bank.recordStatus === RecordStatus.LOCKED ? "LOCKED" : "ACTIVE",
+      };
+    });
   }
 
   async getQuestionBankDetail(actor: Actor, questionBankId: string) {

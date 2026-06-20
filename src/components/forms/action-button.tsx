@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/client-fetch";
 
@@ -43,13 +43,13 @@ export function ActionButton({
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success(successMessage ?? `${label} completed`);
+        feedback.success({ title: successMessage ?? `${label} completed` });
         onSuccess?.();
       } else {
-        toast.error(result.error?.message ?? "Action failed");
+        feedback.error(result.error?.message ?? "Action failed");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

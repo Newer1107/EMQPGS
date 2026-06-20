@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/client-fetch";
 import { useRouter } from "next/navigation";
 import { SlotDemand, type SlotInfo } from "@/components/forms/slot-demand";
+import { CheckCircle } from "lucide-react";
 
 const MODULE_OPTIONS = Array.from({ length: 6 }, (_, i) => ({ value: String(i + 1), label: `Module ${i + 1}` }));
 const MARKS_OPTIONS = [2, 5, 10].map((m) => ({ value: String(m), label: `${m} Marks` }));
@@ -42,12 +43,15 @@ type QuestionFormProps = {
   submitAfterSave?: boolean;
   submitEndpoint?: string;
   slotDataMap?: Record<string, SlotInfo[]>;
+  onSuccessAction?: "redirect" | "stay";
+  onSubmitAnother?: () => void;
 };
 
-export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint, slotDataMap }: QuestionFormProps) {
+export function QuestionForm({ initialValues, subjectVersions, endpoint, title, bankId, method = "POST", redirectOnSuccess, submitAfterSave, submitEndpoint, slotDataMap, onSuccessAction, onSubmitAnother }: QuestionFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({
     subjectVersionId: initialValues?.subjectVersionId ?? "",
     moduleNumber: String(initialValues?.moduleNumber ?? ""),
@@ -103,8 +107,10 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
 
     try {
       await save(body, false);
-      toast.success(redirectOnSuccess ? "Question created" : title);
-      if (redirectOnSuccess) {
+      feedback.success({ title: redirectOnSuccess ? "Question created" : title });
+      if (onSuccessAction === "stay") {
+        setShowSuccess(true);
+      } else if (redirectOnSuccess) {
         router.push(redirectOnSuccess);
         router.refresh();
       } else {
@@ -120,7 +126,7 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
         });
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save question");
+      feedback.error(error instanceof Error ? error.message : "Failed to save question");
     } finally {
       setLoading(false);
     }
@@ -141,16 +147,53 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
 
     try {
       await save(body, true);
-      toast.success("Question saved and submitted for moderation");
-      if (redirectOnSuccess) {
+      feedback.success({ title: "Question saved and submitted for moderation" });
+      if (onSuccessAction === "stay") {
+        setShowSuccess(true);
+      } else if (redirectOnSuccess) {
         router.push(redirectOnSuccess);
         router.refresh();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save and submit");
+      feedback.error(error instanceof Error ? error.message : "Failed to save and submit");
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleSubmitAnother() {
+    setShowSuccess(false);
+    const currentSubjectId = values.subjectVersionId;
+    setValues({
+      subjectVersionId: currentSubjectId,
+      moduleNumber: "",
+      marks: "",
+      questionText: "",
+      coMapping: "",
+      rbtLevel: "",
+      difficultyLevel: "",
+      teachingIndex: "",
+    });
+  }
+
+  if (showSuccess) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center space-y-4">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-green-100 text-green-600">
+            <CheckCircle className="h-6 w-6" />
+          </div>
+          <p className="text-base font-medium">Question submitted successfully!</p>
+          <p className="text-sm text-[var(--text-tertiary)]">Your question has been saved and sent for moderation.</p>
+          <div className="flex justify-center gap-3 pt-2">
+            <Button onClick={onSubmitAnother ?? handleSubmitAnother}>Submit Another</Button>
+            {redirectOnSuccess && (
+              <Button variant="outline" onClick={() => router.push(redirectOnSuccess)}>View My Questions</Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (

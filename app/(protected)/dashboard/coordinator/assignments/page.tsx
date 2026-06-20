@@ -2,8 +2,7 @@ import { Role } from "@prisma/client";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ModeratorAssignmentForm } from "@/components/forms/moderator-assignment-form";
-import { ContributorAssignmentForm } from "@/components/forms/contributor-assignment-form";
+import { AssignmentsClient } from "./assignments-client";
 
 export default async function AssignmentsPage() {
   const actor = await getCurrentUserFromCookies();
@@ -45,15 +44,12 @@ export default async function AssignmentsPage() {
         title="Assignments"
         description="Assign moderators and contributors to question banks."
       />
-      <ModeratorAssignmentForm
+      <AssignmentsClient
         questionBanks={questionBanks}
         moderators={moderators}
-        existingAssignments={existingModeratorAssignments}
-      />
-      <ContributorAssignmentForm
-        questionBanks={questionBanks}
+        existingModeratorAssignments={existingModeratorAssignments}
         contributors={contributors}
-        existingAssignments={existingContributorAssignments}
+        existingContributorAssignments={existingContributorAssignments}
       />
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,8 @@ import { BankActionsPanel } from "@/components/forms/bank-actions-panel";
 import { WorkflowTimeline } from "@/components/forms/workflow-timeline";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
 import { apiFetch } from "@/lib/client-fetch";
+import { EntityStatusBanner } from "@/components/shared/entity-status-banner";
+import { InlineAssignPanel } from "@/components/shared/inline-assign-panel";
 
 export type SlotQuestion = {
   id: string;
@@ -550,315 +552,62 @@ function CoverageStats({ slots, totalSlots }: { slots: SlotItem[]; totalSlots: n
   );
 }
 
-function ContributorCard({ slots, assignedContributors: initialContributors, bankId }: {
-  slots: SlotItem[];
-  assignedContributors: ContributorInfo[];
+function AssignPanelWrapper({ bankId, role, title, currentAssignments }: {
   bankId: string;
+  role: "CONTRIBUTOR" | "MODERATOR";
+  title: string;
+  currentAssignments: Array<{ id: string; name: string; email: string }>;
 }) {
-  const [contributors, setContributors] = useState(initialContributors);
-  const [showAssign, setShowAssign] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string }[]>([]);
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [fetchingUsers, setFetchingUsers] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [availableUsers, setAvailableUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [fetched, setFetched] = useState(false);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAssign(false);
-      }
+    if (!fetched) {
+      setFetched(true);
+      apiFetch(`/api/users?role=${role}&take=200`)
+        .then((r) => r.json())
+        .then((result) => { if (result.success) setAvailableUsers(result.data ?? []); })
+        .catch(() => {});
     }
-    if (showAssign) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [showAssign]);
+  }, [fetched, role]);
 
-  function openAssign() {
-    setShowAssign(true);
-    if (availableUsers.length === 0 && !fetchingUsers) {
-      setFetchingUsers(true);
-      apiFetch("/api/users?role=CONTRIBUTOR&take=200")
-        .then((res) => res.json())
-        .then((result) => {
-          if (result.success) {
-            const all = (result.data ?? []) as { id: string; name: string; email: string }[];
-            const assignedIds = new Set(contributors.map((c) => c.id));
-            setAvailableUsers(all.filter((u) => !assignedIds.has(u.id)));
-          }
-        })
-        .catch(() => {})
-        .finally(() => setFetchingUsers(false));
-    }
-  }
+  const endpoint = role === "CONTRIBUTOR" ? "contributor" : "moderator";
+  const idField = role === "CONTRIBUTOR" ? "contributorId" : "moderatorId";
 
-  async function handleAssign(userId: string) {
-    setAssignLoading(true);
+  const onAssign = async (userId: string) => {
     try {
-      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/contributor`, {
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contributorId: userId }),
+        body: JSON.stringify({ [idField]: userId }),
       });
       const result = await res.json();
-      if (res.ok && result.success) {
-        const user = availableUsers.find((u) => u.id === userId);
-        if (user) {
-          setContributors((prev) => [...prev, { id: user.id, name: user.name, email: user.email }]);
-          setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
-        }
-        setShowAssign(false);
-      }
-    } catch {}
-    setAssignLoading(false);
-  }
+      return { success: result.success, error: result.error };
+    } catch {
+      return { success: false, error: "Network error" };
+    }
+  };
 
-  async function handleRemove(contributorId: string) {
-    setRemoving(contributorId);
+  const onUnassign = async (userId: string) => {
     try {
-      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/contributor?contributorId=${contributorId}`, {
-        method: "DELETE",
-      });
+      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/${endpoint}?${idField}=${userId}`, { method: "DELETE" });
       const result = await res.json();
-      if (res.ok && result.success) {
-        setContributors((prev) => prev.filter((c) => c.id !== contributorId));
-      }
-    } catch {}
-    setRemoving(null);
-  }
-
-  const contributorCounts = useMemo(() => {
-    const counts = new Map<string, { name: string; count: number }>();
-    for (const slot of slots) {
-      const creator = slot.assignedQuestion?.creator;
-      if (creator) {
-        const existing = counts.get(creator.id) ?? { name: creator.name, count: 0 };
-        existing.count++;
-        counts.set(creator.id, existing);
-      }
+      return { success: result.success, error: result.error };
+    } catch {
+      return { success: false, error: "Network error" };
     }
-    for (const c of contributors) {
-      if (!counts.has(c.id)) {
-        counts.set(c.id, { name: c.name, count: 0 });
-      }
-    }
-    return Array.from(counts.entries()).sort((a, b) => b[1].count - a[1].count);
-  }, [slots, contributors]);
+  };
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Contributors ({contributors.length})</CardTitle>
-          <div className="relative" ref={dropdownRef}>
-            <button onClick={openAssign} className="text-xs font-medium text-blue-600 hover:text-blue-800">+ Assign</button>
-            {showAssign && (
-              <div className="absolute right-0 top-6 z-10 w-56 rounded-lg border bg-white shadow-lg">
-                {fetchingUsers ? (
-                  <div className="p-3 text-xs text-[var(--text-tertiary)]">Loading...</div>
-                ) : availableUsers.length === 0 ? (
-                  <div className="p-3 text-xs text-[var(--text-tertiary)]">No available contributors</div>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto py-1">
-                    {availableUsers.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => handleAssign(u.id)}
-                        disabled={assignLoading}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] disabled:opacity-50"
-                      >
-                        <span className="font-medium truncate">{u.name}</span>
-                        <span className="shrink-0 text-xs text-[var(--text-tertiary)]">{u.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {contributors.length === 0 ? (
-          <p className="text-sm text-[var(--text-tertiary)]">No contributors assigned</p>
-        ) : (
-          <div className="space-y-2">
-            {contributors.map((c) => {
-              const count = contributorCounts.find(([id]) => id === c.id)?.[1].count ?? 0;
-              return (
-                <div key={c.id} className="flex items-center justify-between group">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm truncate">{c.name}</span>
-                    <span className="shrink-0 rounded-full bg-[var(--surface-hover)] px-2 py-0.5 text-xs font-medium">{count}</span>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(c.id)}
-                    disabled={removing === c.id}
-                    className="shrink-0 ml-2 text-sm text-[var(--text-tertiary)] hover:text-red-600 disabled:opacity-50"
-                    title="Remove contributor"
-                  >
-                    {removing === c.id ? "..." : "×"}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function ModeratorCard({ moderators: initialModerators, slots, bankId }: {
-  moderators: ModeratorInfo[];
-  slots: SlotItem[];
-  bankId: string;
-}) {
-  const [moderators, setModerators] = useState(initialModerators);
-  const [showAssign, setShowAssign] = useState(false);
-  const [availableUsers, setAvailableUsers] = useState<{ id: string; name: string; email: string }[]>([]);
-  const [assignLoading, setAssignLoading] = useState(false);
-  const [fetchingUsers, setFetchingUsers] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const mod = moderators.length > 0 ? moderators[0] : null;
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAssign(false);
-      }
-    }
-    if (showAssign) {
-      document.addEventListener("mousedown", handleClick);
-      return () => document.removeEventListener("mousedown", handleClick);
-    }
-  }, [showAssign]);
-
-  function openAssign() {
-    setShowAssign(true);
-    if (availableUsers.length === 0 && !fetchingUsers) {
-      setFetchingUsers(true);
-      apiFetch("/api/users?role=MODERATOR&take=200")
-        .then((res) => res.json())
-        .then((result) => {
-          if (result.success) {
-            const all = (result.data ?? []) as { id: string; name: string; email: string }[];
-            const assignedIds = new Set(moderators.map((m) => m.id));
-            setAvailableUsers(all.filter((u) => !assignedIds.has(u.id)));
-          }
-        })
-        .catch(() => {})
-        .finally(() => setFetchingUsers(false));
-    }
-  }
-
-  async function handleAssign(userId: string) {
-    setAssignLoading(true);
-    try {
-      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/moderator`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ moderatorId: userId }),
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        const user = availableUsers.find((u) => u.id === userId);
-        if (user) {
-          setModerators((prev) => [...prev, { id: user.id, name: user.name, email: user.email }]);
-          setAvailableUsers((prev) => prev.filter((u) => u.id !== userId));
-        }
-        setShowAssign(false);
-      }
-    } catch {}
-    setAssignLoading(false);
-  }
-
-  async function handleRemove(moderatorId: string) {
-    setRemoving(moderatorId);
-    try {
-      const res = await apiFetch(`/api/question-banks/${bankId}/assignments/moderator?moderatorId=${moderatorId}`, {
-        method: "DELETE",
-      });
-      const result = await res.json();
-      if (res.ok && result.success) {
-        setModerators((prev) => prev.filter((m) => m.id !== moderatorId));
-      }
-    } catch {}
-    setRemoving(null);
-  }
-
-  const approvedCount = useMemo(() => slots.filter((s) => s.assignedQuestion?.status === "APPROVED").length, [slots]);
-  const totalReviewed = useMemo(() => slots.filter((s) => s.assignedQuestion && s.assignedQuestion.status !== "DRAFT").length, [slots]);
-  const modPct = totalReviewed > 0 ? Math.round((approvedCount / totalReviewed) * 100) : 0;
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Moderator</CardTitle>
-          <div className="relative" ref={dropdownRef}>
-            <button onClick={openAssign} className="text-xs font-medium text-blue-600 hover:text-blue-800">+ Assign</button>
-            {showAssign && (
-              <div className="absolute right-0 top-6 z-10 w-56 rounded-lg border bg-white shadow-lg">
-                {fetchingUsers ? (
-                  <div className="p-3 text-xs text-[var(--text-tertiary)]">Loading...</div>
-                ) : availableUsers.length === 0 ? (
-                  <div className="p-3 text-xs text-[var(--text-tertiary)]">No available moderators</div>
-                ) : (
-                  <div className="max-h-48 overflow-y-auto py-1">
-                    {availableUsers.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => handleAssign(u.id)}
-                        disabled={assignLoading}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--surface-hover)] disabled:opacity-50"
-                      >
-                        <span className="font-medium truncate">{u.name}</span>
-                        <span className="shrink-0 text-xs text-[var(--text-tertiary)]">{u.email}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {!mod ? (
-          <p className="text-sm text-amber-600">No moderator assigned</p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium">{mod.name}</p>
-                <p className="text-xs text-[var(--text-tertiary)]">{mod.email}</p>
-              </div>
-              <button
-                onClick={() => handleRemove(mod.id)}
-                disabled={removing === mod.id}
-                className="shrink-0 ml-2 text-sm text-[var(--text-tertiary)] hover:text-red-600 disabled:opacity-50"
-                title="Remove moderator"
-              >
-                {removing === mod.id ? "..." : "×"}
-              </button>
-            </div>
-            <div>
-              <div className="flex items-center justify-between text-xs mb-1">
-                <span className="text-[var(--text-tertiary)]">Approved</span>
-                <span>{approvedCount}/{totalReviewed} ({modPct}%)</span>
-              </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-hover)]">
-                <div className="h-full rounded-full bg-green-500 transition-all" style={{ width: `${modPct}%` }} />
-              </div>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <InlineAssignPanel
+      bankId={bankId}
+      role={role}
+      title={title}
+      currentAssignments={currentAssignments}
+      onAssign={onAssign}
+      onUnassign={onUnassign}
+      availableUsers={availableUsers}
+    />
   );
 }
 
@@ -928,6 +677,15 @@ export function BankDetailClient(props: BankDetailClientProps) {
       </div>
 
       <ReadinessPanel phase={props.phase} slots={props.slots} totalSlots={props.totalSlots} />
+
+      <EntityStatusBanner items={(() => {
+        if (props.recordStatus === "LOCKED") return [{ id: "locked", title: "Bank Locked", description: "This question bank is locked. No changes can be made.", severity: "critical" as const }];
+        if (props.phase === "DRAFTING") return [{ id: "drafting", title: "Drafting in Progress", description: `${emptyCount} of ${props.totalSlots} slots still empty.`, severity: "info" as const }];
+        if (props.phase === "MODERATION") return [{ id: "moderation", title: "Under Moderation", description: "Waiting for moderator review.", severity: "warning" as const }];
+        if (props.phase === "APPROVAL") return [{ id: "approval", title: "Awaiting Decision", description: "Awaiting coordinator decision.", severity: "info" as const }];
+        if (props.phase === "COMPLETE") return [{ id: "complete", title: "Bank Complete", description: "All slots filled and approved.", severity: "success" as const }];
+        return [];
+      })()} />
 
       <div className="flex items-center gap-2 border-b pb-2">
         <button onClick={() => setViewMode("grid")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-[3px] transition-colors ${viewMode === "grid" ? "border-[var(--foreground)]" : "border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"}`}>Slot Grid</button>
@@ -1009,8 +767,8 @@ export function BankDetailClient(props: BankDetailClientProps) {
             <CardContent><CoverageStats slots={props.slots} totalSlots={props.totalSlots} /></CardContent>
           </Card>
 
-          <ContributorCard slots={props.slots} assignedContributors={props.contributors} bankId={props.bankId} />
-          <ModeratorCard moderators={props.moderators} slots={props.slots} bankId={props.bankId} />
+          <AssignPanelWrapper bankId={props.bankId} role="CONTRIBUTOR" title="Contributors" currentAssignments={props.contributors} />
+          <AssignPanelWrapper bankId={props.bankId} role="MODERATOR" title="Moderator" currentAssignments={props.moderators} />
 
           <WorkflowTimeline phase={props.phase} recordStatus={props.recordStatus} />
           <NextStepGuidance phase={props.phase} recordStatus={props.recordStatus} />

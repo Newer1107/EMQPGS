@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { apiFetch } from "@/lib/client-fetch";
 import { difficultyLabels } from "@/lib/constants";
+import { EntityStatusBanner } from "@/components/shared/entity-status-banner";
 
 type PaperVariant = "PAPER_A" | "PAPER_B" | "PAPER_C";
 
@@ -49,7 +50,7 @@ type WorkspaceData = {
   };
 };
 
-export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string }) {
+export function DeanReviewWorkspace({ questionBankId, nextBankId }: { questionBankId: string; nextBankId?: string | null }) {
   const router = useRouter();
   const [data, setData] = useState<WorkspaceData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +58,7 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [expandedPaperIds, setExpandedPaperIds] = useState<Record<string, boolean>>({});
+  const [submitted, setSubmitted] = useState(false);
   const [selection, setSelection] = useState<{
     regularPaper: PaperVariant | "";
     supplementaryPaper: PaperVariant | "";
@@ -124,6 +126,7 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
   const selectionLocked = Boolean(data?.deanReview);
   const allSlotsAssigned = Boolean(selection.regularPaper && selection.supplementaryPaper && selection.ktPaper);
   const selectionsAreDistinct = new Set([selection.regularPaper, selection.supplementaryPaper, selection.ktPaper].filter(Boolean)).size === 3;
+  const allPapersGenerated = (data?.papers?.length ?? 0) >= 3 && new Set(data?.papers?.map((p) => p.paperId) ?? []).size >= 3;
   const canSubmit = !selectionLocked && allSlotsAssigned && selectionsAreDistinct && !submitting;
 
   const disabledOptions = {
@@ -157,9 +160,8 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
         return;
       }
 
+      setSubmitted(true);
       setMessage("Selection submitted successfully.");
-      router.push("/dashboard/dean");
-      router.refresh();
     } catch {
       setError("Network request failed. Please check your connection.");
     } finally {
@@ -267,45 +269,76 @@ export function DeanReviewWorkspace({ questionBankId }: { questionBankId: string
 
       <Card>
         <CardHeader>
-          <CardTitle>{selectionLocked ? "Submitted Selection" : "Selection Interface"}</CardTitle>
+          <CardTitle>{submitted ? "Selection Submitted" : selectionLocked ? "Submitted Selection" : "Selection Interface"}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-3">
-            <SelectionField
-              id="regular-paper"
-              label="Regular Exam Paper"
-              value={selection.regularPaper}
-              options={data.papers.map((paper) => paper.paperId)}
-              disabledOptions={disabledOptions.regularPaper}
-              disabled={selectionLocked}
-              onChange={(value) => setSelection((current) => ({ ...current, regularPaper: value as PaperVariant }))}
-            />
-            <SelectionField
-              id="supplementary-paper"
-              label="Supplementary Exam Paper"
-              value={selection.supplementaryPaper}
-              options={data.papers.map((paper) => paper.paperId)}
-              disabledOptions={disabledOptions.supplementaryPaper}
-              disabled={selectionLocked}
-              onChange={(value) => setSelection((current) => ({ ...current, supplementaryPaper: value as PaperVariant }))}
-            />
-            <SelectionField
-              id="kt-paper"
-              label="KT (Keep Term) Paper"
-              value={selection.ktPaper}
-              options={data.papers.map((paper) => paper.paperId)}
-              disabledOptions={disabledOptions.ktPaper}
-              disabled={selectionLocked}
-              onChange={(value) => setSelection((current) => ({ ...current, ktPaper: value as PaperVariant }))}
-            />
-          </div>
-
-          {!selectionLocked ? (
-            <Button type="button" disabled={!canSubmit} onClick={submitSelection}>
-              {submitting ? "Submitting..." : "Submit Selection"}
-            </Button>
-          ) : (
+          {submitted ? (
+            <div className="space-y-4">
+              <p className="text-green-700 font-medium">{message}</p>
+              {nextBankId ? (
+                <Button type="button" onClick={() => router.push(`/dashboard/dean/review?bank=${nextBankId}`)}>
+                  Next Review →
+                </Button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-[var(--text-tertiary)]">All reviews complete.</p>
+                  <Button type="button" variant="outline" onClick={() => router.push("/dashboard/dean")}>
+                    Return to Dashboard
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : selectionLocked ? (
             <p className="text-sm text-[var(--text-tertiary)]">This review is read-only. Dean selections cannot be changed after submission.</p>
+          ) : (
+            <>
+              <div className="grid gap-4 md:grid-cols-3">
+                <SelectionField
+                  id="regular-paper"
+                  label="Regular Exam Paper"
+                  value={selection.regularPaper}
+                  options={data.papers.map((paper) => paper.paperId)}
+                  disabledOptions={disabledOptions.regularPaper}
+                  disabled={selectionLocked}
+                  onChange={(value) => setSelection((current) => ({ ...current, regularPaper: value as PaperVariant }))}
+                />
+                <SelectionField
+                  id="supplementary-paper"
+                  label="Supplementary Exam Paper"
+                  value={selection.supplementaryPaper}
+                  options={data.papers.map((paper) => paper.paperId)}
+                  disabledOptions={disabledOptions.supplementaryPaper}
+                  disabled={selectionLocked}
+                  onChange={(value) => setSelection((current) => ({ ...current, supplementaryPaper: value as PaperVariant }))}
+                />
+                <SelectionField
+                  id="kt-paper"
+                  label="KT (Keep Term) Paper"
+                  value={selection.ktPaper}
+                  options={data.papers.map((paper) => paper.paperId)}
+                  disabledOptions={disabledOptions.ktPaper}
+                  disabled={selectionLocked}
+                  onChange={(value) => setSelection((current) => ({ ...current, ktPaper: value as PaperVariant }))}
+                />
+              </div>
+
+              {allPapersGenerated ? (
+                <Button type="button" disabled={!canSubmit} onClick={submitSelection}>
+                  {submitting ? "Submitting..." : "Submit Selection"}
+                </Button>
+              ) : (
+                <EntityStatusBanner
+                  items={[
+                    {
+                      id: "papers-not-ready",
+                      title: "Papers Not Generated",
+                      description: "Papers are not yet generated. Please wait for paper generation to complete before reviewing.",
+                      severity: "critical",
+                    },
+                  ]}
+                />
+              )}
+            </>
           )}
         </CardContent>
       </Card>

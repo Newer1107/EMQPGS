@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,20 +21,24 @@ export function SimpleForm({
   title,
   submitLabel = "Save",
   extraPayload,
+  successGuidance,
 }: {
   fields: Field[];
   endpoint: string;
   title: string;
   submitLabel?: string;
   extraPayload?: Record<string, unknown>;
+  successGuidance?: string;
 }) {
   const [loading, setLoading] = useState(false);
+  const [showGuidance, setShowGuidance] = useState(false);
   const initialValues = Object.fromEntries(
     fields.map((field) => [field.name, field.type === "select" ? field.options[0]?.value ?? "" : ""]),
   );
   const [values, setValues] = useState<Record<string, string>>(initialValues);
 
   async function onSubmit() {
+    setShowGuidance(false);
     setLoading(true);
     const payload: Record<string, unknown> = { ...Object.fromEntries(Object.entries(values)) };
     for (const field of fields) {
@@ -54,13 +58,14 @@ export function SimpleForm({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        toast.success(`${title} saved successfully`);
+        feedback.success({ title: `${title} saved successfully` });
         setValues(initialValues);
+        setShowGuidance(true);
       } else {
-        toast.error(result.error?.message ?? "Failed to save");
+        feedback.error(result.error?.message ?? "Failed to save");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -120,6 +125,11 @@ export function SimpleForm({
             {loading ? "Saving..." : submitLabel}
           </Button>
         </form>
+        {showGuidance && successGuidance && (
+          <div className="mt-4 rounded-lg border border-[var(--border-soft)] bg-[var(--surface-secondary)] p-3 text-sm text-[var(--text-secondary)]">
+            {successGuidance}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

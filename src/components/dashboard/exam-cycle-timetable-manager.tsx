@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -279,12 +279,12 @@ export function ExamCycleTimetableManager({
         }
 
         resetForm();
-        toast.success(isEdit ? "Exam cycle updated." : "Exam cycle created.");
+          feedback.success({ title: isEdit ? "Exam cycle updated." : "Exam cycle created." });
       } else {
-        toast.error(result.error?.message ?? "Failed to save exam cycle.");
+          feedback.error(result.error?.message ?? "Failed to save exam cycle.");
       }
     } catch {
-      toast.error("Network request failed.");
+          feedback.error("Network request failed.");
     } finally {
       setIsSaving(false);
     }

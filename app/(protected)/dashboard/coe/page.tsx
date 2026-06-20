@@ -7,6 +7,7 @@ import { PrimaryAction } from "@/components/dashboard/primary-action";
 import { AttentionSection } from "@/components/dashboard/attention-card";
 import { ActionPanel } from "@/components/dashboard/action-panel";
 import { WorkflowPipeline, type Bottleneck } from "@/components/dashboard/workflow-pipeline";
+import { TaskQueue, type QueueItem } from "@/components/dashboard/task-queue";
 import { DepartmentProgress } from "@/components/dashboard/department-progress";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { RecentActivity } from "@/components/dashboard/recent-activity";
@@ -122,7 +123,51 @@ export default async function CoeDashboardPage() {
         <ActionPanel actions={secondaryActions} title="Next Steps" />
       )}
 
-      {/* ZONE 6: Workflow Pipeline with bottleneck annotations */}
+      {/* ZONE 6: Task Queue — actionable items for stalled banks, dean bottlenecks, ready for export */}
+      {(() => {
+        const queueItems: QueueItem[] = [];
+
+        for (const bank of data.stalledBanks) {
+          queueItems.push({
+            id: `stalled-${bank.id}`,
+            title: `${bank.subjectName} (${bank.subjectCode})`,
+            subtitle: `Stalled in ${bank.phase} · ${bank.stalledDays} days without update`,
+            href: `/dashboard/coordinator/question-banks/${bank.id}`,
+            badge: { label: "Stalled", variant: "warning" },
+            meta: `${bank.stalledDays}d`,
+            metaVariant: "warning",
+          });
+        }
+
+        for (const bank of data.deanBottleneckBanks) {
+          queueItems.push({
+            id: `dean-${bank.id}`,
+            title: `${bank.subjectName} (${bank.subjectCode})`,
+            subtitle: "Awaiting dean review",
+            href: "/dashboard/coe/production",
+            badge: { label: "Dean Review", variant: "info" },
+            meta: "Overdue",
+            metaVariant: "danger",
+          });
+        }
+
+        if (data.readyForExportCount > 0) {
+          queueItems.push({
+            id: "ready-for-export",
+            title: `${data.readyForExportCount} bank${data.readyForExportCount > 1 ? "s" : ""} ready for export`,
+            subtitle: "Dean selection completed",
+            description: "Ready for production export pipeline",
+            href: "/dashboard/coe/production",
+            badge: { label: "Ready", variant: "success" },
+          });
+        }
+
+        return queueItems.length > 0 ? (
+          <TaskQueue items={queueItems} title="Action Queue" maxItems={8} />
+        ) : null;
+      })()}
+
+      {/* ZONE 7: Workflow Pipeline with bottleneck annotations */}
       <div>
         <h2 className="mb-3 text-base font-semibold">Workflow Pipeline</h2>
         <WorkflowPipeline
@@ -142,7 +187,7 @@ export default async function CoeDashboardPage() {
         />
       </div>
 
-      {/* ZONE 7: Department Progress — compact visual rows */}
+      {/* ZONE 8: Department Progress — compact visual rows */}
       <div>
         <h2 className="mb-3 text-base font-semibold">Department Progress</h2>
         <DepartmentProgress
@@ -157,7 +202,7 @@ export default async function CoeDashboardPage() {
         />
       </div>
 
-      {/* ZONE 8: Key Supporting Metrics — compact stat strip */}
+      {/* ZONE 9: Key Supporting Metrics — compact stat strip */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-4">
         <StatCard value={totalBanks} label="Total Banks" icon={<Database className="h-4 w-4" />} size="sm" />
         <StatCard value={fillRate} label="Fill Rate" icon={<Activity className="h-4 w-4" />} size="sm" />
@@ -165,7 +210,7 @@ export default async function CoeDashboardPage() {
         <StatCard value={activeCyclesCount} label="Active Cycles" icon={<RefreshCw className="h-4 w-4" />} size="sm" />
       </div>
 
-      {/* ZONE 9: Recent Activity — timeline format */}
+      {/* ZONE 10: Recent Activity — timeline format */}
       <div>
         <h2 className="mb-3 text-base font-semibold">Recent Activity</h2>
         <RecentActivity
@@ -183,7 +228,7 @@ export default async function CoeDashboardPage() {
         />
       </div>
 
-      {/* ZONE 10: Compact Footer — remaining supporting metrics */}
+      {/* ZONE 11: Compact Footer — remaining supporting metrics */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 xl:grid-cols-7">
         <StatCard value={data.coverageCounts.coordinators} label="Coordinators" icon={<UserCheck className="h-4 w-4" />} size="sm" variant="info" />
         <StatCard value={data.coverageCounts.moderators} label="Moderators" icon={<Shield className="h-4 w-4" />} size="sm" variant="info" />

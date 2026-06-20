@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { UserStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/client-fetch";
@@ -18,13 +18,13 @@ export function UserActions({ userId, status }: { userId: string; status: string
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("User disabled");
+        feedback.success({ title: "User disabled" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to disable user");
+        feedback.error(result.error?.message ?? "Failed to disable user");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(null);
     }
@@ -40,13 +40,13 @@ export function UserActions({ userId, status }: { userId: string; status: string
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("User re-enabled");
+        feedback.success({ title: "User re-enabled" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to re-enable user");
+        feedback.error(result.error?.message ?? "Failed to re-enable user");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(null);
     }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ type ModeratorActionsProps = {
 export function ModeratorActions({ questionId, status, queueIds }: ModeratorActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [selectedAction, setSelectedAction] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [instructions, setInstructions] = useState("");
 
@@ -38,11 +39,11 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
     try {
       let body: Record<string, string> | undefined;
       if (action === "reject") {
-        if (!reason.trim()) { toast.error("Please provide a rejection reason"); setLoading(null); return; }
+        if (!reason.trim()) { feedback.error("Please provide a rejection reason"); setLoading(null); return; }
         body = { reason: reason.trim() };
       }
       if (action === "request-revision") {
-        if (!instructions.trim()) { toast.error("Please provide revision instructions"); setLoading(null); return; }
+        if (!instructions.trim()) { feedback.error("Please provide revision instructions"); setLoading(null); return; }
         body = { instructions: instructions.trim() };
       }
 
@@ -54,13 +55,13 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
       const result = await response.json();
       if (response.ok && result.success) {
         const msg = action === "approve" ? "Question approved" : action === "reject" ? "Question rejected" : "Revision requested";
-        toast.success(msg);
+        feedback.success({ title: msg });
         setTimeout(navigateToNext, 600);
       } else {
-        toast.error(result.error?.message ?? "Action failed");
+        feedback.error(result.error?.message ?? "Action failed");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(null);
     }
@@ -95,25 +96,50 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
         <p className="text-xs text-[var(--text-tertiary)]">
           Question {queueIds.indexOf(questionId) + 1} of {queueIds.length}
         </p>
+
         <Button variant="default" size="sm" onClick={() => handleAction("approve")} disabled={loading !== null} className="w-full">
           {loading === "approve" ? "Approving..." : "Approve Question"}
         </Button>
 
-        <div className="space-y-2">
-          <Label htmlFor="reason">Rejection Reason</Label>
-          <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Enter the reason for rejection..." />
-          <Button variant="danger" size="sm" onClick={() => handleAction("reject")} disabled={loading !== null} className="w-full">
-            {loading === "reject" ? "Rejecting..." : "Reject Question"}
-          </Button>
-        </div>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setSelectedAction(selectedAction === "reject" ? null : "reject")}
+          disabled={loading !== null}
+          className="w-full"
+        >
+          {selectedAction === "reject" ? "Cancel Rejection" : "Reject Question"}
+        </Button>
 
-        <div className="space-y-2">
-          <Label htmlFor="instructions">Revision Instructions</Label>
-          <Textarea id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} placeholder="What changes are needed..." />
-          <Button variant="secondary" size="sm" onClick={() => handleAction("request-revision")} disabled={loading !== null} className="w-full">
-            {loading === "request-revision" ? "Requesting..." : "Request Revision"}
-          </Button>
-        </div>
+        {selectedAction === "reject" && (
+          <div className="space-y-2">
+            <Label htmlFor="reason">Rejection Reason</Label>
+            <Textarea id="reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Enter the reason for rejection..." />
+            <Button variant="danger" size="sm" onClick={() => { setSelectedAction(null); handleAction("reject"); }} disabled={loading !== null} className="w-full">
+              {loading === "reject" ? "Rejecting..." : "Submit Rejection"}
+            </Button>
+          </div>
+        )}
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setSelectedAction(selectedAction === "request-revision" ? null : "request-revision")}
+          disabled={loading !== null}
+          className="w-full"
+        >
+          {selectedAction === "request-revision" ? "Cancel Revision Request" : "Request Revision"}
+        </Button>
+
+        {selectedAction === "request-revision" && (
+          <div className="space-y-2">
+            <Label htmlFor="instructions">Revision Instructions</Label>
+            <Textarea id="instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} rows={2} placeholder="What changes are needed..." />
+            <Button variant="secondary" size="sm" onClick={() => { setSelectedAction(null); handleAction("request-revision"); }} disabled={loading !== null} className="w-full">
+              {loading === "request-revision" ? "Requesting..." : "Submit Revision Request"}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

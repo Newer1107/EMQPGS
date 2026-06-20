@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Role, UserStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,14 +43,14 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("User updated");
+        feedback.success({ title: "User updated" });
         onClose();
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to update user");
+        feedback.error(result.error?.message ?? "Failed to update user");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(false);
     }

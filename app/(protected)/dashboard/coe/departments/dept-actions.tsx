@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,13 +19,13 @@ export function DeleteDepartmentButton({ department }: { department: Department 
       const response = await apiFetch(`/api/departments/${department.id}`, { method: "DELETE" });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Department deleted");
+        feedback.success({ title: "Department deleted" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to delete department");
+        feedback.error(result.error?.message ?? "Failed to delete department");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(false);
     }
@@ -56,14 +56,14 @@ export function EditDepartmentForm({ department, onClose }: { department: Depart
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Department updated");
+        feedback.success({ title: "Department updated" });
         onClose();
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to update department");
+        feedback.error(result.error?.message ?? "Failed to update department");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(false);
     }

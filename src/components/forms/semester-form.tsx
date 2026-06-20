@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,13 +32,13 @@ export function SemesterForm({ academicYears }: SemesterFormProps) {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Semester created");
+        feedback.success({ title: "Semester created" });
         setValues({ number: "", name: "", academicYearId: "" });
       } else {
-        toast.error(result.error?.message ?? "Failed to create");
+        feedback.error(result.error?.message ?? "Failed to create");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

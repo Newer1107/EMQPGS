@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -41,13 +41,13 @@ export function CoordinatorAssignmentForm(props: Props) {
             const response = await apiFetch(`/api/coordinator-departments/${props.assignmentId}`, { method: "DELETE" });
             const result = await response.json();
             if (response.ok && result.success) {
-              toast.success("Assignment removed");
+              feedback.success({ title: "Assignment removed" });
               setTimeout(() => window.location.reload(), 800);
             } else {
-              toast.error(result.error?.message ?? "Failed to remove");
+              feedback.error(result.error?.message ?? "Failed to remove");
             }
           } catch {
-            toast.error("Network request failed");
+            feedback.error("Network request failed");
           } finally {
             setLoading(false);
           }
@@ -61,7 +61,7 @@ export function CoordinatorAssignmentForm(props: Props) {
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!coordinatorId || !departmentId) {
-      toast.error("Please select both a coordinator and a department");
+      feedback.error("Please select both a coordinator and a department");
       return;
     }
     setLoading(true);
@@ -73,15 +73,15 @@ export function CoordinatorAssignmentForm(props: Props) {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Coordinator assigned successfully");
+        feedback.success({ title: "Coordinator assigned successfully" });
         setCoordinatorId("");
         setDepartmentId("");
         setTimeout(() => window.location.reload(), 800);
       } else {
-        toast.error(result.error?.message ?? "Failed to assign");
+        feedback.error(result.error?.message ?? "Failed to assign");
       }
     } catch {
-      toast.error("Network request failed");
+      feedback.error("Network request failed");
     } finally {
       setLoading(false);
     }

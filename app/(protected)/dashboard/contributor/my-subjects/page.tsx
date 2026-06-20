@@ -40,6 +40,9 @@ export default async function ContributorMySubjectsPage() {
           const mySlotCount = bank.slots.filter(
             (s) => s.assignedQuestion?.ownerId === actor.id
           ).length;
+          const totalSlots = bank.slots.length;
+          const filledSlots = bank.slots.filter((s) => s.assignedQuestion !== null).length;
+          const fillPercent = totalSlots > 0 ? Math.round((filledSlots / totalSlots) * 100) : 0;
           return (
             <Card key={bank.id}>
               <CardHeader className="pb-3">
@@ -56,7 +59,19 @@ export default async function ContributorMySubjectsPage() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
+                    <span>{filledSlots} of {totalSlots} slots filled</span>
+                    <span>{fillPercent}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-[var(--border-soft)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
+                      style={{ width: `${fillPercent}%` }}
+                    />
+                  </div>
+                </div>
                 <Link href={`/dashboard/contributor/submit-question?subjectVersionId=${svId ?? ''}`}>
                   <Button size="sm">Submit Question for This Subject</Button>
                 </Link>

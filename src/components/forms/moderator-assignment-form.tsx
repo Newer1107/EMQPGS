@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
   async function handleAssign(event: React.FormEvent) {
     event.preventDefault();
     if (!questionBankId || !moderatorId) {
-      toast.error("Please select both a question bank and a moderator.");
+      feedback.error("Please select both a question bank and a moderator.");
       return;
     }
     setLoading(true);
@@ -38,15 +38,15 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Moderator assigned successfully");
+        feedback.success({ title: "Moderator assigned successfully" });
         setQuestionBankId("");
         setModeratorId("");
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Assignment failed");
+        feedback.error(result.error?.message ?? "Assignment failed");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

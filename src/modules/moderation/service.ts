@@ -41,7 +41,27 @@ export class ModeratorService {
       include: {
         subjectVersion: { include: { subject: true } },
         creator: { select: { id: true, name: true, email: true } },
-        slotAssignments: { include: { questionBank: { select: { id: true } } } },
+        slotAssignments: {
+          include: {
+            questionBank: {
+              select: {
+                id: true,
+                subject: { select: { subjectCode: true, subjectName: true } },
+                examCycle: {
+                  select: {
+                    examType: true,
+                    batchSemester: {
+                      select: {
+                        semesterNumber: true,
+                        academicYear: { select: { code: true } },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
   }

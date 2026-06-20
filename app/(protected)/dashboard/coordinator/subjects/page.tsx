@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export default async function SubjectsManagementPage() {
   const actor = await getCurrentUserFromCookies();
@@ -24,9 +25,9 @@ export default async function SubjectsManagementPage() {
       />
       <DataTableCard title="Department Subjects">
         <Table>
-          <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Credits</TH><TH>Status</TH><TH>Linked Exam Cycles</TH><TH>Actions</TH></TR></THead>
+          <THead><TR><TH>Department</TH><TH>Code</TH><TH>Name</TH><TH>Credits</TH><TH>Status</TH><TH>Placement</TH><TH>Linked Exam Cycles</TH><TH>Actions</TH></TR></THead>
           <TBody>
-            {(subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; credits: number; status: string; department: { name: string; id: string }; examCycleLinks: Array<{ examCycle: { batchSemester: { semesterNumber: number; academicYear: { code: string } } } }> }>).map((subject) => (
+            {(subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; credits: number; status: string; department: { name: string; id: string }; curriculumSubjects: Array<{ id: string }>; examCycleLinks: Array<{ examCycle: { batchSemester: { semesterNumber: number; academicYear: { code: string } } } }> }>).map((subject) => (
               <TR key={subject.id}>
                 <TD>{subject.department?.name ?? ''}</TD>
                 <TD className="font-medium">{subject.subjectCode}</TD>
@@ -37,6 +38,7 @@ export default async function SubjectsManagementPage() {
                 </TD>
                 <TD>{subject.credits} cr</TD>
                 <TD>{subject.status}</TD>
+                <TD><Badge variant={(subject.curriculumSubjects?.length ?? 0) > 0 ? "success" : "warning"}>{(subject.curriculumSubjects?.length ?? 0) > 0 ? "Placed" : "Not Placed"}</Badge></TD>
                 <TD>{subject.examCycleLinks.map((link) => `Sem ${link.examCycle.batchSemester.semesterNumber} · ${link.examCycle.batchSemester.academicYear.code}`).join(", ") || "Not linked"}</TD>
                 <TD>
                   <div className="flex gap-2">

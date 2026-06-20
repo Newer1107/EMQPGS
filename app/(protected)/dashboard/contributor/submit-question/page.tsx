@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/dashboard/empty-state";
-import { QuestionForm } from "@/components/forms/question-form";
+import { QuestionFormWrapper } from "./question-form-wrapper";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { getContributorAssignedBanks } from "@/lib/server-data";
@@ -10,7 +10,7 @@ import type { SlotInfo } from "@/components/forms/slot-demand";
 export default async function ContributorSubmitQuestionPage({
   searchParams,
 }: {
-  searchParams: Promise<{ module?: string; marks?: string; subjectVersionId?: string }>;
+  searchParams: Promise<{ module?: string; marks?: string; subjectVersionId?: string; submitted?: string }>;
 }) {
   const params = await searchParams;
   const actor = await getCurrentUserFromCookies();
@@ -65,19 +65,28 @@ export default async function ContributorSubmitQuestionPage({
         title="Submit Question"
         description="Create a new question for one of your assigned subjects."
       />
+      {params.submitted === "true" && (
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+          </svg>
+          Question submitted successfully! You can submit another below.
+        </div>
+      )}
       {initialValues && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
           Creating question for Module {initialValues.moduleNumber}, {initialValues.marks} marks.
         </div>
       )}
       <NextStepGuidance context="question_created" />
-      <QuestionForm
+      <QuestionFormWrapper
         subjectVersions={assignedSubjectVersions}
         endpoint="/api/question-library"
         title="Create Question"
         redirectOnSuccess="/dashboard/contributor/questions"
         initialValues={initialValues}
         slotDataMap={slotDataMap}
+        currentSubjectVersionId={params.subjectVersionId}
       />
     </div>
   );

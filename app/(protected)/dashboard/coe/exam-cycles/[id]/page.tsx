@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { EntityStatusBanner } from "@/components/shared/entity-status-banner";
 import { examTypeLabels, examCycleStatusLabels } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Exam Cycle — EMQPGS" };
@@ -42,6 +43,17 @@ export default async function ExamCycleDetailPage({ params }: { params: Promise<
         title={`${examTypeLabels[cycle.examType as keyof typeof examTypeLabels] ?? cycle.examType} — ${batch?.name ?? ''}`}
         description={`Semester ${bs?.semesterNumber} · ${bs?.academicYear?.code ?? ''} · ${bs?.department?.name ?? ''}`}
       />
+
+      {cycle.questionBanks.length === 0 && (
+        <EntityStatusBanner
+          items={[{
+            id: "no-banks",
+            title: "No Question Banks Initialized",
+            description: "This exam cycle has no question banks initialized. Question banks must be created in the Coordinator workspace before this cycle can proceed.",
+            severity: "critical",
+          }]}
+        />
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>

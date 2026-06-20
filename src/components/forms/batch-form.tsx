@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,7 +49,7 @@ export function BatchForm({ departments, schemes }: Props) {
   function handleCreateSuccess(json: { data?: { batch?: { id: string }; academicYearsCreated?: number; allDraft?: boolean } }) {
     const data = json.data;
     if (!data?.batch?.id) {
-      toast.success("Batch created successfully");
+      feedback.success({ title: "Batch created successfully" });
       router.push("/dashboard/coe/batches");
       router.refresh();
       return;
@@ -57,9 +57,9 @@ export function BatchForm({ departments, schemes }: Props) {
 
     if (data.academicYearsCreated && data.academicYearsCreated > 0) {
       const msg = `${data.academicYearsCreated} Academic Year${data.academicYearsCreated !== 1 ? "s were" : " was"} created${data.allDraft ? " in Draft status. Please review their dates before activating them." : "."} Batch created successfully.`;
-      toast.success(msg, { duration: 6000 });
+      feedback.success({ title: msg });
     } else {
-      toast.success("Batch created successfully");
+      feedback.success({ title: "Batch created successfully" });
     }
 
     router.push(`/dashboard/coe/batches/${data.batch.id}`);
@@ -91,13 +91,13 @@ export function BatchForm({ departments, schemes }: Props) {
       }
 
       if (!res.ok) {
-        toast.error(json.error?.message ?? "Validation failed");
+        feedback.error(json.error?.message ?? "Validation failed");
         return;
       }
 
       await createBatch();
     } catch {
-      toast.error("Network error. Please try again.");
+      feedback.error("Network error. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -124,7 +124,7 @@ export function BatchForm({ departments, schemes }: Props) {
     try {
       await createBatch();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Network error. Please try again.");
+      feedback.error(err instanceof Error ? err.message : "Network error. Please try again.");
     } finally {
       setLoading(false);
     }

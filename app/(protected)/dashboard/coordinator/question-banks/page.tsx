@@ -45,20 +45,32 @@ export default async function QuestionBanksManagementPage() {
       <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
         <DataTableCard title="All Question Banks">
           <Table>
-            <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH><TH>Actions</TH></TR></THead>
+            <THead><TR><TH>Subject</TH><TH>Cycle</TH><TH>Status</TH><TH>Progress</TH><TH>Actions</TH></TR></THead>
             <TBody>
-              {(questionBanks).map((bank) => (
+              {(questionBanks as Array<{ id: string; phase: string; filledSlots?: number; totalSlots?: number; subject?: { subjectCode: string } | null; examCycle?: { batchSemester?: { semesterNumber: number; academicYear?: { code: string } } } | null }>).map((bank) => {
+                const filled = (bank as any).filledSlots ?? 0;
+                const total = (bank as any).totalSlots ?? 0;
+                const pct = total > 0 ? Math.round((filled / total) * 100) : 0;
+                return (
                 <TR key={bank.id}>
                   <TD className="font-medium">{bank.subject?.subjectCode ?? '-'}</TD>
                   <TD>Sem {bank.examCycle?.batchSemester?.semesterNumber ?? '-'} · {bank.examCycle?.batchSemester?.academicYear?.code ?? '-'}</TD>
                   <TD><Badge variant={phaseVariants[bank.phase] ?? "default"}>{questionBankPhaseLabels[bank.phase as keyof typeof questionBankPhaseLabels] ?? bank.phase}</Badge></TD>
+                  <TD>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium tabular-nums">{filled}/{total}</span>
+                      <div className="h-1.5 w-12 overflow-hidden rounded-full bg-[var(--surface-hover)]">
+                        <div className={`h-full rounded-full ${pct >= 100 ? "bg-green-500" : pct > 0 ? "bg-amber-500" : "bg-gray-300"}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  </TD>
                   <TD>
                     <Link href={`/dashboard/coordinator/question-banks/${bank.id}`}>
                       <Button variant="outline" size="sm">Manage</Button>
                     </Link>
                   </TD>
                 </TR>
-              ))}
+              )})}
             </TBody>
           </Table>
         </DataTableCard>

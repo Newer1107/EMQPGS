@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -33,7 +33,7 @@ export function PlacementForm({ subjectId, schemes, departments, semesters }: Pl
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!schemeId || !semester) {
-      toast.error("Select a curriculum scheme and semester.");
+      feedback.error("Select a curriculum scheme and semester.");
       return;
     }
     setLoading(true);
@@ -52,14 +52,14 @@ export function PlacementForm({ subjectId, schemes, departments, semesters }: Pl
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Subject placed in curriculum successfully.");
+        feedback.success({ title: "Subject placed in curriculum successfully." });
         router.push(`/dashboard/coordinator/subjects/${subjectId}`);
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Failed to place subject in curriculum.");
+        feedback.error(result.error?.message ?? "Failed to place subject in curriculum.");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

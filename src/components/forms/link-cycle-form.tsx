@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -33,14 +33,14 @@ export function LinkCycleForm({ subjectId, examCycles, existingLinks }: LinkCycl
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Subject linked to exam cycle");
+        feedback.success({ title: "Subject linked to exam cycle" });
         setExamCycleId("");
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Failed to link");
+        feedback.error(result.error?.message ?? "Failed to link");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

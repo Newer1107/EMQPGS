@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,20 +50,20 @@ export function NotificationInbox({
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
-        if (onError === "toast") toast.error(body.error?.message ?? "Failed to mark notification as read.");
+        if (onError === "toast") feedback.error(body.error?.message ?? "Failed to mark notification as read.");
         return;
       }
 
       const result = await response.json();
 
       if (!result.success) {
-        if (onError === "toast") toast.error(result.error?.message ?? "Failed to mark notification as read.");
+        if (onError === "toast") feedback.error(result.error?.message ?? "Failed to mark notification as read.");
         return;
       }
 
       setNotifications((current) => current.map((item) => (item.id === id ? { ...item, isRead: true } : item)));
     } catch {
-      if (onError === "toast") toast.error("Network request failed. Please check your connection.");
+      if (onError === "toast") feedback.error("Network request failed. Please check your connection.");
     } finally {
       setBusy(false);
     }
@@ -80,21 +80,21 @@ export function NotificationInbox({
 
       if (!response.ok) {
         const body = await response.json().catch(() => ({ error: { message: `Request failed with status ${response.status}` } }));
-        if (onError === "toast") toast.error(body.error?.message ?? "Failed to clear notifications.");
+        if (onError === "toast") feedback.error(body.error?.message ?? "Failed to clear notifications.");
         return;
       }
 
       const result = await response.json();
 
       if (!result.success) {
-        if (onError === "toast") toast.error(result.error?.message ?? "Failed to clear notifications.");
+        if (onError === "toast") feedback.error(result.error?.message ?? "Failed to clear notifications.");
         return;
       }
 
       setNotifications((current) => current.map((item) => ({ ...item, isRead: true })));
-      if (onError === "toast") toast.success("Notifications cleared.");
+      if (onError === "toast") feedback.success({ title: "Notifications cleared." });
     } catch {
-      if (onError === "toast") toast.error("Network request failed. Please check your connection.");
+      if (onError === "toast") feedback.error("Network request failed. Please check your connection.");
     } finally {
       setBusy(false);
     }

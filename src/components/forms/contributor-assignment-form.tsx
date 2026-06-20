@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ export function ContributorAssignmentForm({ questionBanks, contributors, existin
   async function handleAssign(event: React.FormEvent) {
     event.preventDefault();
     if (!questionBankId || !contributorId) {
-      toast.error("Please select both a question bank and a contributor.");
+      feedback.error("Please select both a question bank and a contributor.");
       return;
     }
     setLoading(true);
@@ -38,15 +38,15 @@ export function ContributorAssignmentForm({ questionBanks, contributors, existin
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Contributor assigned successfully");
+        feedback.success({ title: "Contributor assigned successfully" });
         setQuestionBankId("");
         setContributorId("");
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Assignment failed");
+        feedback.error(result.error?.message ?? "Assignment failed");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }

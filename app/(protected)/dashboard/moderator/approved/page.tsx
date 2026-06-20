@@ -23,7 +23,7 @@ export default async function ModeratorApprovedPage() {
       />
       <DataTableCard title={`Approved (${questions.length})`}>
         <Table>
-          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Actions</TH></TR></THead>
+          <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Approved On</TH><TH>Actions</TH></TR></THead>
           <TBody>
             {questions.map((question) => (
               <TR key={question.id}>
@@ -32,6 +32,7 @@ export default async function ModeratorApprovedPage() {
                 <TD>{question.marks}</TD>
                 <TD><Badge variant="success">{questionStatusLabels[question.status] ?? question.status}</Badge></TD>
                 <TD>{question.creator.name}</TD>
+                <TD>{question.reviewedAt ? new Date(question.reviewedAt).toLocaleDateString() : "—"}</TD>
                 <TD>
                   <Link href={`/dashboard/moderator/questions/${question.id}`}>
                     <Button variant="outline" size="sm">View</Button>

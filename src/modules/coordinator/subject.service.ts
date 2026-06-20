@@ -75,6 +75,9 @@ export class SubjectManagementService {
             examCycle: { select: { id: true, examType: true, status: true, batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } } } },
           },
         },
+        curriculumSubjects: {
+          select: { id: true },
+        },
         questionBanks: {
           select: {
             id: true,

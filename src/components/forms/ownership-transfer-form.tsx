@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
+import { feedback } from "@/lib/feedback";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -35,15 +35,15 @@ export function OwnershipTransferForm({ questionId, users, currentOwnerId }: Own
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        toast.success("Ownership transferred");
+        feedback.success({ title: "Ownership transferred" });
         setToUserId("");
         setReason("");
         router.refresh();
       } else {
-        toast.error(result.error?.message ?? "Transfer failed");
+        feedback.error(result.error?.message ?? "Transfer failed");
       }
     } catch {
-      toast.error("Network request failed. Please check your connection.");
+      feedback.error("Network request failed. Please check your connection.");
     } finally {
       setLoading(false);
     }
