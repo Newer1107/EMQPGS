@@ -36,28 +36,32 @@ async function main() {
   // ──────────────────────────────────────────────
   // 2. CURRICULUM SCHEMES
   // ──────────────────────────────────────────────
-  const compScheme = await prisma.curriculumScheme.create({
-    data: { departmentId: comp.id, name: "CBCGS-H 2019 (COMP)", year: 2024, durationSemesters: 8 },
+  const compScheme = await prisma.curriculumScheme.upsert({
+    where: { departmentId_year: { departmentId: comp.id, year: 2024 } },
+    update: {},
+    create: { departmentId: comp.id, name: "CBCGS-H 2019 (COMP)", year: 2024, durationSemesters: 8 },
   });
 
-  const extcScheme = await prisma.curriculumScheme.create({
-    data: { departmentId: extc.id, name: "CBCGS-H 2019 (EXTC)", year: 2024, durationSemesters: 8 },
+  const extcScheme = await prisma.curriculumScheme.upsert({
+    where: { departmentId_year: { departmentId: extc.id, year: 2024 } },
+    update: {},
+    create: { departmentId: extc.id, name: "CBCGS-H 2019 (EXTC)", year: 2024, durationSemesters: 8 },
   });
 
   // ──────────────────────────────────────────────
   // 3. ACADEMIC YEARS
   // ──────────────────────────────────────────────
-  const ay2425 = await prisma.academicYear.create({
-    data: { code: "2024-2025", startDate: dt(2024, 6, 1), endDate: dt(2025, 5, 31), status: AcademicYearStatus.CLOSED },
-  });
+  async function makeAY(code: string, start: Date, end: Date, status: AcademicYearStatus) {
+    return prisma.academicYear.upsert({
+      where: { code },
+      update: {},
+      create: { code, startDate: start, endDate: end, status },
+    });
+  }
 
-  const ay2526 = await prisma.academicYear.create({
-    data: { code: "2025-2026", startDate: dt(2025, 6, 1), endDate: dt(2026, 5, 31), status: AcademicYearStatus.CLOSED },
-  });
-
-  const ay2627 = await prisma.academicYear.create({
-    data: { code: "2026-2027", startDate: dt(2026, 6, 1), endDate: dt(2027, 5, 31), status: AcademicYearStatus.ACTIVE },
-  });
+  const ay2425 = await makeAY("2024-2025", dt(2024, 6, 1), dt(2025, 5, 31), AcademicYearStatus.CLOSED);
+  const ay2526 = await makeAY("2025-2026", dt(2025, 6, 1), dt(2026, 5, 31), AcademicYearStatus.CLOSED);
+  const ay2627 = await makeAY("2026-2027", dt(2026, 6, 1), dt(2027, 5, 31), AcademicYearStatus.ACTIVE);
 
   // ──────────────────────────────────────────────
   // 4. ALL SUBJECTS (FE + SE/TE)
@@ -204,8 +208,10 @@ async function main() {
   ];
 
   for (const f of FACULTY) {
-    await prisma.user.create({
-      data: { name: f.name, email: f.email, role: f.role, passwordHash: pwh, status: UserStatus.ACTIVE, departmentId: f.dept },
+    await prisma.user.upsert({
+      where: { email: f.email },
+      update: {},
+      create: { name: f.name, email: f.email, role: f.role, passwordHash: pwh, status: UserStatus.ACTIVE, departmentId: f.dept },
     });
   }
 
@@ -224,23 +230,20 @@ async function main() {
   // ──────────────────────────────────────────────
   // 7. BATCHES — 2 (1 per department)
   // ──────────────────────────────────────────────
-  const compBatch = await prisma.batch.create({
-    data: {
-      name: "BE Computer 2024-28", code: "BECOMP2024", departmentId: comp.id,
-      curriculumSchemeId: compScheme.id, admissionYear: 2024, graduationYear: 2028,
-      status: BatchStatus.ACTIVE, hasTeachingGroups: true,
-      teachingGroups: { create: [{ groupNumber: 1, name: "Physics Group (COMP)" }] },
-    },
-  });
+  async function makeBatch(name: string, code: string, deptId: string, schemeId: string, ay: number, gy: number, tg: { groupNumber: number; name: string }) {
+    const existing = await prisma.batch.findUnique({ where: { code }, include: { teachingGroups: true } });
+    if (existing) return existing;
+    return prisma.batch.create({
+      data: {
+        name, code, departmentId: deptId, curriculumSchemeId: schemeId, admissionYear: ay, graduationYear: gy,
+        status: BatchStatus.ACTIVE, hasTeachingGroups: true,
+        teachingGroups: { create: [tg] },
+      },
+    });
+  }
 
-  const extcBatch = await prisma.batch.create({
-    data: {
-      name: "BE EXTC 2024-28", code: "BEEXTC2024", departmentId: extc.id,
-      curriculumSchemeId: extcScheme.id, admissionYear: 2024, graduationYear: 2028,
-      status: BatchStatus.ACTIVE, hasTeachingGroups: true,
-      teachingGroups: { create: [{ groupNumber: 2, name: "Chemistry Group (EXTC)" }] },
-    },
-  });
+  const compBatch = await makeBatch("BE Computer 2024-28", "BECOMP2024", comp.id, compScheme.id, 2024, 2028, { groupNumber: 1, name: "Physics Group (COMP)" });
+  const extcBatch = await makeBatch("BE EXTC 2024-28", "BEEXTC2024", extc.id, extcScheme.id, 2024, 2028, { groupNumber: 2, name: "Chemistry Group (EXTC)" });
 
   // ──────────────────────────────────────────────
   // 8. BATCH SEMESTERS (Sem I → V)
@@ -265,8 +268,10 @@ async function main() {
   const batchSemesterMap = new Map<string, string>();
 
   for (const bd of BATCH_SEMESTERS) {
-    const bs = await prisma.batchSemester.create({
-      data: {
+    const bs = await prisma.batchSemester.upsert({
+      where: { batchId_semesterNumber: { batchId: bd.batchId, semesterNumber: bd.sem } },
+      update: {},
+      create: {
         batchId: bd.batchId, semesterNumber: bd.sem, academicYearId: bd.ayId,
         departmentId: bd.deptId, startDate: bd.start, endDate: bd.end, status: bd.status,
       },
@@ -302,14 +307,20 @@ async function main() {
     const ecStatus = bd.status === BatchSemesterStatus.COMPLETED ? ExamCycleStatus.CLOSED : ExamCycleStatus.ACTIVE;
 
     for (const examType of [ExamType.ISE_1, ExamType.ISE_2, ExamType.ENDSEM] as const) {
-      const ec = await prisma.examCycle.create({
-        data: { examType, status: ecStatus, version: 1, batchSemesterId: bsId },
+      const ec = await prisma.examCycle.upsert({
+        where: { batchSemesterId_examType: { batchSemesterId: bsId, examType } },
+        update: {},
+        create: { examType, status: ecStatus, version: 1, batchSemesterId: bsId },
       });
 
       for (const subjCode of subjectsBySem[bd.sem] || []) {
         const subjId = subjectMap.get(subjCode);
         if (subjId) {
-          await prisma.subjectExamCycleLink.create({ data: { subjectId: subjId, examCycleId: ec.id } }).catch(() => {});
+          await prisma.subjectExamCycleLink.upsert({
+            where: { subjectId_examCycleId: { subjectId: subjId, examCycleId: ec.id } },
+            update: {},
+            create: { subjectId: subjId, examCycleId: ec.id },
+          });
         }
       }
     }
