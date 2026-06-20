@@ -18,21 +18,21 @@
 | **DEAN** | Final reviewer role — selects paper variants for use. |
 | **DeanReview** | Record of dean's variant selection for a bank. |
 | **Department** | Single organizational entity handling both faculty administration and curriculum ownership. |
-| **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Department-scoped. |
+| **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Linked to a BatchSemester. Consumes existing QuestionBanks — does not own them. |
 | **GeneratedPaper** | A generated paper variant (A, B, or C) for a bank. |
 | **MODERATOR** | Quality reviewer role — approves/rejects questions. |
 | **ModerationEvent** | Record of a moderator action on a question. |
 | **PaperPattern** | Slot grid template for a bank (63 slots for ISE, 126 for ENDSEM). |
 | **PaperSnapshot** | Immutable capture of a generated paper's state. |
 
-| **QuestionBank** | Container for exam questions for one (Subject, ExamCycle) pair. Has phase + record status. |
+| **QuestionBank** | Annual academic asset — one per (BatchSemester, Subject). Repository for all questions across all exam types (ISE-1, ISE-2, ENDSEM). Auto-created on batch semester activation. |
 | **QuestionBankPhase** | Workflow progression: DRAFTING → MODERATION → APPROVAL → COMPLETE. |
 | **QuestionBankSnapshot** | Immutable capture of slot assignments at lock time. |
 | **QuestionLibraryItem** | A standalone, reusable question entity. Scoped to a SubjectVersion. |
 | **QuestionSlot** | Sole linkage between QuestionBank and QuestionLibraryItem. Position defined by (module, marks, slot). |
 | **RBAC** | Role-Based Access Control — two-layer: proxy.ts route gating + withApiHandler operation gating. |
 | **ReadinessEngine** | Advisory component that evaluates whether a bank can advance to the next phase. |
-| **RecordStatus** | Mutability axis: ACTIVE, LOCKED, or ARCHIVED. Orthogonal to phase. |
+| **RecordStatus** | Mutability axis: ACTIVE or LOCKED. Orthogonal to phase. |
 | **SubjectVersion** | A versioned syllabus of a Subject. QuestionLibraryItems belong to this. |
 | **TeachingGroup** | Records that a batch has up to two teaching groups. |
 

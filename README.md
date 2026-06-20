@@ -9,8 +9,12 @@ A full-stack web application for managing the complete lifecycle of academic exa
 ## Features
 
 - **Five-role hierarchy**: COE (admin), Coordinator (academic manager), Contributor (question author), Moderator (quality reviewer), Dean (final reviewer)
+- **Annual question banks**: One bank per (Batch Semester, Subject) — reused across ISE-1, ISE-2, ENDSEM
+- **Automatic initialization**: Banks auto-created when a batch semester is activated
 - **Four-phase question bank lifecycle**: DRAFTING → MODERATION → APPROVAL → COMPLETE
-- **126-slot template**: Structured question paper pattern per exam type (ISE-1, ISE-2, ENDSEM, Supplementary, KT)
+- **126-slot template**: 6 modules × 3 marks × 7 slots — questions are a repository, not consumed by paper generation
+- **Module-aware paper generation**: ISE-1 uses modules 1-3, ISE-2 uses modules 4-6, ENDSEM uses modules 1-6
+- **QuestionUsageHistory**: Tracks which questions were used across which exam cycles — prevents reuse
 - **AI-powered analysis**: Optional Ollama integration for bank coverage, RBT level distribution, and quality scoring
 - **Automated paper generation**: Balanced paper variants (A, B, C) with coverage, difficulty, and duplicate risk scoring
 - **Dean review workspace**: Side-by-side paper comparison with variant selection
@@ -36,7 +40,7 @@ COE (System Admin)
 
 ```mermaid
 flowchart LR
-    A[DRAFTING] -->|All slots filled| B[MODERATION]
+    A[DRAFTING] -->|Coordinator sends| B[MODERATION]
     B -->|All questions moderated| C[APPROVAL]
     C -->|Coordinator approves| D[COMPLETE]
     C -->|Coordinator rejects| B
@@ -99,9 +103,9 @@ erDiagram
     QuestionBank ||--o{ ApprovalDecision : decision
     Department ||--o{ Batch : cohorts
     Batch ||--o{ BatchSemester : semesters
-    BatchSemester ||--o{ ExamCycle : cycles
+    BatchSemester ||--o{ QuestionBank : owns
+    BatchSemester ||--o{ ExamCycle : schedules
     ExamCycle ||--o{ SubjectExamCycleLink : links
-    ExamCycle ||--o{ QuestionBank : banks
 ```
 
 ---
@@ -194,11 +198,13 @@ All passwords: `Password@123`
 
 | Email | Role | Department |
 |---|---|---|
-| `coe@emqpgs.local` | COE | — |
-| `coordinator.aids@emqpgs.local` | COORDINATOR | AIDS |
-| `moderator.aids@emqpgs.local` | MODERATOR | AIDS |
-| `contributor1.aids@emqpgs.local` | CONTRIBUTOR | AIDS |
-| `dean@emqpgs.local` | DEAN | — |
+| `coe@emqpgs.local` | COE | COMP |
+| `dean@emqpgs.local` | DEAN | COMP |
+| `coordinator.comp@emqpgs.local` | COORDINATOR | COMP |
+| `coordinator.extc@emqpgs.local` | COORDINATOR | EXTC |
+| `coordinator.hns@emqpgs.local` | COORDINATOR | HNS |
+| `moderator.comp1@emqpgs.local` | MODERATOR | COMP |
+| `contributor1.comp@emqpgs.local` | CONTRIBUTOR | COMP |
 
 ---
 
@@ -274,7 +280,7 @@ emqpgs/
 │   └── modules/             # 28 service modules
 ├── prisma/
 │   ├── schema.prisma        # 34 models, 26 enums
-│   ├── migrations/          # 2 production migrations
+│   ├── migrations/          # 5 migrations
 │   └── seed.ts              # Demo data seeder
 ├── tests/
 │   ├── unit/                # 19 test files, 126 tests

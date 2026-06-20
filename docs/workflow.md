@@ -19,8 +19,8 @@ These are independent — a bank can be in APPROVAL phase and LOCKED simultaneou
 
 | Current → Target | Gate | ReadinessEngine checks |
 |---|---|---|
-| DRAFTING → MODERATION | Coordinator advance | All slots filled |
-| MODERATION → APPROVAL | Coordinator advance | ≥1 slot filled, all moderated, AI report completed |
+| DRAFTING → MODERATION | Coordinator advance | ≥1 slot filled (warns on empty, does not block) |
+| MODERATION → APPROVAL | Coordinator advance | ≥1 slot filled, all filled slots moderated, AI report completed |
 | APPROVAL → COMPLETE | Coordinator approves | No checks (gated by decision) |
 | APPROVAL → MODERATION | Coordinator rejects | No checks (loopback) |
 
@@ -40,19 +40,23 @@ LOCKED → ACTIVE : unlock() (reversible — available for emergency recovery)
 ### Phase 1: Setup (COE)
 
 1. **Create Department** → `/dashboard/coe/departments`
-2. **Create Academic Year** → auto-generates 8 semesters
-3. **Create Exam Cycle** → department-scoped, status DRAFT
-4. **Activate Exam Cycle** → status → ACTIVE
-5. **Assign Coordinator** to department
+2. **Create CurriculumScheme** → define curriculum plan per department
+3. **Create Academic Year** → temporal container
+4. **Create Batch** → cohort linked to department + curriculum scheme
+5. **Create CurriculumSubjects** → map subjects to semesters in the scheme
 6. **Create Users** (if not seeded)
+7. **Assign Coordinator** to department
+8. **Activate BatchSemester** → `/api/batch-semesters/[id]?action=activate`
+   - **Auto-creates** all QuestionBanks (126-slot, DRAFTING)
+   - **Auto-creates** Exam Cycles (ISE-1, ISE-2, ENDSEM) with subject links
+   - **Sends notifications** to coordinators
 
-### Phase 2: Preparation (Coordinator)
+### Phase 2: Coordinator Workspace
 
-7. **Create Subject** → auto-creates SubjectVersion v1
-8. **Link Subject to Exam Cycle**
-9. **Initialize QuestionBank** → phase DRAFTING, PaperPattern created, all QuestionSlots generated (63 for ISE, 126 for ENDSEM)
+9. **Create Subject** (if not already in curriculum) → auto-creates SubjectVersion v1
 10. **Assign Moderator** to bank
 11. **Assign Contributor** to bank → contributor sees bank immediately in their dashboard
+12. **Manage progress** — view filled slots, pending questions, stalled status
 
 ### Phase 3: Contribution (Contributor + Coordinator)
 
@@ -60,7 +64,7 @@ LOCKED → ACTIVE : unlock() (reversible — available for emergency recovery)
 13. **Assign to Slot** → matches `(moduleNumber, marks)` position
 14. **Submit for Moderation** → status → PENDING
 
-All slots must be filled before advancing out of DRAFTING.
+The coordinator decides when sufficient questions are present. Slots do not need to be fully filled before advancing to MODERATION — partial banks can move forward.
 
 **Editing rules:** DRAFT and REVISION_REQUESTED questions are freely editable. PENDING, APPROVED, REJECTED, and REVISION_SUBMITTED block edits via `QuestionLibraryService.update()`. If a COORDINATOR edits an APPROVED question, it auto-reverts to REVISION_REQUESTED.
 
@@ -74,7 +78,10 @@ Question lifecycle: `DRAFT → PENDING → APPROVED | REJECTED | REVISION_REQUES
 
 16. **Advance to APPROVAL**
 17. **Trigger AI analysis** → `POST /api/question-banks/[id]/reports`
-18. **Generate papers** → 3 variants (A, B, C), 18 questions each for ENDSEM
+18. **Generate papers** → `POST /api/question-banks/[id]/papers` (specify exam type in body)
+    - ISE-1: generates from modules 1-3 (3 × 3 marks × 3 variants = 27 questions)
+    - ISE-2: generates from modules 4-6 (3 × 3 marks × 3 variants = 27 questions)
+    - ENDSEM: generates from modules 1-6 (6 × 3 marks × 3 variants = 54 questions)
 19. **Coordinator decision** → Approve (→COMPLETE) or Reject (→MODERATION)
 
 ### Phase 6: Finalization
@@ -82,7 +89,7 @@ Question lifecycle: `DRAFT → PENDING → APPROVED | REJECTED | REVISION_REQUES
 20. **Lock bank** → creates QuestionBankSnapshot, all mutations blocked
 21. **Dean review** → select distinct variants for Regular, Supplementary, KT
 22. **COE export** → PDF/DOCX/ZIP
-23. **Close Exam Cycle**
+23. **BatchSemester completes** → all banks auto-locked
 
 ---
 
@@ -92,7 +99,7 @@ Question lifecycle: `DRAFT → PENDING → APPROVED | REJECTED | REVISION_REQUES
 
 | Target Phase | Checks |
 |---|---|
-| MODERATION | All slots filled (no empty slots) |
+| MODERATION | ≥1 filled slot (warns on empty, does not block) |
 | APPROVAL | ≥1 filled slot, all filled slots have moderation decisions, AI report completed. Coverage warnings for CO/RBT spread. |
 | COMPLETE | No checks (gated by coordinator decision) |
 
@@ -103,7 +110,7 @@ Question lifecycle: `DRAFT → PENDING → APPROVED | REJECTED | REVISION_REQUES
 ## 4. Locking Behavior
 
 **Lock** (`PATCH /api/question-banks/[id]/lock`, coordinator only):
-- Preconditions: bank not already LOCKED, exam cycle ACTIVE, exam cycle has `endDate` set
+- Preconditions: bank not already LOCKED, batch semester ACTIVE, batch semester has `endDate` set
 - Effects: `recordStatus → LOCKED`, `lockedAt` set, `QuestionBankSnapshot` created (full slot array captured)
 - All mutations rejected by `ensureQuestionBankMutable()` guard
 
@@ -135,14 +142,19 @@ The decision is write-once — no update or delete path. `ApprovalDecision` fiel
 6. `PaperSnapshot` upserted for each variant (coverage, difficulty, quality scores)
 7. Usage history recorded for each selected question
 
-### Slot breakdown (ENDSEM)
+### Slot breakdown (Annual Bank — all exam types share the same 126 slots)
 
 | Module | 2-mark slots | 5-mark slots | 10-mark slots | Total |
 |---|---|---|---|---|
 | 1-6 (each) | 7 | 7 | 7 | 21 |
 | **Total** | **42** | **42** | **42** | **126** |
 
-ISE types use 3 modules → 63 total slots.
+All banks use the same 6-module pattern. The paper generator filters by the exam type's module range:
+- **ISE-1**: modules 1-3 only (3 × 3 × 7 = 63 available slots)
+- **ISE-2**: modules 4-6 only (3 × 3 × 7 = 63 available slots)
+- **ENDSEM**: modules 1-6 (6 × 3 × 7 = 126 available slots)
+
+QuestionUsageHistory prevents question reuse across exam cycles. See `src/lib/constants.ts` → `EXAM_MODULE_RANGES` for the centralized module range configuration.
 
 ---
 

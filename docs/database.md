@@ -90,28 +90,10 @@
 | startDate | DateTime | |
 | endDate | DateTime | |
 | status | AcademicYearStatus | ACTIVE or CLOSED |
-| activeSemesterType | SemesterType | ODD or EVEN. Determines default operational semester filter. |
 
-**Relationships:** Has many Semesters, ExamCycles, SubjectVersions, BatchSemesters.
+**Relationships:** Has many SubjectVersions, BatchSemesters, QuestionBanks.
 
 Invariant: Only one ACTIVE academic year at a time (application-enforced).
-
-**SemesterType** — operational filter, not a replacement for Semester.
-- `ODD`: Semesters 1, 3, 5, 7
-- `EVEN`: Semesters 2, 4, 6, 8
-
-When an AcademicYear is created, all 8 semesters (1–8) are auto-generated. The `activeSemesterType` field controls which semesters are shown by default in dropdowns and filters. Users may override to view all semesters.
-
-### Semester
-
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| number | Int | 1-8 |
-| name | String | e.g. "Semester 5" |
-| academicYearId | String | FK → AcademicYear |
-
-**Unique:** `@@unique([academicYearId, number])` — one semester number per year.
 
 ### Department
 
@@ -383,16 +365,14 @@ Invariant: Append-only. Records every time a question is included in a paper or 
 | status | ExamCycleStatus | DRAFT, ACTIVE, CLOSED |
 | version | Int | For optimistic locking |
 | startDate | DateTime? | |
-| endDate | DateTime? | Required before banks can be locked |
-| departmentId | String | FK → Department (required) |
-| academicYearId | String | FK → AcademicYear |
-| semesterId | String | FK → Semester |
+| endDate | DateTime? | |
+| batchSemesterId | String | FK → BatchSemester |
 | timetable* | various | Timetable data (JSON) |
 
 **Unique:** `@@unique([batchSemesterId, examType])`
 * Each batch semester gets its own cycle per examType.
 
-Invariant: Only ACTIVE cycles can have question bank initialization or locking.
+**Note:** ExamCycles no longer own QuestionBanks. They consume existing banks during paper generation. See QuestionBank below for the new ownership model.
 
 ### QuestionBank
 
@@ -400,17 +380,27 @@ Invariant: Only ACTIVE cycles can have question bank initialization or locking.
 |---|---|---|
 | id | String (cuid) | PK |
 | subjectId | String | FK → Subject |
-| examCycleId | String | FK → ExamCycle |
+| batchSemesterId | String | FK → BatchSemester |
+| academicYearId | String | FK → AcademicYear (denormalized) |
 | phase | QuestionBankPhase | DRAFTING, MODERATION, APPROVAL, COMPLETE |
 | recordStatus | RecordStatus | ACTIVE, LOCKED |
 | version | Int | Optimistic locking counter |
-| createdById | String | FK → User |
+| createdById | String | FK → User (COE, auto-set during initialization) |
 | lockedAt | DateTime? | |
 | lockedReason | String? | |
 
-**Unique:** `@@unique([subjectId, examCycleId])` — one bank per subject per cycle.
+**Unique:** `@@unique([batchSemesterId, subjectId])` — one bank per batch semester per subject.
 
-**Relationships:** Has slots, pattern, snapshots, aiReports, generatedPapers, deanReview, exportArtifacts, approvalDecisions, moderatorAssignments.
+**Ownership:** QuestionBank is an **annual academic asset** owned by (BatchSemester, Subject). It is NOT owned by ExamCycle. Instead, ExamCycles consume the bank via QuestionUsageHistory during paper generation.
+
+**Lifecycle:**
+- Auto-created when BatchSemester → ACTIVE (via AutoInitializeService)
+- Contains 126 QuestionSlots (6 modules × 3 marks × 7 slots) — identical for all banks
+- Reused across ISE-1, ISE-2, ENDSEM, and any future exam types
+- Locked when BatchSemester → COMPLETED
+- QuestionUsageHistory tracks which questions were used in which exam cycle — the bank itself is never consumed
+
+**Relationships:** Has slots, pattern, snapshots, aiReports, generatedPapers, deanReview, exportArtifacts, approvalDecisions, moderatorAssignments, batchSemester, academicYear.
 
 ### PaperPattern
 
@@ -418,11 +408,11 @@ Invariant: Only ACTIVE cycles can have question bank initialization or locking.
 |---|---|---|
 | id | String (cuid) | PK |
 | questionBankId | String | Unique FK → QuestionBank |
-| examType | ExamType | |
-| totalModules | Int | 3 for ISE, 6 for ENDSEM |
+| examType | ExamType | Always ENDSEM (all banks use the 6-module pattern) |
+| totalModules | Int | 6 (always — bank is annual, covers all modules) |
 | marksPattern | Json | e.g. [2, 5, 10] |
 | slotsPerModule | Int | 7 |
-| totalSlots | Int | 63 or 126 |
+| totalSlots | Int | 126 |
 
 **Unique:** `questionBankId` is unique — one pattern per bank.
 

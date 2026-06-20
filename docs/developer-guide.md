@@ -13,7 +13,7 @@ Key architectural decisions:
 - **proxy.ts middleware** (not `middleware.ts`) — exports a function named `proxy`. Route-level role gating for `/dashboard/<role>` and `/api/**`.
 - **withApiHandler** — every API route wraps this. Provides CSRF, rate limiting, role-based access, audit logging, and consistent error formatting.
 - **Custom JWT auth** — Auth.js v5 credentials provider. Cookie names: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_token`.
-- **Two-axis bank state** — `QuestionBankPhase` (4 states) + `RecordStatus` (3 states), orthogonal.
+- **Two-axis bank state** — `QuestionBankPhase` (4 states) + `RecordStatus` (2 states: ACTIVE, LOCKED), orthogonal.
 - **QuestionSlot linkage** — no join table. Slots are first-class positional entities.
 - **ReadinessEngine** — advisory checks. Auto-advance does not exist.
 
@@ -53,7 +53,7 @@ src/modules/<feature>/
 └── validation.ts     Zod schemas
 ```
 
-Modules following this pattern: `academic-years`, `semesters`, `subject-versions`, `exam-cycles`, `departments`, `users`, `question-library`, `question-banks`, `question-slots`, `coordinator-departments`, `moderator-assignments`, `curriculum-schemes`, `curriculum-subjects`, `batches`, `batch-semesters`, `teaching-groups`.
+Modules following this pattern: `academic-years`, `subject-versions`, `exam-cycles`, `departments`, `users`, `question-library`, `question-banks`, `coordinator-departments`, `moderator-assignments`, `curriculum-schemes`, `curriculum-subjects`, `batches`, `batch-semesters`, `teaching-groups`, `auto-initialize`.
 
 Modules using direct Prisma calls: `coordinator/`, `reports/`, `readiness/`, `question-bank-metrics/`, `production/`, `moderation/`, `notifications/`, `dashboard/`, `ai/`.
 
@@ -72,9 +72,9 @@ Modules using direct Prisma calls: `coordinator/`, `reports/`, `readiness/`, `qu
 | Service | File | Responsibility |
 |---|---|---|
 | QuestionLibraryService | `src/modules/question-library/service.ts` | CRUD, submit, transfer ownership |
-| QuestionBankService | `src/modules/question-banks/service.ts` | Create, phase advance, lock/unlock |
-| QuestionBankWorkflowService | `src/modules/coordinator/question-bank.service.ts` | Coordinator orchestration, bank init |
-| QuestionSlotService | `src/modules/question-slots/service.ts` | Slot assignment/unassignment |
+| QuestionBankService | `src/modules/question-banks/service.ts` | Phase advance, lock/unlock |
+| QuestionBankWorkflowService | `src/modules/coordinator/question-bank.service.ts` | Coordinator orchestration, listing, detail |
+| AutoInitializeService | `src/modules/auto-initialize/service.ts` | Auto-creates banks + exam cycles on batch semester activation |
 | ReadinessEngine | `src/modules/readiness/engine.ts` | Phase readiness evaluation |
 | ReportService | `src/modules/reports/service.ts` | AI reports, coordinator decision |
 | PaperGenerationService | `src/modules/reports/paper.service.ts` | Paper generation, PDF, snapshots |
@@ -158,7 +158,7 @@ Tests live in `tests/{unit,integration,permission}/`. Unit tests run without inf
 | 401 on API calls | Token expired or missing CSRF header |
 | 403 on API calls | User lacks required role |
 | 409 on advance phase | Invalid phase transition (check `transitions.ts`) |
-| 409 on lock | Exam cycle not ACTIVE or missing endDate |
+| 409 on lock | Batch semester not ACTIVE or missing endDate |
 | `integrityHash` mismatch | Audit chain tampered or concurrency issue |
 
 ---

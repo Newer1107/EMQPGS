@@ -44,12 +44,14 @@ EMQPGS (Examination Management & Question Paper Generation System) manages the c
 ### Primary entities
 
 ```
-AcademicYear 1─N Semester 1─N ExamCycle
+AcademicYear 1─N BatchSemester 1─N ExamCycle
+AcademicYear 1─N QuestionBank (via BatchSemester)
+Batch 1─N BatchSemester
+BatchSemester 1─N QuestionBank
 Department 1─N Subject 1─N SubjectVersion 1─N QuestionLibraryItem
-Department 1─N ExamCycle
 Subject 1─N QuestionBank
 QuestionBank 1─N QuestionSlot N─1 QuestionLibraryItem
-ExamCycle 1─N QuestionBank
+ExamCycle 1─N SubjectExamCycleLink (consumer — does NOT own banks)
 ```
 
 ### Key entity: QuestionSlot
@@ -128,7 +130,7 @@ Browser → proxy.ts middleware (route-level role gate)
 
 ## 7. Key Invariants
 
-1. One bank per (subject, exam cycle) — `@@unique([subjectId, examCycleId])`
+1. One bank per (batch semester, subject) — `@@unique([batchSemesterId, subjectId])`
 2. One slot position per bank — `@@unique([questionBankId, moduleNumber, marks, slotNumber])`
 3. No duplicate questions per bank (application-enforced)
 4. QuestionSlot is the sole linkage (no QuestionBankQuestion table)
@@ -174,10 +176,10 @@ COE SETUP PHASE
 
 COORDINATOR PHASE
 ┌──────────────────────────────────────────────────────────────┐
-│ initializeQuestionBank(subjectId, examCycleId)                 │
+│ Banks are auto-created when BatchSemester → ACTIVE            │
 │   └── Creates: QuestionBank (DRAFTING, ACTIVE)                │
-│   └── Creates: PaperPattern (modules/marks/slots config)      │
-│   └── Creates: 63 (ISE) or 126 (ENDSEM) QuestionSlots         │
+│   └── Creates: PaperPattern (6 modules, 126 slots)            │
+│   └── Creates: 126 QuestionSlots (all banks use same pattern) │
 │                                                               │
 │ assignContributors(questionBankId, contributorIds)             │
 │ assignModerators(questionBankId, moderatorIds)                 │
@@ -194,7 +196,7 @@ CONTRIBUTOR PHASE
 MODERATION PHASE
 ┌──────────────────────────────────────────────────────────────┐
 │ Coordinator advances bank: DRAFTING → MODERATION              │
-│   └── Readiness check: all slots must be filled               │
+│   └── Readiness check: at least 1 slot filled (warns on empty)│
 │                                                               │
 │ Moderator reviews questions in PENDING or REVISION_SUBMITTED  │
 │   ├── approveQuestion() → status: APPROVED                    │
@@ -238,8 +240,8 @@ COMPLETE PHASE → PRODUCTION
 | **AcademicYear** | A time period (e.g. "2026-2027") that spans all semesters. | The temporal container for exam cycles. Each academic year generates 8 semesters automatically. |
 | **Batch** | A cohort descriptor (e.g. "2024-2028 BE Computer batch"). Belongs to a Department and CurriculumScheme. | A group of students that started together and progresses through semesters together. No student roster is stored — the batch is a label. |
 | **BatchSemester** | A single semester within a batch (e.g. "Batch 2024-28, Semester 3"). Has its own dates and status. | The actual timebox for teaching. Activating a BatchSemester sets the Batch's `currentSemester` — this is how the system knows which semester a batch is in right now. |
-| **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Department-scoped. | The reason the entire question bank pipeline exists. An exam cycle is the target event for which question banks are created and papers generated. |
-| **QuestionBank** | The container for all questions, slots, and workflow state for one (Subject, ExamCycle) pair. | The central operational unit. Every action — contribution, moderation, approval, paper generation — happens within a question bank. |
+| **ExamCycle** | A single examination event (e.g. "ENDSEM Nov 2026"). Linked to a BatchSemester. | Exam Cycles consume existing question banks for paper generation. They do not own or create banks. |
+| **QuestionBank** | An annual academic asset — one per (BatchSemester, Subject). The repository for all questions across all exam types (ISE-1, ISE-2, ENDSEM). | The central operational unit. Every action — contribution, moderation, approval, paper generation — happens within a question bank. Banks are auto-created when a batch semester is activated. |
 | **QuestionSlot** | A single position in the question paper defined by `(moduleNumber, marks, slotNumber)`. | The linkage between a bank and its questions. There is no `QuestionBankQuestion` join table — slots are the only bridge. |
 | **PaperPattern** | The template that defines how many slots exist per module and mark value. | Different exam types (ISE vs ENDSEM) have different slot counts. The pattern is set once at bank initialization. |
 | **SubjectVersion** | A versioned syllabus of a Subject. Questions belong to a SubjectVersion, not directly to a Subject. | Syllabi change. SubjectVersion lets the system track which version of the syllabus a question was written for. |
@@ -259,7 +261,7 @@ Here is the full walkthrough from nothing to exported exam papers, using a singl
 - **Dr. Mehta** — Moderator (senior faculty)
 - **Prof. Desai** — Dean (academic dean)
 
-**Setup: The university wants to conduct ENDSEM exams in Nov 2026 for the 2024-28 BE Computer batch.**
+**Setup: The university wants to conduct exams in the 2026-27 academic year for the 2024-28 BE Computer batch.**
 
 #### Step 1: COE sets up the institutional structure
 
@@ -267,26 +269,23 @@ Dr. Sharma logs in as COE and creates:
 
 1. **Department "Computer Engineering"** — the single organizational entity owning curriculum and faculty.
 2. **CurriculumScheme "2024 Scheme"** for Department "Computer Engineering" — the curriculum plan for this batch.
-3. **AcademicYear "2026-2027"** — this auto-generates 8 semesters (Sem 1 through Sem 8).
+3. **AcademicYear "2026-2027"** — the temporal container.
 4. **Batch "2024-28 BE Computer"** linked to Department "Computer Engineering" + Scheme "2024 Scheme".
-5. **Activate BatchSemester for Sem 5** (Nov 2026 is the 5th semester for a 2024-entry batch) — this sets `Batch.currentSemester = 5`.
-6. **ExamCycle "ENDSEM Nov 2026"** for Semester 5, Department "Computer Engineering" — the target examination event.
-7. **CurriculumSubject:** links Subject "Computer Networks" to Semester 5 of Scheme "2024 Scheme" under Department "Computer Engineering".
-8. **Assigns Prof. Patil** as Coordinator for Department "Computer Engineering".
+5. **CurriculumSubject:** links Subject "Computer Networks" to Semester 5 of Scheme "2024 Scheme" under Department "Computer Engineering".
+6. **Activate BatchSemester for Sem 5** — this triggers **automatic initialization**:
+   - 126-slot QuestionBank created for Computer Networks (phase DRAFTING)
+   - Exam Cycles created (ISE-1, ISE-2, ENDSEM) with subject links
+   - Coordinator notified
+7. **Assigns Prof. Patil** as Coordinator for Department "Computer Engineering".
 
-The exam cycle now exists. The coordinator can see it in their dashboard.
+Prof. Patil sees "Computer Networks — Annual Bank (126 slots)" on her dashboard.
 
-#### Step 2: Coordinator prepares the question bank
+#### Step 2: Coordinator assigns contributors
 
-Prof. Patil logs in as Coordinator. In her dashboard, she sees "Computer Networks" is a subject without a question bank for "ENDSEM Nov 2026". She:
+Prof. Patil logs in as Coordinator. She sees the auto-created bank for Computer Networks. She:
 
-1. **Creates Subject "Computer Networks"** — this auto-creates `SubjectVersion v1`.
-2. **Initializes QuestionBank** for (Computer Networks, ENDSEM Nov 2026):
-   - Bank is created with phase `DRAFTING`, status `ACTIVE`.
-   - `PaperPattern` is created for ENDSEM (6 modules × 21 slots = 126 total).
-   - 126 `QuestionSlots` are instantiated: 42 two-mark slots, 42 five-mark slots, 42 ten-mark slots, spread across 6 modules.
-3. **Assigns Contributors:** Adds Ms. Iyer and two other faculty as contributors to the bank.
-4. **Assigns Moderator:** Adds Dr. Mehta as moderator for the bank.
+1. **Assigns Contributors:** Adds Ms. Iyer and two other faculty as contributors to the bank.
+2. **Assigns Moderator:** Adds Dr. Mehta as moderator for the bank.
 
 Ms. Iyer now sees "Computer Networks — 126 slots need questions" on her dashboard.
 

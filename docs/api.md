@@ -70,7 +70,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 | GET | `/api/batch-semesters` | COE, COORDINATOR | List by `?batchId=` or active by `?departmentId=` |
 | GET | `/api/batch-semesters/[id]` | COE, COORDINATOR | Get detail |
 | PATCH | `/api/batch-semesters/[id]` | COE | Update dates/status/unit |
-| POST | `/api/batch-semesters/[id]?action=activate` | COE | Activate semester |
+| POST | `/api/batch-semesters/[id]?action=activate` | COE | Activate semester — triggers automatic QuestionBank + ExamCycle creation |
 | POST | `/api/batch-semesters/[id]?action=complete` | COE | Complete semester |
 
 ### Teaching groups
@@ -176,8 +176,9 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 | Method | Path | Roles | Purpose |
 |---|---|---|---|
 | GET | `/api/question-banks` | COORDINATOR | List banks (filtered by department) |
-| POST | `/api/question-banks` | COORDINATOR | Create (alias for initialize) |
 | GET | `/api/question-banks/[id]` | COORDINATOR, MODERATOR | Get bank detail with slots |
+
+**Note:** Banks are never created via API. They are auto-created when a BatchSemester transitions to ACTIVE. See `AutoInitializeService` in `src/modules/auto-initialize/service.ts`.
 
 ### Workflow
 
@@ -202,7 +203,7 @@ Sets three cookies: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_
 | GET | `/api/question-banks/[id]/reports` | COORDINATOR | List AI reports |
 | POST | `/api/question-banks/[id]/reports` | COORDINATOR | Trigger AI analysis |
 | GET | `/api/question-banks/[id]/papers` | COORDINATOR | List generated papers |
-| POST | `/api/question-banks/[id]/papers` | COORDINATOR | Generate 3 paper variants (A, B, C) |
+| POST | `/api/question-banks/[id]/papers` | COORDINATOR | Generate 3 paper variants (A, B, C). Accepts `examType` in request body to control module range (ISE_1 → mods 1-3, ISE_2 → mods 4-6, ENDSEM → mods 1-6) |
 
 ### Coordinator decision
 
