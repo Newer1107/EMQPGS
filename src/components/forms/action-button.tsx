@@ -46,10 +46,12 @@ export function ActionButton({
         feedback.success({ title: successMessage ?? `${label} completed` });
         onSuccess?.();
       } else {
-        feedback.error(result.error?.message ?? "Action failed");
+        console.error("[ActionButton]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not complete action");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ActionButton]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

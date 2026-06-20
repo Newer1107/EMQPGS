@@ -583,8 +583,9 @@ function AssignPanelWrapper({ bankId, role, title, currentAssignments }: {
       });
       const result = await res.json();
       return { success: result.success, error: result.error };
-    } catch {
-      return { success: false, error: "Network error" };
+    } catch (error) {
+      console.error("[BankDetailClient]", error);
+      return { success: false, error: "Unable to reach the server. Please check your connection." };
     }
   };
 
@@ -593,8 +594,9 @@ function AssignPanelWrapper({ bankId, role, title, currentAssignments }: {
       const res = await apiFetch(`/api/question-banks/${bankId}/assignments/${endpoint}?${idField}=${userId}`, { method: "DELETE" });
       const result = await res.json();
       return { success: result.success, error: result.error };
-    } catch {
-      return { success: false, error: "Network error" };
+    } catch (error) {
+      console.error("[BankDetailClient]", error);
+      return { success: false, error: "Unable to reach the server. Please check your connection." };
     }
   };
 

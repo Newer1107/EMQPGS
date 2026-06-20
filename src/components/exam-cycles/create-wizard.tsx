@@ -45,8 +45,9 @@ export function CreateExamCycleWizard() {
         const res = await fetch("/api/batches");
         const json = await res.json();
         setBatches(json.data ?? json);
-      } catch {
-        feedback.error("Failed to load batches");
+      } catch (error) {
+        console.error("[CreateWizard]", error);
+        feedback.error("Could not load batches");
       } finally {
         setLoadingBatches(false);
       }
@@ -62,8 +63,9 @@ export function CreateExamCycleWizard() {
       const res = await fetch(`/api/batch-semesters?batchId=${batchId}`);
       const json = await res.json();
       setSemesters(json.data ?? json);
-    } catch {
-        feedback.error("Failed to load semesters");
+    } catch (error) {
+        console.error("[CreateWizard]", error);
+        feedback.error("Could not load semesters");
     } finally {
       setLoadingSemesters(false);
     }
@@ -76,8 +78,9 @@ export function CreateExamCycleWizard() {
     try {
       const result = await getSubjectsForBatchSemester(batchSemesterId);
       setSubjects(result);
-    } catch {
-        feedback.error("Failed to load subjects");
+    } catch (error) {
+        console.error("[CreateWizard]", error);
+        feedback.error("Could not load subjects");
     } finally {
       setLoadingSubjects(false);
     }
@@ -140,15 +143,17 @@ export function CreateExamCycleWizard() {
       const json = await res.json();
 
       if (!res.ok) {
-        const msg = json.error?.message ?? json.error ?? "Failed to create exam cycle";
+        console.error("[CreateWizard]", json);
+        const msg = json.error?.message ?? json.error ?? "Could not create exam cycle";
         feedback.error(msg);
         return;
       }
 
-      feedback.success({ title: "Exam cycle created successfully" });
+      feedback.success({ title: "Exam cycle created successfully", description: "Subjects can now be linked to this cycle" });
       router.push(`/dashboard/coe/exam-cycles/${json.data.id}`);
-    } catch {
-      feedback.error("Network error. Please try again.");
+    } catch (error) {
+      console.error("[CreateWizard]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setSubmitting(false);
     }

@@ -33,7 +33,7 @@ export default function ResetPasswordPage() {
     setLoading(false);
 
     if (!result.success) {
-      setError(result.error?.message ?? "Failed to reset password");
+      setError(result.error?.message ?? "Could not reset password");
       return;
     }
 

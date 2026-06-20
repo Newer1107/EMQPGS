@@ -52,14 +52,15 @@ export function PlacementForm({ subjectId, schemes, departments, semesters }: Pl
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Subject placed in curriculum successfully." });
+        feedback.success({ title: "Subject placed in curriculum successfully.", description: "It will appear in exam cycle linking options" });
         router.push(`/dashboard/coordinator/subjects/${subjectId}`);
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Failed to place subject in curriculum.");
+        feedback.error(result.error?.message ?? "Could not place subject in curriculum");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[PlacementForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

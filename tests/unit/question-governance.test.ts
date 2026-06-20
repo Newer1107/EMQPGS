@@ -30,7 +30,7 @@ import { prisma } from "@/lib/db";
 
 const mockActor: User = { id: "user-1", name: "Test User", email: "test@test.com", role: Role.CONTRIBUTOR, status: "ACTIVE" as any, lastLoginAt: null, departmentId: null, resetTokenHash: null, resetTokenExpiry: null, createdAt: new Date(), updatedAt: new Date(), passwordHash: "hash" };
 const mockCoordinator: User = { ...mockActor, id: "coord-1", role: Role.COORDINATOR };
-const mockQuestion: QuestionLibraryItem = {
+const mockQuestion: QuestionLibraryItem & { slotAssignments?: Array<unknown> } = {
   id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5,
   questionText: "What is the capital of France?",
   coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "MEDIUM",
@@ -38,6 +38,7 @@ const mockQuestion: QuestionLibraryItem = {
   createdById: "user-1", ownerId: "user-1",
   moderatorRemark: null, submittedAt: null, reviewedAt: null,
   createdAt: new Date(), updatedAt: new Date(),
+  slotAssignments: [{ questionBank: { batchSemester: { semesterNumber: 1 } } }],
 };
 
 function mockRepoFindById(overrides: Partial<QuestionLibraryItem> = {}) {
@@ -215,12 +216,12 @@ describe("Question Governance Hardening", () => {
         subjectVersionId: "sv-1", moduleNumber: 1, marks: 2,
         questionText: "Test question?",
         coMapping: "CO1", rbtLevel: "L1",
-      }, mockActor as any);
+      }, mockCoordinator as any);
       expect(prisma.questionRevision.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             changeReason: "Initial creation",
-            changedById: "user-1",
+            changedById: "coord-1",
           }),
         }),
       );

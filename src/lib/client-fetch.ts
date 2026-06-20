@@ -40,6 +40,6 @@ export async function apiFetch(input: string, init?: RequestInit) {
       credentials: "same-origin",
     });
   } catch {
-    throw new Error("Network request failed. Please check your connection.");
+    throw new Error("Unable to reach the server. Please check your connection.");
   }
 }

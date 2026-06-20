@@ -55,10 +55,11 @@ export function InlineAssignPanel({
 
     const result = await onAssign(userId);
     if (result.success) {
-      feedback.success({ title: `${role} assigned` });
+      feedback.success({ title: `${role} assigned`, description: `${role} can now access the bank` });
     } else {
+      console.error("[InlineAssignPanel]", result.error);
       setLocalAssignments((prev) => prev.filter((a) => a.id !== userId));
-      feedback.error(result.error ?? `Failed to assign ${role.toLowerCase()}`);
+      feedback.error(result.error ?? `Could not assign ${role.toLowerCase()}`);
     }
     setLoading(false);
   }
@@ -73,10 +74,11 @@ export function InlineAssignPanel({
 
     const result = await onUnassign(userId);
     if (result.success) {
-      feedback.success({ title: `${role} unassigned` });
+      feedback.success({ title: `${role} unassigned`, description: `${role} access removed` });
     } else {
+      console.error("[InlineAssignPanel]", result.error);
       setLocalAssignments((prev) => [...prev, user]);
-      feedback.error(result.error ?? `Failed to unassign ${role.toLowerCase()}`);
+      feedback.error(result.error ?? `Could not unassign ${role.toLowerCase()}`);
     }
     setLoading(false);
   }

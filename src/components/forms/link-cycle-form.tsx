@@ -33,14 +33,16 @@ export function LinkCycleForm({ subjectId, examCycles, existingLinks }: LinkCycl
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Subject linked to exam cycle" });
+        feedback.success({ title: "Subject linked to exam cycle", description: "It will appear in papers for this cycle" });
         setExamCycleId("");
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Failed to link");
+        console.error("[LinkCycleForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not link subject to cycle");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[LinkCycleForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

@@ -78,6 +78,7 @@ const baseInput = {
   coMapping: "CO1" as const,
   rbtLevel: "L1" as const,
   difficultyLevel: "EASY" as const,
+  teachingIndex: null,
 };
 
 const mockSlot = {

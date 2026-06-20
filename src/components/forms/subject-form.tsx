@@ -64,10 +64,11 @@ export function SubjectForm({ departments, initialValues, endpoint, title }: Sub
         }
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Failed to save subject");
+        feedback.error(result.error?.message ?? "Could not save subject");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[SubjectForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

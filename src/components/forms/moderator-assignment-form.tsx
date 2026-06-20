@@ -38,15 +38,17 @@ export function ModeratorAssignmentForm({ questionBanks, moderators, existingAss
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Moderator assigned successfully" });
+        feedback.success({ title: "Moderator assigned successfully", description: "They can now review questions in this bank" });
         setQuestionBankId("");
         setModeratorId("");
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Assignment failed");
+        console.error("[ModeratorAssignmentForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not assign moderator");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ModeratorAssignmentForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

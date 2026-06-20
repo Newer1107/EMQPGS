@@ -62,10 +62,12 @@ export function SimpleForm({
         setValues(initialValues);
         setShowGuidance(true);
       } else {
-        feedback.error(result.error?.message ?? "Failed to save");
+        console.error("[SimpleForm]", result);
+        feedback.error(result.error?.message ?? "Could not save");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[SimpleForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

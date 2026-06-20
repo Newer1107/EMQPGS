@@ -105,9 +105,10 @@ export function DeanReviewWorkspace({ questionBankId, nextBankId }: { questionBa
             ktPaper: workspace.deanReview.ktPaper,
           });
         }
-      } catch {
+      } catch (error) {
+        console.error("[DeanReviewWorkspace]", error);
         if (active) {
-          setError("Network request failed. Please check your connection.");
+          setError("Unable to reach the server. Please check your connection.");
         }
       } finally {
         if (active) {
@@ -162,8 +163,9 @@ export function DeanReviewWorkspace({ questionBankId, nextBankId }: { questionBa
 
       setSubmitted(true);
       setMessage("Selection submitted successfully.");
-    } catch {
-      setError("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[DeanReviewWorkspace]", error);
+      setError("Unable to reach the server. Please check your connection.");
     } finally {
       setSubmitting(false);
     }

@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AppError } from "@/lib/errors";
 
 import { ContributorAssignmentService } from "@/modules/contributor-assignments/service";
 import { contributorAssignmentSchema } from "@/modules/contributor-assignments/validation";
@@ -29,7 +30,7 @@ export const DELETE = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const contributorId = request.nextUrl.searchParams.get("contributorId");
     if (!contributorId) {
-      throw new Error("contributorId query parameter is required");
+      throw new AppError("contributorId query parameter is required", 400, "MISSING_PARAM");
     }
     return service.unassignContributor(questionBankId, contributorId);
   },

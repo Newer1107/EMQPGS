@@ -41,13 +41,14 @@ export function CoordinatorAssignmentForm(props: Props) {
             const response = await apiFetch(`/api/coordinator-departments/${props.assignmentId}`, { method: "DELETE" });
             const result = await response.json();
             if (response.ok && result.success) {
-              feedback.success({ title: "Assignment removed" });
+              feedback.success({ title: "Assignment removed", description: "The coordinator no longer manages this department" });
               setTimeout(() => window.location.reload(), 800);
             } else {
-              feedback.error(result.error?.message ?? "Failed to remove");
+              feedback.error(result.error?.message ?? "Could not remove assignment");
             }
-          } catch {
-            feedback.error("Network request failed");
+          } catch (error) {
+            console.error("[AssignForm]", error);
+            feedback.error("Unable to reach the server. Please check your connection.");
           } finally {
             setLoading(false);
           }
@@ -73,15 +74,16 @@ export function CoordinatorAssignmentForm(props: Props) {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Coordinator assigned successfully" });
+        feedback.success({ title: "Coordinator assigned successfully", description: "They can now manage this department" });
         setCoordinatorId("");
         setDepartmentId("");
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to assign");
+        feedback.error(result.error?.message ?? "Could not assign coordinator");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[AssignForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

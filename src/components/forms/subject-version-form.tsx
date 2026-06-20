@@ -37,14 +37,16 @@ export function SubjectVersionForm({ subjectId, academicYears }: SubjectVersionF
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Subject version created" });
+        feedback.success({ title: "Subject version created", description: "A new draft version is ready for editing" });
         setValues({ title: "", syllabusDescription: "", effectiveFromAcademicYearId: "" });
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Failed to create version");
+        console.error("[SubjectVersionForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not create subject version");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[SubjectVersionForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

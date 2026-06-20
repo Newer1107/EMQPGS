@@ -1,6 +1,10 @@
 import { CourseOutcome, DifficultyLevel, QuestionStatus, RbtLevel } from "@prisma/client";
 import { z } from "zod";
 
+function emptyStrToNull<T extends z.ZodTypeAny>(schema: T) {
+  return z.preprocess((v) => (v === "" ? null : v), schema);
+}
+
 export const questionLibraryItemSchema = z.object({
   subjectVersionId: z.string().min(1),
   moduleNumber: z.coerce.number().int().min(1).max(6),
@@ -8,8 +12,8 @@ export const questionLibraryItemSchema = z.object({
   questionText: z.string().min(15),
   coMapping: z.nativeEnum(CourseOutcome),
   rbtLevel: z.nativeEnum(RbtLevel),
-  difficultyLevel: z.nativeEnum(DifficultyLevel).optional().nullable(),
-  teachingIndex: z.string().max(50).optional().nullable(),
+  difficultyLevel: emptyStrToNull(z.nativeEnum(DifficultyLevel).nullable()).optional(),
+  teachingIndex: emptyStrToNull(z.string().max(50).nullable()).optional(),
   status: z.nativeEnum(QuestionStatus).optional(),
 });
 

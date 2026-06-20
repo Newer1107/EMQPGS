@@ -46,9 +46,13 @@ export default async function ContributorSubmitQuestionPage({
         }
       : undefined;
 
+  const bankIdBySubjectVersionId: Record<string, string> = {};
   const slotDataMap: Record<string, SlotInfo[]> = {};
   for (const bank of banks) {
     for (const v of bank.subject.versions) {
+      if (!bankIdBySubjectVersionId[v.id]) {
+        bankIdBySubjectVersionId[v.id] = bank.id;
+      }
       const entries = bank.slots.map((s) => ({
         moduleNumber: s.moduleNumber,
         marks: s.marks,
@@ -86,6 +90,7 @@ export default async function ContributorSubmitQuestionPage({
         redirectOnSuccess="/dashboard/contributor/questions"
         initialValues={initialValues}
         slotDataMap={slotDataMap}
+        bankIdBySubjectVersionId={bankIdBySubjectVersionId}
         currentSubjectVersionId={params.subjectVersionId}
       />
     </div>

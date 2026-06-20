@@ -76,7 +76,7 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
     });
     const result = await response.json();
     if (!response.ok || !result.success) {
-      throw new Error(result.error?.message ?? "Failed to save question");
+      throw new Error(result.error?.message ?? "Could not save question");
     }
     const savedId = result.data?.id;
     if (submitAfter && savedId && submitEndpoint) {
@@ -84,7 +84,7 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
       const submitResponse = await apiFetch(submitUrl, { method: "POST" });
       const submitResult = await submitResponse.json();
       if (!submitResponse.ok || !submitResult.success) {
-        throw new Error(submitResult.error?.message ?? "Failed to submit question");
+        throw new Error(submitResult.error?.message ?? "Could not submit question");
       }
     }
     return savedId;
@@ -107,7 +107,7 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
 
     try {
       await save(body, false);
-      feedback.success({ title: redirectOnSuccess ? "Question created" : title });
+      feedback.success({ title: redirectOnSuccess ? "Question created" : title, description: "The question was added to the bank" });
       if (onSuccessAction === "stay") {
         setShowSuccess(true);
       } else if (redirectOnSuccess) {
@@ -126,7 +126,8 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
         });
       }
     } catch (error) {
-      feedback.error(error instanceof Error ? error.message : "Failed to save question");
+      console.error("[QuestionForm]", error);
+      feedback.error(error instanceof Error ? error.message : "Could not save question");
     } finally {
       setLoading(false);
     }
@@ -147,7 +148,7 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
 
     try {
       await save(body, true);
-      feedback.success({ title: "Question saved and submitted for moderation" });
+      feedback.success({ title: "Question saved and submitted for moderation", description: "The moderator will review it shortly" });
       if (onSuccessAction === "stay") {
         setShowSuccess(true);
       } else if (redirectOnSuccess) {
@@ -155,7 +156,8 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
         router.refresh();
       }
     } catch (error) {
-      feedback.error(error instanceof Error ? error.message : "Failed to save and submit");
+      console.error("[QuestionForm]", error);
+      feedback.error(error instanceof Error ? error.message : "Could not save and submit");
     } finally {
       setSaving(false);
     }

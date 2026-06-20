@@ -38,15 +38,17 @@ export function ContributorAssignmentForm({ questionBanks, contributors, existin
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Contributor assigned successfully" });
+        feedback.success({ title: "Contributor assigned successfully", description: "They can now write questions in this bank" });
         setQuestionBankId("");
         setContributorId("");
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Assignment failed");
+        console.error("[ContributorAssignmentForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not assign contributor");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ContributorAssignmentForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

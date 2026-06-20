@@ -4,7 +4,7 @@ export default function RoleSectionError({ error, reset }: { error: Error; reset
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
       <p className="text-sm font-medium text-[var(--text-primary)]">
-        Failed to load moderator dashboard.
+        Moderator dashboard unavailable
       </p>
       <p className="mt-1 text-xs text-[var(--text-tertiary)]">
         {error.message || "An unexpected error occurred."}

@@ -17,7 +17,7 @@ export default function ProtectedError({
     <div className="flex items-center justify-center p-12">
       <div className="max-w-md text-center">
         <h2 className="text-xl font-semibold mb-2">
-          Something went wrong
+          Unexpected error
         </h2>
         <p className="text-neutral-500 mb-6 leading-relaxed">
           {error.message || "An unexpected error occurred. Please try again."}

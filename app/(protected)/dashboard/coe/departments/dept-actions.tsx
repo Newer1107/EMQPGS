@@ -19,13 +19,14 @@ export function DeleteDepartmentButton({ department }: { department: Department 
       const response = await apiFetch(`/api/departments/${department.id}`, { method: "DELETE" });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Department deleted" });
+        feedback.success({ title: "Department deleted", description: "All associated data has been removed" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to delete department");
+        feedback.error(result.error?.message ?? "Could not delete department");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[DeptActions]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -60,10 +61,11 @@ export function EditDepartmentForm({ department, onClose }: { department: Depart
         onClose();
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to update department");
+        feedback.error(result.error?.message ?? "Could not update department");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[DeptActions]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

@@ -29,7 +29,7 @@ export default function ForgotPasswordPage() {
     setLoading(false);
 
     if (!result.success) {
-      setError(result.error?.message ?? "Failed to send reset email");
+      setError(result.error?.message ?? "Could not send reset email");
       return;
     }
 

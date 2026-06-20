@@ -56,7 +56,6 @@ async function createAuditEntryWithRetry(
           },
         });
       },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
   } catch (err) {
     if (

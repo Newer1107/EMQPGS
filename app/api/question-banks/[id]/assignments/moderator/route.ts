@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AppError } from "@/lib/errors";
 
 import { ModeratorAssignmentService } from "@/modules/moderator-assignments/service";
 import { assignmentSchema } from "@/modules/moderator-assignments/validation";
@@ -29,7 +30,7 @@ export const DELETE = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const moderatorId = request.nextUrl.searchParams.get("moderatorId");
     if (!moderatorId) {
-      throw new Error("moderatorId query parameter is required");
+      throw new AppError("moderatorId query parameter is required", 400, "MISSING_PARAM");
     }
     return service.unassignModerator(questionBankId, moderatorId);
   },

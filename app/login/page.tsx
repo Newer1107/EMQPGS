@@ -40,7 +40,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (!result.success) {
-      setError(result.error?.message ?? "Invalid email or password");
+      setError(result.error?.message ?? "Sign in failed. Please check your email and password.");
       return;
     }
     router.push("/dashboard");

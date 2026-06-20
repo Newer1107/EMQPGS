@@ -34,13 +34,15 @@ export function CoordinatorDecisionForm({ questionBankId }: CoordinatorDecisionF
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Decision recorded" });
+        feedback.success({ title: "Decision recorded", description: "The bank phase will update accordingly" });
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Failed to record decision");
+        console.error("[CoordinatorDecisionForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not record decision");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[CoordinatorDecisionForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

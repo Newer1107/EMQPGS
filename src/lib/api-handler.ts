@@ -89,7 +89,7 @@ function translatePrismaError(error: Prisma.PrismaClientKnownRequestError): AppE
       );
     case "P2025":
       return new AppError(
-        "The requested record was not found. It may have been deleted or modified.",
+        "Record not found. It may have been deleted by another user.",
         404,
         "RECORD_NOT_FOUND",
       );
@@ -125,7 +125,7 @@ function handleApiError(error: unknown, request: NextRequest, correlationId: str
       issues: error.issues.length,
     });
     return NextResponse.json(
-      { success: false, error: { code: "VALIDATION_ERROR", message: "Validation failed", details: error.issues }, correlationId },
+      { success: false, error: { code: "VALIDATION_ERROR", message: `${error.issues.length} field${error.issues.length === 1 ? "" : "s"} need attention`, details: error.issues }, correlationId },
       { status: 400 },
     );
   }
@@ -168,7 +168,7 @@ function handleApiError(error: unknown, request: NextRequest, correlationId: str
     error: error instanceof Error ? error.message : "Unknown error",
   });
   return NextResponse.json(
-    { success: false, error: { code: "INTERNAL_SERVER_ERROR", message: "Something went wrong" }, correlationId },
+    { success: false, error: { code: "INTERNAL_SERVER_ERROR", message: "Unexpected error" }, correlationId },
     { status: 500 },
   );
 }

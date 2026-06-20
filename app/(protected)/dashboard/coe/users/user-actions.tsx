@@ -18,13 +18,14 @@ export function UserActions({ userId, status }: { userId: string; status: string
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "User disabled" });
+        feedback.success({ title: "User disabled", description: "They will not be able to sign in" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to disable user");
+        feedback.error(result.error?.message ?? "Could not disable user");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[UserActions]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(null);
     }
@@ -40,13 +41,14 @@ export function UserActions({ userId, status }: { userId: string; status: string
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "User re-enabled" });
+        feedback.success({ title: "User re-enabled", description: "They can sign in again" });
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to re-enable user");
+        feedback.error(result.error?.message ?? "Could not re-enable user");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[UserActions]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(null);
     }

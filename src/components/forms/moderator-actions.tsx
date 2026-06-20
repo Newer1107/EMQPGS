@@ -55,13 +55,15 @@ export function ModeratorActions({ questionId, status, queueIds }: ModeratorActi
       const result = await response.json();
       if (response.ok && result.success) {
         const msg = action === "approve" ? "Question approved" : action === "reject" ? "Question rejected" : "Revision requested";
-        feedback.success({ title: msg });
+        feedback.success({ title: msg, description: "The action was completed" });
         setTimeout(navigateToNext, 600);
       } else {
-        feedback.error(result.error?.message ?? "Action failed");
+        console.error("[ModeratorActions]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not complete action");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ModeratorActions]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(null);
     }

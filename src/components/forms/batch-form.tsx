@@ -49,7 +49,7 @@ export function BatchForm({ departments, schemes }: Props) {
   function handleCreateSuccess(json: { data?: { batch?: { id: string }; academicYearsCreated?: number; allDraft?: boolean } }) {
     const data = json.data;
     if (!data?.batch?.id) {
-      feedback.success({ title: "Batch created successfully" });
+      feedback.success({ title: "Batch created successfully", description: "You can now add semesters to this batch" });
       router.push("/dashboard/coe/batches");
       router.refresh();
       return;
@@ -59,7 +59,7 @@ export function BatchForm({ departments, schemes }: Props) {
       const msg = `${data.academicYearsCreated} Academic Year${data.academicYearsCreated !== 1 ? "s were" : " was"} created${data.allDraft ? " in Draft status. Please review their dates before activating them." : "."} Batch created successfully.`;
       feedback.success({ title: msg });
     } else {
-      feedback.success({ title: "Batch created successfully" });
+      feedback.success({ title: "Batch created successfully", description: "You can now add semesters to this batch" });
     }
 
     router.push(`/dashboard/coe/batches/${data.batch.id}`);
@@ -91,13 +91,14 @@ export function BatchForm({ departments, schemes }: Props) {
       }
 
       if (!res.ok) {
-        feedback.error(json.error?.message ?? "Validation failed");
+        feedback.error(json.error?.message ?? "Please review the form and try again");
         return;
       }
 
       await createBatch();
-    } catch {
-      feedback.error("Network error. Please try again.");
+    } catch (error) {
+      console.error("[BatchForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -112,7 +113,7 @@ export function BatchForm({ departments, schemes }: Props) {
     const json = await res.json();
 
     if (!res.ok) {
-      throw new Error(json.error?.message ?? "Failed to create batch");
+      throw new Error(json.error?.message ?? "Could not create batch");
     }
 
     handleCreateSuccess(json);
@@ -124,7 +125,8 @@ export function BatchForm({ departments, schemes }: Props) {
     try {
       await createBatch();
     } catch (err) {
-      feedback.error(err instanceof Error ? err.message : "Network error. Please try again.");
+      console.error("[BatchForm]", err);
+      feedback.error(err instanceof Error ? err.message : "Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

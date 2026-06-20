@@ -27,13 +27,15 @@ export function AcademicYearForm() {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Academic year created" });
+        feedback.success({ title: "Academic year created", description: "It is now available for batch linking" });
         setValues({ code: "", startDate: "", endDate: "" });
       } else {
-        feedback.error(result.error?.message ?? "Failed to create");
+        console.error("[AcademicYearForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not create academic year");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[AcademicYearForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

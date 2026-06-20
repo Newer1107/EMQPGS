@@ -43,14 +43,15 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "User updated" });
+        feedback.success({ title: "User updated", description: "Changes are now reflected" });
         onClose();
         setTimeout(() => window.location.reload(), 800);
       } else {
-        feedback.error(result.error?.message ?? "Failed to update user");
+        feedback.error(result.error?.message ?? "Could not update user");
       }
-    } catch {
-      feedback.error("Network request failed");
+    } catch (error) {
+      console.error("[EditDialog]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

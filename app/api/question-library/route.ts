@@ -1,5 +1,6 @@
 import { Role } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AppError } from "@/lib/errors";
 
 import { QuestionLibraryService } from "@/modules/question-library/service";
 import { questionLibraryItemSchema } from "@/modules/question-library/validation";
@@ -27,10 +28,21 @@ export const POST = withApiHandler(
   async (request, context) => {
     const payload = questionLibraryItemSchema.parse(await request.json());
     const questionBankId = request.nextUrl.searchParams.get("bankId");
+    const actor = context.user!;
+
     if (questionBankId) {
-      return service.createForBank({ ...payload, questionBankId }, context.user!);
+      return service.createForBank({ ...payload, questionBankId }, actor);
     }
-    return service.create(payload, context.user!);
+
+    if (actor.role === "CONTRIBUTOR") {
+      throw new AppError(
+        "Questions submitted by contributors must belong to a Question Bank. Please use the 'bankId' query parameter.",
+        400,
+        "MISSING_BANK_ID",
+      );
+    }
+
+    return service.create(payload, actor);
   },
   { roles: [Role.CONTRIBUTOR, Role.COORDINATOR], successStatus: 201, audit: { action: "QUESTION_CREATED", entityType: "QUESTION_LIBRARY_ITEM", getEntityId: (result) => (result as { id?: string }).id } },
 );

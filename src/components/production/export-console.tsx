@@ -39,8 +39,9 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
       const result = await response.json();
       setMessage(result.success ? "Export generated successfully." : result.error?.message ?? "Unable to generate export");
       if (result.success) window.location.reload();
-    } catch {
-      setMessage("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ExportConsole]", error);
+      setMessage("Unable to reach the server. Please check your connection.");
     } finally {
       setBusy(false);
     }
@@ -55,8 +56,9 @@ export function ExportConsole({ banks }: { banks: CoeOverviewItem[] }) {
         return;
       }
       setMessage(result.error?.message ?? "Unable to download export");
-    } catch {
-      setMessage("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[ExportConsole]", error);
+      setMessage("Unable to reach the server. Please check your connection.");
     }
   }
 

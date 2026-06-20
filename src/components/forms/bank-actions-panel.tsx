@@ -122,12 +122,13 @@ function AdvanceSection({
               warnings: result.data.warnings ?? [],
             });
           } else {
-            setState((prev) => ({ ...prev, loading: false, error: result.error?.message ?? "Unknown error" }));
+            setState((prev) => ({ ...prev, loading: false, error: result.error?.message ?? "Could not check readiness" }));
           }
         });
       })
-      .catch(() => {
-        setState((prev) => ({ ...prev, loading: false, error: "Network error" }));
+      .catch((error) => {
+        console.error("[BankActionsPanel]", error);
+        setState((prev) => ({ ...prev, loading: false, error: "Unable to reach the server. Please check your connection." }));
       });
   }
 

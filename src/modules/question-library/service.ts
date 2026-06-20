@@ -62,7 +62,15 @@ export class QuestionLibraryService {
     return { moduleCoverage, coCoverage, rbtCoverage, diffCoverage, approvedCount: approved.length, totalCount: questions.length };
   }
 
+  /** @deprecated Contributors must use createForBank(). This path is for coordinator/import use only. */
   async create(input: QuestionLibraryItemInput, actor: Actor) {
+    if (actor.role === "CONTRIBUTOR") {
+      throw new AppError(
+        "Contributors must create questions within a Question Bank.",
+        400,
+        "CONTRIBUTOR_CREATE_WITHOUT_BANK",
+      );
+    }
     return prisma.$transaction(async (tx) => {
       const question = await tx.questionLibraryItem.create({
         data: {
@@ -220,6 +228,15 @@ export class QuestionLibraryService {
     if (question.ownerId !== actor.id) throw new ForbiddenError("Only the owner can submit this question");
     if (question.status !== QuestionStatus.DRAFT && question.status !== QuestionStatus.REVISION_REQUESTED) {
       throw new AppError("Question cannot be submitted in its current status.", 409);
+    }
+
+    const hasSlot = question.slotAssignments && question.slotAssignments.length > 0;
+    if (!hasSlot) {
+      throw new AppError(
+        "Question must be assigned to a Question Bank slot before it can be submitted.",
+        400,
+        "QUESTION_NOT_IN_BANK",
+      );
     }
 
     const nextStatus = question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_SUBMITTED : QuestionStatus.PENDING;

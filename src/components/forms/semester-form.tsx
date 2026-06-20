@@ -32,13 +32,15 @@ export function SemesterForm({ academicYears }: SemesterFormProps) {
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Semester created" });
+        feedback.success({ title: "Semester created", description: "Add subjects to complete the semester setup" });
         setValues({ number: "", name: "", academicYearId: "" });
       } else {
-        feedback.error(result.error?.message ?? "Failed to create");
+        console.error("[SemesterForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not create semester");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[SemesterForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

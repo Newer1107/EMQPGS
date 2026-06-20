@@ -35,15 +35,17 @@ export function OwnershipTransferForm({ questionId, users, currentOwnerId }: Own
       });
       const result = await response.json();
       if (response.ok && result.success) {
-        feedback.success({ title: "Ownership transferred" });
+        feedback.success({ title: "Ownership transferred", description: "The new owner can now manage this resource" });
         setToUserId("");
         setReason("");
         router.refresh();
       } else {
-        feedback.error(result.error?.message ?? "Transfer failed");
+        console.error("[OwnershipTransferForm]", result.error ?? result);
+        feedback.error(result.error?.message ?? "Could not transfer ownership");
       }
-    } catch {
-      feedback.error("Network request failed. Please check your connection.");
+    } catch (error) {
+      console.error("[OwnershipTransferForm]", error);
+      feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setLoading(false);
     }

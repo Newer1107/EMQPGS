@@ -279,12 +279,14 @@ export function ExamCycleTimetableManager({
         }
 
         resetForm();
-          feedback.success({ title: isEdit ? "Exam cycle updated." : "Exam cycle created." });
+          feedback.success({ title: isEdit ? "Exam cycle updated." : "Exam cycle created.", description: "Timetable slots are now open for scheduling" });
       } else {
-          feedback.error(result.error?.message ?? "Failed to save exam cycle.");
+          console.error("[ExamCycleTimetableManager]", result);
+          feedback.error(result.error?.message ?? "Could not save exam cycle");
       }
-    } catch {
-          feedback.error("Network request failed.");
+    } catch (error) {
+          console.error("[ExamCycleTimetableManager]", error);
+          feedback.error("Unable to reach the server. Please check your connection.");
     } finally {
       setIsSaving(false);
     }

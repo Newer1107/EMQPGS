@@ -18,7 +18,7 @@ export default function Error({
     <div className="flex min-h-screen items-center justify-center p-8">
       <div className="max-w-md text-center">
         <h1 className="text-3xl font-bold tracking-tight mb-2">
-          Something went wrong
+          Unexpected error
         </h1>
         <p className="text-neutral-500 mb-6 leading-relaxed">
           {error.message || "An unexpected error occurred. Please try again."}
