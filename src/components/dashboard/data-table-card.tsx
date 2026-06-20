@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function DataTableCard({ title, children }: { title: string; children: React.ReactNode }) {
