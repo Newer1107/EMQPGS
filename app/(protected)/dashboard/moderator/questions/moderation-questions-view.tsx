@@ -40,7 +40,7 @@ type QuestionData = {
           semesterNumber: number;
           academicYear: { code: string };
         };
-      };
+      } | null;
     };
   }>;
 };
@@ -63,7 +63,10 @@ export function ModerationQuestionsView({ questions }: Props) {
       for (const sa of q.slotAssignments) {
         const bank = sa.questionBank;
         if (!map.has(bank.id)) {
-          const label = `${bank.subject.subjectCode} — ${bank.examCycle.examType.replaceAll("_", " ")} · Sem ${bank.examCycle.batchSemester.semesterNumber} (${bank.examCycle.batchSemester.academicYear.code})`;
+          const cycle = bank.examCycle;
+          const label = cycle
+            ? `${bank.subject.subjectCode} — ${cycle.examType.replaceAll("_", " ")} · Sem ${cycle.batchSemester.semesterNumber} (${cycle.batchSemester.academicYear.code})`
+            : `${bank.subject.subjectCode} (no cycle)`;
           map.set(bank.id, { id: bank.id, label });
         }
       }
