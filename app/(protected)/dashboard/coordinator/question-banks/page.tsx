@@ -30,7 +30,7 @@ export default async function QuestionBanksManagementPage() {
     bankService.listQuestionBanks(actor),
     subjectService.listSubjects(actor, { status: "ACTIVE" }),
     prisma.examCycle.findMany({
-      where: { status: ExamCycleStatus.ACTIVE },
+      where: { status: ExamCycleStatus.ACTIVE, batchSemester: { departmentId: { in: departmentIds } } },
       include: { batchSemester: { include: { academicYear: true } } },
       orderBy: { createdAt: "desc" },
     }),
