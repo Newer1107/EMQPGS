@@ -28,7 +28,7 @@ export default async function QuestionBanksManagementPage() {
   const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
   const [questionBanks, subjects, examCycles] = await Promise.all([
     bankService.listQuestionBanks(actor),
-    subjectService.listSubjects(actor, { status: "ACTIVE" }),
+    subjectService.getSubjectsForBankForm(actor),
     prisma.examCycle.findMany({
       where: { status: ExamCycleStatus.ACTIVE, batchSemester: { departmentId: { in: departmentIds } } },
       include: { batchSemester: { include: { academicYear: true } } },
@@ -74,7 +74,7 @@ export default async function QuestionBanksManagementPage() {
             </TBody>
           </Table>
         </DataTableCard>
-        <CreateBankForm subjects={subjects as unknown as Array<{ id: string; subjectCode: string; subjectName: string; examCycleLinks: Array<{ examCycleId: string }> }>} examCycles={examCycles} />
+        <CreateBankForm subjects={subjects} examCycles={examCycles} />
       </div>
     </div>
   );

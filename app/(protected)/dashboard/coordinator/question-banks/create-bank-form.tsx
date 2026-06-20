@@ -9,11 +9,11 @@ import { apiFetch } from "@/lib/client-fetch";
 import { feedback } from "@/lib/feedback";
 import { useRouter } from "next/navigation";
 import type { ExamType } from "@prisma/client";
+import type { CoordinatorSubjectDto } from "@/modules/coordinator/subject.types";
 
-type Subject = { id: string; subjectCode: string; subjectName: string; examCycleLinks: Array<{ examCycleId: string }> };
 type ExamCycle = { id: string; examType: ExamType; batchSemester: { semesterNumber: number; academicYear: { code: string } } };
 
-export function CreateBankForm({ subjects, examCycles: cycles }: { subjects: Subject[]; examCycles: ExamCycle[] }) {
+export function CreateBankForm({ subjects, examCycles: cycles }: { subjects: CoordinatorSubjectDto[]; examCycles: ExamCycle[] }) {
   const router = useRouter();
   const [examCycleId, setExamCycleId] = useState("");
   const [subjectId, setSubjectId] = useState("");

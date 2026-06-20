@@ -4,6 +4,7 @@ import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { withUniqueCheck } from "@/lib/db-helpers";
 import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
 import { SubjectVersionService } from "@/modules/subject-versions/service";
+import type { CoordinatorSubjectDto } from "@/modules/coordinator/subject.types";
 
 type SubjectPayload = {
   subjectCode: string;
@@ -72,6 +73,7 @@ export class SubjectManagementService {
         examCycleLinks: {
           select: {
             id: true,
+            examCycleId: true,
             examCycle: { select: { id: true, examType: true, status: true, batchSemester: { select: { semesterNumber: true, academicYear: { select: { id: true, code: true } } } } } },
           },
         },
@@ -89,6 +91,21 @@ export class SubjectManagementService {
       },
       orderBy: [{ departmentId: "asc" }, { subjectCode: "asc" }],
     });
+  }
+
+  async getSubjectsForBankForm(actor: Actor): Promise<CoordinatorSubjectDto[]> {
+    const subjects = await this.listSubjects(actor, { status: "ACTIVE" });
+    return subjects.map((s) => ({
+      id: s.id,
+      subjectCode: s.subjectCode,
+      subjectName: s.subjectName,
+      examCycleLinks: s.examCycleLinks.map((l) => ({
+        examCycleId: l.examCycleId,
+        examType: l.examCycle.examType,
+        examCycleStatus: l.examCycle.status,
+        examCycleName: `Sem ${l.examCycle.batchSemester.semesterNumber} · ${l.examCycle.batchSemester.academicYear.code} / ${l.examCycle.examType}`,
+      })),
+    }));
   }
 
   async createSubject(actor: Actor, payload: SubjectPayload) {
