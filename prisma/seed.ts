@@ -132,20 +132,15 @@ async function main() {
 
   async function createSubjects() {
     for (const sd of ALL_SUBJECTS) {
-      // FE subjects (BSC/ESC codes without dept prefix) → HNS
-      // COMP subjects → COMP, EXTC subjects → EXTC
+      if (subjectMap.has(sd.code)) continue;
       const deptId = sd.code.includes("COMP") ? comp.id : sd.code.includes("EXTC") ? extc.id : hns.id;
-
-      const s = await prisma.subject.upsert({
-        where: { subjectCode_departmentId: { subjectCode: sd.code, departmentId: deptId } },
-        update: {},
-        create: {
+      const s = await prisma.subject.create({
+        data: {
           subjectCode: sd.code, subjectName: sd.name, credits: sd.credits,
           questionBankDueDate: dt(2026, 12, 15), departmentId: deptId, status: SubjectStatus.ACTIVE,
         },
       });
       subjectMap.set(sd.code, s.id);
-
       await prisma.subjectVersion.create({
         data: { subjectId: s.id, versionNumber: 1, title: sd.name, effectiveFromAcademicYearId: ay2425.id },
       });
