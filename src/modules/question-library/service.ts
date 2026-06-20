@@ -103,16 +103,17 @@ export class QuestionLibraryService {
   async createForBank(input: QuestionLibraryItemInput & { questionBankId: string }, actor: Actor) {
     if (actor.role !== "COORDINATOR") {
       const assignment = await prisma.contributorBankAssignment.findUnique({
-        where: { contributorId_questionBankId: { contributorId: actor.id, questionBankId: input.questionBankId } },
+        where: { contributorId_questionBankId: { contributorId: actor.id, questionBankId: slotBankId } },
       });
       if (!assignment) {
         throw new AppError("You are no longer assigned to contribute to this question bank.", 403);
       }
     }
+    const { questionBankId: slotBankId, ...createData } = input;
     return prisma.$transaction(async (tx) => {
       const question = await tx.questionLibraryItem.create({
         data: {
-          ...input,
+          ...createData,
           createdById: actor.id,
           ownerId: actor.id,
         },
@@ -136,7 +137,7 @@ export class QuestionLibraryService {
 
       const emptySlot = await tx.questionSlot.findFirst({
         where: {
-          questionBankId: input.questionBankId,
+          questionBankId: slotBankId,
           moduleNumber: question.moduleNumber,
           marks: question.marks,
           assignedQuestionId: null,
