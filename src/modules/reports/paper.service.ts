@@ -18,7 +18,8 @@ import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES, EXAM_MODULE_RANGES } from "@/lib/constants";
 import { PdfService } from "@/modules/reports/pdf-service";
-import { recordUsage } from "@/modules/question-library/service";
+// ponytail: QuestionUsageHistory is created only by COE "Mark As Used In Examination" action.
+// Paper generation must never mutate question history.
 import { PaperGenerationEngine } from "@/modules/paper-generation-engine/paper-generation-engine";
 import { ConstraintAwareGreedyStrategy } from "@/modules/paper-generation-engine/strategies/constraint-aware-greedy";
 import { slotKey } from "@/modules/paper-generation-engine/constraint-engine";
@@ -171,12 +172,6 @@ export class PaperGenerationService {
           paperFileAsset: true,
         },
       });
-
-      await Promise.all(
-        selectedQuestions.map((question) =>
-          recordUsage(question.id, "GENERATED_PAPER", record.id),
-        ),
-      );
 
       await prisma.paperSnapshot.upsert({
         where: { questionBankId_variant: { questionBankId, variant } },

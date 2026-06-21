@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coe/academic-years", label: "Academic Years", workspaceTypes: ["COE"] },
   { href: "/dashboard/coe/monitoring", label: "Monitoring", workspaceTypes: ["COE"] },
   { href: "/dashboard/coe/production", label: "Production", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/papers", label: "Paper Publication", workspaceTypes: ["COE"] },
   { href: "/dashboard/coe/audit", label: "Audit Log", workspaceTypes: ["COE"] },
   { href: "/dashboard/coe/coordinator-assignments", label: "Coordinators", workspaceTypes: ["COE"] },
   // Academic Setup
