@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { responsibilityLabels } from "@/lib/constants";
@@ -21,18 +20,17 @@ export function WorkspacePicker({
   responsibilities: ResponsibilityOption[];
   userName: string;
 }) {
-  const router = useRouter();
-
   async function enterWorkspace(assignmentId: string) {
+    localStorage.setItem("lastWorkspace", assignmentId);
     const res = await apiFetch("/api/auth/workspace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ assignmentId }),
     });
     const result = await res.json();
-    if (!result.success) return; // error handling omitted for brevity
+    if (!result.success) return;
     const type = result.data.responsibility.toLowerCase();
-    router.push(`/dashboard/${type}`);
+    window.location.href = `/dashboard/${type}`;
   }
 
   function getScopeLabel(r: ResponsibilityOption): string {

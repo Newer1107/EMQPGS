@@ -16,8 +16,7 @@ export default async function DashboardIndexPage() {
 
   if (responsibilities.length === 0) redirect("/no-access");
   if (responsibilities.length === 1) {
-    await aws.activate(user.id, responsibilities[0].id);
-    redirect(`/dashboard/${responsibilities[0].type.toLowerCase()}`);
+    redirect(`/api/auth/workspace?assignmentId=${responsibilities[0].id}`);
   }
   redirect("/workspace-select");
 }

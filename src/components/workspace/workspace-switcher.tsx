@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { responsibilityLabels } from "@/lib/constants";
@@ -21,13 +20,13 @@ export function WorkspaceSwitcher({
   currentAssignmentId?: string;
   workspaces: WorkspaceOption[];
 }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
 
   const current = workspaces.find((w) => w.id === currentAssignmentId);
 
   async function switchWorkspace(assignmentId: string) {
     setOpen(false);
+    localStorage.setItem("lastWorkspace", assignmentId);
     const res = await apiFetch("/api/auth/workspace", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -36,7 +35,7 @@ export function WorkspaceSwitcher({
     const result = await res.json();
     if (!result.success) return;
     const type = result.data.responsibility.toLowerCase();
-    router.push(`/dashboard/${type}`);
+    window.location.href = `/dashboard/${type}`;
   }
 
   return (

@@ -105,7 +105,7 @@ Invariant: Only one ACTIVE academic year at a time (application-enforced).
 | hodName | String |
 | isActive | Boolean | For soft-delete |
 
-**Relationships:** Has many Users, CoordinatorDepartmentAssignments, Subjects, ExamCycles, CurriculumSchemes, Batches, CurriculumSubjects, BatchSemesters.
+**Relationships:** Has many Users (via homeDepartmentId), Subjects, ExamCycles, CurriculumSchemes, Batches, CurriculumSubjects, BatchSemesters.
 **Note:** Department is now the single organizational entity — handles both faculty administration and curriculum ownership.
 
 ### Subject
@@ -156,52 +156,40 @@ Invariant: Only one ACTIVE academic year at a time (application-enforced).
 ### User
 
 | Field | Type | Notes |
-|---|---|---|
+|---|---|---|---|
 | id | String (cuid) | PK |
 | name | String | |
 | email | String | Unique |
 | passwordHash | String | bcrypt hash |
-| role | Role | COE, COORDINATOR, MODERATOR, CONTRIBUTOR, DEAN |
 | status | UserStatus | ACTIVE or DISABLED |
 | lastLoginAt | DateTime? | |
-| departmentId | String? | FK → Department |
+| homeDepartmentId | String? | FK → Department. Informational only — never used for authorization. |
 | resetTokenHash | String? | For password reset |
 | resetTokenExpiry | DateTime? | |
 
-**Indexes:** `@unique([role])`, `@unique([departmentId])`
+**Note:** The `Role` enum and `role` field have been removed. Access is determined by `ResponsibilityAssignment` records.
 
-### CoordinatorDepartmentAssignment
-
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| coordinatorId | String | FK → User |
-| departmentId | String | FK → Department |
-
-**Unique:** `@@unique([coordinatorId, departmentId])` — one assignment per coordinator per department.
-
-### ModeratorBankAssignment
+### ResponsibilityAssignment
 
 | Field | Type | Notes |
 |---|---|---|
 | id | String (cuid) | PK |
-| moderatorId | String | FK → User |
-| questionBankId | String | FK → QuestionBank |
-
-**Unique:** `@@unique([moderatorId, questionBankId])` — one assignment per moderator per bank.
-
-### ContributorBankAssignment
-
-| Field | Type | Notes |
-|---|---|---|
-| id | String (cuid) | PK |
-| contributorId | String | FK → User |
-| questionBankId | String | FK → QuestionBank |
+| userId | String | FK → User |
+| responsibility | ResponsibilityType | COE, DEAN, COORDINATOR, MODERATOR, CONTRIBUTOR |
+| scopeType | ScopeType | INSTITUTION, DEPARTMENT, QUESTION_BANK |
+| scopeId | String? | Department.id, QuestionBank.id, or null for institution |
+| activeFrom | DateTime | Default now. When the assignment takes effect. |
+| activeTo | DateTime? | Optional expiry. Null = indefinite. |
+| assignedById | String? | FK → User. Who created this assignment. |
 | assignedAt | DateTime | Default now |
+| deletedAt | DateTime? | Soft-delete timestamp |
+| deletedById | String? | FK → User. Who revoked this assignment. |
+| deletionReason | String? | Why it was revoked. |
 
-**Unique:** `@@unique([contributorId, questionBankId])` — one assignment per contributor per bank.
+**Unique:** `@@unique([userId, responsibility, scopeType, scopeId])`
+**Indexes:** `userId`, `(responsibility, scopeType, scopeId)`, `activeTo`, `deletedAt`
 
-**Purpose:** Mirrors `ModeratorBankAssignment`. Provides explicit contributor-to-bank assignment used by `getContributorAssignedBanks()` alongside slots-based inference. POST/DELETE/GET API at `/api/question-banks/{id}/assignments/contributor`.
+**Purpose:** Single generic table replacing `CoordinatorDepartmentAssignment`, `ModeratorBankAssignment`, and `ContributorBankAssignment`. Every responsibility is an instance of this model. The assignment IS what grants the responsibility — no pre-existing role required.
 
 ### Notification
 
@@ -568,7 +556,7 @@ Invariant: One dean review per bank. Write-once (no update path). State is deter
 
 | Enum | Values | Used by |
 |---|---|---|
-| Role | COE, COORDINATOR, MODERATOR, CONTRIBUTOR, DEAN | User |
+| ResponsibilityType | COE, DEAN, COORDINATOR, MODERATOR, CONTRIBUTOR | ResponsibilityAssignment |
 | UserStatus | ACTIVE, DISABLED | User |
 | SubjectStatus | ACTIVE, INACTIVE | Subject |
 | ExamType | ISE_1, ISE_2, ENDSEM, SUPPLEMENTARY, KT | ExamCycle, PaperPattern |

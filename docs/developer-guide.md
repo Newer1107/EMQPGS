@@ -11,7 +11,7 @@ EMQPGS is an examination question paper management system on **Next.js 16 App Ro
 Key architectural decisions:
 
 - **proxy.ts middleware** (not `middleware.ts`) — exports a function named `proxy`. Route-level role gating for `/dashboard/<role>` and `/api/**`.
-- **withApiHandler** — every API route wraps this. Provides CSRF, rate limiting, role-based access, audit logging, and consistent error formatting.
+- **withApiHandler** — every API route wraps this. Provides CSRF, rate limiting, responsibility-based access, audit logging, and consistent error formatting.
 - **Custom JWT auth** — Auth.js v5 credentials provider. Cookie names: `emqpgs_access_token`, `emqpgs_refresh_token`, `emqpgs_csrf_token`.
 - **Two-axis bank state** — `QuestionBankPhase` (4 states) + `RecordStatus` (2 states: ACTIVE, LOCKED), orthogonal.
 - **QuestionSlot linkage** — no join table. Slots are first-class positional entities.

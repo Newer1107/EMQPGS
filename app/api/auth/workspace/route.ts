@@ -1,13 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ActiveWorkspaceService } from "@/lib/auth/active-workspace";
-import { UnauthorizedError } from "@/lib/errors";
+import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
 import { z } from "zod";
 
 const schema = z.object({
   assignmentId: z.string().min(1),
 });
 
+/**
+ * GET — auto-activate (used by server-component redirect on login).
+ * Sets the workspace cookie and redirects to the appropriate dashboard.
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const user = await getCurrentUserFromCookies();
+    const assignmentId = request.nextUrl.searchParams.get("assignmentId");
+    if (!assignmentId) throw new ForbiddenError("assignmentId is required");
+
+    const service = new ActiveWorkspaceService();
+    const workspace = await service.activate(user.id, assignmentId);
+    const type = workspace.responsibility.toLowerCase();
+
+    return NextResponse.redirect(new URL(`/dashboard/${type}`, request.url));
+  } catch (error) {
+    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.redirect(new URL("/workspace-select", request.url));
+  }
+}
+
+/**
+ * POST — workspace switching (used by workspace picker and header switcher).
+ * Sets the workspace cookie and returns JSON with the workspace details.
+ */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUserFromCookies();
