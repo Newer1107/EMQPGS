@@ -611,7 +611,7 @@ model AiReport {
   questionBankId  String
   status          AiReportStatus @default(PENDING)
   modelName       String
-  summary         String?
+    summary         String?       @db.Text
   reportJson      Json?
   chartData       Json?
   failureReason   String?
