@@ -1,11 +1,8 @@
 import fs from "node:fs";
 
-const CANDIDATES = [
-  "templates/tcet-header.png",
-  "templates/tcet-header.webp",
-  "templates/tcet-header.jpg",
-  "templates/tcet-header.jpeg",
-];
+const ASSETS_DIR = "src/modules/paper-generation/assets";
+const PRIMARY = `${ASSETS_DIR}/tcet-header.png`;
+const FALLBACKS = [".webp", ".jpg", ".jpeg"];
 
 export type HeaderInfo = {
   buffer: Buffer;
@@ -13,16 +10,22 @@ export type HeaderInfo = {
 };
 
 export function loadHeader(): HeaderInfo | null {
-  for (const rel of CANDIDATES) {
+  try {
+    if (fs.statSync(PRIMARY).isFile()) {
+      return { buffer: fs.readFileSync(PRIMARY), docxType: "png" };
+    }
+  } catch { /* fall through */ }
+
+  for (const ext of FALLBACKS) {
+    const p = `${ASSETS_DIR}/tcet-header${ext}`;
     try {
-      const buf = fs.readFileSync(rel);
-      const ext = rel.split(".").pop()?.toLowerCase() ?? "";
-      if (ext === "png") return { buffer: buf, docxType: "png" };
-      if (ext === "jpg" || ext === "jpeg") return { buffer: buf, docxType: "jpg" };
-      if (ext === "gif") return { buffer: buf, docxType: "gif" };
-      if (ext === "bmp") return { buffer: buf, docxType: "bmp" };
-      if (ext === "webp") return { buffer: buf, docxType: "png" };
+      if (fs.statSync(p).isFile()) {
+        const buf = fs.readFileSync(p);
+        if (ext === ".webp") return { buffer: buf, docxType: "png" };
+        return { buffer: buf, docxType: ext === ".jpg" || ext === ".jpeg" ? "jpg" : "png" };
+      }
     } catch { /* try next */ }
   }
+
   return null;
 }
