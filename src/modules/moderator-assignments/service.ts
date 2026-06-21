@@ -17,19 +17,12 @@ export class ModeratorAssignmentService {
     });
     if (!moderator) throw new NotFoundError("User not found");
 
-    const hasModeratorResp = await prisma.responsibilityAssignment.findFirst({
-      where: { userId: payload.moderatorId, responsibility: "MODERATOR" },
-    });
-    if (!hasModeratorResp) {
-      throw new AppError("Only users with the MODERATOR responsibility can be assigned.", 400);
-    }
-
     const bank = await this.repository.findQuestionBankById(questionBankId);
     if (!bank) throw new NotFoundError("Question bank not found");
 
     const existing = await this.repository.findDuplicate(payload.moderatorId, questionBankId);
     if (existing) {
-      throw new AppError("Moderator is already assigned to this question bank.", 409);
+      throw new AppError("This user is already assigned as Moderator for this Question Bank.", 409);
     }
 
     const assignment = await this.repository.create(payload.moderatorId, questionBankId);

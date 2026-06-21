@@ -19,10 +19,7 @@ export default async function CoordinatorAssignmentsPage() {
       orderBy: { assignedAt: "desc" },
     }),
     prisma.user.findMany({
-      where: {
-        status: "ACTIVE",
-        responsibilities: { some: { responsibility: "COORDINATOR" as ResponsibilityType } },
-      },
+      where: { status: "ACTIVE" },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),

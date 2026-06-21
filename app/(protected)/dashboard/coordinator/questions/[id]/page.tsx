@@ -47,13 +47,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
   ]);
 
   const users = await prisma.user.findMany({
-    where: {
-      responsibilities: {
-        some: {
-          responsibility: { in: ["CONTRIBUTOR", "COORDINATOR"] },
-        },
-      },
-    },
+    where: { status: "ACTIVE" },
     orderBy: { name: "asc" },
   });
 

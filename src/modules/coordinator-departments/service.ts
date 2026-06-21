@@ -13,22 +13,15 @@ export class CoordinatorDepartmentAssignmentService {
   async create(data: CoordinatorDepartmentAssignmentInput) {
     const coordinator = await prisma.user.findUnique({
       where: { id: data.coordinatorId },
-      select: { id: true },
+      select: { id: true, name: true },
     });
     if (!coordinator) throw new NotFoundError("Coordinator not found");
-
-    const hasCoordinatorResp = await prisma.responsibilityAssignment.findFirst({
-      where: { userId: data.coordinatorId, responsibility: "COORDINATOR" },
-    });
-    if (!hasCoordinatorResp) {
-      throw new AppError("Only users with the COORDINATOR responsibility can be assigned to departments.", 400);
-    }
 
     const department = await prisma.department.findUnique({ where: { id: data.departmentId } });
     if (!department) throw new NotFoundError("Department not found");
 
     const existing = await this.repository.findByCoordinatorAndDepartment(data.coordinatorId, data.departmentId);
-    if (existing) throw new AppError("Coordinator is already assigned to this department.", 409);
+    if (existing) throw new AppError("This user is already assigned as Coordinator for this Department.", 409);
 
     return this.repository.create(data);
   }

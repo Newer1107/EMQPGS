@@ -17,19 +17,12 @@ export class ContributorAssignmentService {
     });
     if (!contributor) throw new NotFoundError("User not found");
 
-    const hasContributorResp = await prisma.responsibilityAssignment.findFirst({
-      where: { userId: payload.contributorId, responsibility: "CONTRIBUTOR" },
-    });
-    if (!hasContributorResp) {
-      throw new AppError("Only users with the CONTRIBUTOR responsibility can be assigned.", 400);
-    }
-
     const bank = await this.repository.findQuestionBankById(questionBankId);
     if (!bank) throw new NotFoundError("Question bank not found");
 
     const existing = await this.repository.findDuplicate(payload.contributorId, questionBankId);
     if (existing) {
-      throw new AppError("Contributor is already assigned to this question bank.", 409);
+      throw new AppError("This user is already assigned as Contributor for this Question Bank.", 409);
     }
 
     const assignment = await this.repository.create(payload.contributorId, questionBankId);

@@ -256,14 +256,9 @@ export class QuestionLibraryService {
     if (!question) throw new NotFoundError("Question not found");
     new AuthorizationService(authContext).requireCoordinator();
 
-    const targetUser = await prisma.user.findUnique({ where: { id: toUserId } });
+    const targetUser = await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true, status: true } });
     if (!targetUser) throw new NotFoundError("Target user not found");
     if (targetUser.status !== "ACTIVE") throw new AppError("Cannot transfer ownership to a disabled user.", 400);
-
-    const hasContributorResp = await prisma.responsibilityAssignment.findFirst({
-      where: { userId: toUserId, responsibility: "CONTRIBUTOR" },
-    });
-    if (!hasContributorResp) throw new AppError("Ownership can only be transferred to contributors.", 400);
 
     const [updated] = await prisma.$transaction(async (tx) => {
       const updatedQuestion = await tx.questionLibraryItem.update({

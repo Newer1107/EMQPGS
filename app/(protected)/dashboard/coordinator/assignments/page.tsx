@@ -21,10 +21,7 @@ export default async function AssignmentsPage() {
       take: 100,
     }),
     prisma.user.findMany({
-      where: {
-        status: "ACTIVE",
-        responsibilities: { some: { responsibility: "MODERATOR" as ResponsibilityType } },
-      },
+      where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
     }),
     prisma.responsibilityAssignment.findMany({
@@ -32,10 +29,7 @@ export default async function AssignmentsPage() {
       include: { user: { select: { name: true } } },
     }),
     prisma.user.findMany({
-      where: {
-        status: "ACTIVE",
-        responsibilities: { some: { responsibility: "CONTRIBUTOR" as ResponsibilityType } },
-      },
+      where: { status: "ACTIVE" },
       orderBy: { name: "asc" },
     }),
     prisma.responsibilityAssignment.findMany({
