@@ -15,7 +15,8 @@ export const GET = withApiHandler(
 export const POST = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    return service.triggerPaperGeneration(context.auth!, questionBankId);
+    const body = await request.json().catch(() => ({}));
+    return service.triggerPaperGeneration(context.auth!, questionBankId, body.examType);
   },
   { responsibility: ["DEAN" as ResponsibilityType], audit: { action: "PAPER_GENERATION_REQUESTED", entityType: "GENERATED_PAPER" } },
 );

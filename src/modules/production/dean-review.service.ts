@@ -13,6 +13,7 @@ import { logAudit } from "@/lib/audit";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES } from "@/lib/constants";
+import type { EvaluationReport } from "@/modules/paper-generation-engine/types";
 
 const DEAN_REVIEW_REMINDER_DAYS = Number(process.env.DEAN_REVIEW_REMINDER_DAYS ?? "3");
 
@@ -74,6 +75,9 @@ export type DeanReviewWorkspace = {
     qualityScore: number | null;
     duplicateRisk: number | null;
     aiRecommendation: string;
+    evaluationReport: EvaluationReport | null;
+    scoreBreakdown: string | null;
+    hasGenerationTrace: boolean;
     questions: Array<{
       questionText: string;
       markType: number;
@@ -164,25 +168,31 @@ export class DeanReviewService {
       subjectCode: questionBank.subject.subjectCode,
       examCycleLabel: `${questionBank.batchSemester.academicYear.code} · Sem ${questionBank.batchSemester.semesterNumber}`,
       generationTimestamp: getGenerationTimestamp(questionBank.generatedPapers),
-      papers: questionBank.generatedPapers.map((paper) => ({
-        paperId: paper.variant,
-        paperLabel: paper.variant,
-        coverageScore: paper.coverageScore ?? null,
-        difficultyScore: paper.difficultyScore ?? null,
-        qualityScore: paper.qualityScore ?? null,
-        duplicateRisk: paper.duplicateRisk ?? null,
-        aiRecommendation: paper.recommendation ?? questionBank.aiReports[0]?.summary ?? "No AI recommendation available.",
-        questions: paper.items
-          .map((item) => ({
-            questionText: item.question.questionText,
-            markType: item.question.marks,
-            moduleNumber: item.question.moduleNumber,
-            co: item.question.coMapping,
-            rbtLevel: item.question.rbtLevel,
-            difficultyLevel: item.question.difficultyLevel ?? null,
-          }))
-          .sort((left, right) => left.moduleNumber - right.moduleNumber || left.markType - right.markType || left.questionText.localeCompare(right.questionText)),
-      })),
+      papers: questionBank.generatedPapers.map((paper) => {
+        const pj = paper.paperJson as Record<string, unknown> | null;
+        return {
+          paperId: paper.variant,
+          paperLabel: paper.variant,
+          coverageScore: paper.coverageScore ?? null,
+          difficultyScore: paper.difficultyScore ?? null,
+          qualityScore: paper.qualityScore ?? null,
+          duplicateRisk: paper.duplicateRisk ?? null,
+          aiRecommendation: paper.recommendation ?? questionBank.aiReports[0]?.summary ?? "No AI recommendation available.",
+          evaluationReport: (pj?.evaluationReport as EvaluationReport) ?? null,
+          scoreBreakdown: (pj?.scoreBreakdown as string) ?? null,
+          hasGenerationTrace: Boolean(pj?.generationTrace ?? false),
+          questions: paper.items
+            .map((item) => ({
+              questionText: item.question.questionText,
+              markType: item.question.marks,
+              moduleNumber: item.question.moduleNumber,
+              co: item.question.coMapping,
+              rbtLevel: item.question.rbtLevel,
+              difficultyLevel: item.question.difficultyLevel ?? null,
+            }))
+            .sort((left, right) => left.moduleNumber - right.moduleNumber || left.markType - right.markType || left.questionText.localeCompare(right.questionText)),
+        };
+      }),
       deanReview: questionBank.deanReview ? {
         id: questionBank.deanReview.id,
         regularPaper: questionBank.deanReview.regularPaper,

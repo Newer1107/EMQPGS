@@ -4,6 +4,7 @@ import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { WorkspaceCookieManager } from "@/lib/auth/workspace-cookie-manager";
 import { WorkspaceDisplayResolver } from "@/lib/auth/workspace-display";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
+import { ACTIVE_WS_COOKIE } from "@/lib/constants";
 import { z } from "zod";
 
 const schema = z.object({
@@ -56,7 +57,18 @@ export async function GET(request: NextRequest) {
     const workspace = await validateAndSetCookie(user.id, assignmentId);
     const type = workspace.responsibility.toLowerCase();
 
-    return NextResponse.redirect(originUrl(request, `/dashboard/${type}`));
+    // cookies.set() before NextResponse.redirect() loses the cookie
+    // because redirect creates a new response object. Set it on the redirect response explicitly.
+    const redirectUrl = originUrl(request, `/dashboard/${type}`);
+    const response = NextResponse.redirect(redirectUrl);
+    response.cookies.set(ACTIVE_WS_COOKIE, assignmentId, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+    return response;
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
       return NextResponse.redirect(originUrl(request, "/login"));

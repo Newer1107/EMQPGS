@@ -103,6 +103,15 @@ export class PaperGenerationService {
         uploadedById: actor.id,
       });
 
+      // Capture existing paperJson for regeneration history
+      const existingPaper = await prisma.generatedPaper.findUnique({
+        where: { questionBankId_variant: { questionBankId, variant } },
+        select: { paperJson: true },
+      });
+      const prevGenerations = existingPaper?.paperJson
+        ? [existingPaper.paperJson as Record<string, unknown>]
+        : [];
+
       const diffCat = solution.report.categories.find((c) => c.label === "Difficulty Balance");
       const overallScore = Math.round(solution.report.overall);
 
@@ -124,6 +133,7 @@ export class PaperGenerationService {
             evaluationReport: solution.report,
             scoreBreakdown: formatReport(solution.report),
             generationTrace: trace,
+            ...(prevGenerations.length > 0 ? { previousGenerations: prevGenerations } : {}),
           } as Prisma.InputJsonValue,
           paperFileAssetId: pdfAsset.id,
           failureReason: null,

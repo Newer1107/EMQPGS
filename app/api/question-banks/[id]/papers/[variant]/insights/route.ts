@@ -9,8 +9,8 @@ import type { GenerationTrace, EvaluationReport } from "@/modules/paper-generati
 
 type PaperJsonData = {
   questionIds: string[];
-  evaluationReport: EvaluationReport;
-  scoreBreakdown: string;
+  evaluationReport?: EvaluationReport;
+  scoreBreakdown?: string;
   generationTrace?: GenerationTrace;
 };
 
@@ -52,10 +52,6 @@ export async function GET(request: NextRequest) {
 
     const rawPaperJson = paper.paperJson as PaperJsonData | null;
 
-    if (!rawPaperJson?.evaluationReport) {
-      throw new AppError("No generation data available for this paper", 404);
-    }
-
     return NextResponse.json({
       success: true,
       data: {
@@ -67,9 +63,9 @@ export async function GET(request: NextRequest) {
         recommendation: paper.recommendation,
         generatedAt: paper.generatedAt?.toISOString() ?? null,
         createdAt: paper.createdAt.toISOString(),
-        evaluationReport: rawPaperJson.evaluationReport,
-        scoreBreakdown: rawPaperJson.scoreBreakdown,
-        generationTrace: rawPaperJson.generationTrace ?? null,
+        evaluationReport: rawPaperJson?.evaluationReport ?? null,
+        scoreBreakdown: rawPaperJson?.scoreBreakdown ?? null,
+        generationTrace: rawPaperJson?.generationTrace ?? null,
         questions: paper.items.map((item) => ({
           id: item.question.id,
           questionText: item.question.questionText,

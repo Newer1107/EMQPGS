@@ -23,7 +23,7 @@ export default async function DeanReviewWorkspacePage({
     <div className="space-y-6">
       <PageHeader
         title="Review Generated Papers"
-        description="Compare papers A, B, and C, then assign one distinct paper to each final exam slot."
+        description="Select an exam type to generate papers, then review and assign one distinct paper to each final exam slot."
       />
       <DeanReviewWorkspace questionBankId={bank} nextBankId={nextBankId} />
     </div>
