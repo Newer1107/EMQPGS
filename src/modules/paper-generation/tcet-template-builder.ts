@@ -1,6 +1,6 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-  ImageRun, AlignmentType, BorderStyle, WidthType, VerticalAlign,
+  ImageRun, AlignmentType, BorderStyle, WidthType, VerticalAlign, ShadingType,
 } from "docx";
 import type { IPropertiesOptions } from "docx";
 import { TemplateConfig as C } from "@/modules/paper-generation/template-config";
@@ -11,12 +11,13 @@ import type { PaperModel } from "@/modules/paper-generation/types";
 
 function cell(
   children: Paragraph[],
-  opts: { width?: number; span?: number; align?: "center" | "top" } = {},
+  opts: { width?: number; span?: number; align?: "center" | "top"; fill?: string } = {},
 ): TableCell {
   const props: Record<string, unknown> = {};
   if (opts.width) props.width = { size: opts.width, type: WidthType.DXA };
   if (opts.span) props.columnSpan = opts.span;
   if (opts.align === "center") props.verticalAlign = VerticalAlign.CENTER;
+  if (opts.fill) props.shading = { type: ShadingType.CLEAR, fill: opts.fill, color: "auto" };
   return new TableCell({ children, ...props });
 }
 
@@ -151,20 +152,19 @@ export class TcetTemplateBuilder {
       ],
     }));
 
-    for (const g of model.questionGroups) {
-      /* Q.N instruction row */
+    for (const sec of model.sections) {
+      /* Section header row (merged across all 5 columns with shading) */
+      const sectionText = `${sec.label} — Answer ALL questions (${sec.marks} marks each)`;
       rows.push(new TableRow({
         children: [
-          cell([para(`Q.${g.number}`, { size: C.fontSize.questionLabel, bold: true })], { width: qno, align: "top" }),
-          cell([para(g.instruction, { size: C.fontSize.questionText, bold: true })], { width: qw }),
-          cell([], { width: marks }),
-          cell([], { width: co }),
-          cell([], { width: bloom }),
+          cell([para(sectionText, { size: C.fontSize.sectionHeading, bold: true, align: AlignmentType.CENTER })], {
+            width: C.usableWidth, span: 5, align: "center", fill: "E8EDF5",
+          }),
         ],
       }));
 
-      for (const sq of g.subQuestions) {
-        /* Sub-question row */
+      for (const sq of sec.questions) {
+        /* Question row */
         rows.push(new TableRow({
           children: [
             cell([para(sq.label, { size: C.fontSize.questionLabel, bold: true })], { width: qno, align: "top" }),

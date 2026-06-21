@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -234,13 +235,21 @@ export function DeanReviewWorkspace({ questionBankId, nextBankId }: { questionBa
                   <p className="mt-2 text-sm leading-6">{paper.aiRecommendation}</p>
                 </div>
 
-                <a
-                  href={`/api/question-banks/${questionBankId}/papers/${paper.paperId}/export`}
-                  className="inline-flex items-center justify-center rounded-md bg-[var(--foreground)] px-3 py-2 text-xs font-medium text-[var(--background)] hover:opacity-90 transition-opacity"
-                  download
-                >
-                  Download DOCX
-                </a>
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/dashboard/dean/question-banks/${questionBankId}/insights?variant=${paper.paperId}`}
+                    className="inline-flex items-center justify-center rounded-md border border-[var(--border)] px-3 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] transition-colors"
+                  >
+                    View Insights
+                  </Link>
+                  <a
+                    href={`/api/question-banks/${questionBankId}/papers/${paper.paperId}/export`}
+                    className="inline-flex items-center justify-center rounded-md bg-[var(--foreground)] px-3 py-2 text-xs font-medium text-[var(--background)] hover:opacity-90 transition-opacity"
+                    download
+                  >
+                    Download DOCX
+                  </a>
+                </div>
 
                 <div className="rounded-xl border border-[var(--border)] p-4">
                   <button

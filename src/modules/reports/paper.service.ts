@@ -5,9 +5,11 @@ import {
   PaperGenerationStatus,
   PaperVariant,
   QuestionBankPhase,
+  QuestionStatus,
   RecordStatus,
   type Prisma,
 } from "@prisma/client";
+import type { QuestionLibraryItem } from "@prisma/client";
 import { type Actor } from "@/lib/types";
 import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/db";
@@ -15,16 +17,18 @@ import { AppError, NotFoundError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
 import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES, EXAM_MODULE_RANGES } from "@/lib/constants";
-import { PaperGenerator } from "@/modules/reports/paper-generator";
 import { PdfService } from "@/modules/reports/pdf-service";
 import { recordUsage } from "@/modules/question-library/service";
-
+import { PaperGenerationEngine } from "@/modules/paper-generation-engine/paper-generation-engine";
+import { ConstraintAwareGreedyStrategy } from "@/modules/paper-generation-engine/strategies/constraint-aware-greedy";
+import { slotKey } from "@/modules/paper-generation-engine/constraint-engine";
+import { formatReport } from "@/modules/paper-generation-engine/score-report";
+import type { GenerationTrace, GenerationStats, SlotDecision, CandidateEvaluation } from "@/modules/paper-generation-engine/types";
 
 export class PaperGenerationService {
   constructor(
     private readonly storageService = new StorageService(),
     private readonly notificationService = new NotificationService(),
-    private readonly paperGenerator = new PaperGenerator(),
     private readonly pdfService = new PdfService(),
   ) {}
 
@@ -36,14 +40,52 @@ export class PaperGenerationService {
     }
 
     const moduleRange = EXAM_MODULE_RANGES[examType];
-    const generatedPayloads = this.paperGenerator.generate(questionBank, variants, moduleRange);
-    const outputs = [];
 
-    for (const payload of generatedPayloads) {
+    // Build inventory from approved question slots
+    const inventory = new Map<string, QuestionLibraryItem[]>();
+    for (const slot of questionBank.slots) {
+      if (!slot.assignedQuestion) continue;
+      const q = slot.assignedQuestion;
+      if (q.status !== QuestionStatus.APPROVED) continue;
+      const key = slotKey(q.moduleNumber, q.marks);
+      if (!inventory.has(key)) inventory.set(key, []);
+      inventory.get(key)!.push(q);
+    }
+
+    if (inventory.size === 0) {
+      throw new AppError("No approved inventory available for paper generation", 409);
+    }
+
+    // Get usage history for freshness scoring
+    const allQIds = [...inventory.values()].flat().map((q) => q.id);
+    const usageHistory = await prisma.questionUsageHistory.findMany({
+      where: { questionId: { in: allQIds } },
+    });
+
+    const outputs = [];
+    const overallConsumed = new Set<string>();
+
+    for (const variant of variants) {
+      // Build variant-specific inventory excluding questions used by earlier variants
+      const variantInventory = new Map<string, QuestionLibraryItem[]>();
+      for (const [key, questions] of inventory) {
+        const available = questions.filter((q) => !overallConsumed.has(q.id));
+        if (available.length > 0) variantInventory.set(key, available);
+      }
+
+      const engine = new PaperGenerationEngine(
+        { moduleRange, enforceUsageHistory: true, enforceConceptDiversity: true },
+        new ConstraintAwareGreedyStrategy(),
+      );
+      const { solution, trace } = engine.generate(variantInventory, usageHistory, variant);
+      const selectedQuestions = solution.assignments.map((a) => a.question);
+
+      for (const q of selectedQuestions) overallConsumed.add(q.id);
+
       const pdfBytes = await this.pdfService.createPaperPdf({
-        title: `${questionBank.subject.subjectCode} ${payload.variant.replace("_", " ")}`,
+        title: `${questionBank.subject.subjectCode} ${variant.replace("_", " ")}`,
         subtitle: `Semester ${questionBank.batchSemester.semesterNumber} · ${questionBank.batchSemester.academicYear.code} · ${examType}`,
-        questions: payload.selectedQuestions.map((question) => ({
+        questions: selectedQuestions.map((question) => ({
           moduleNumber: question.moduleNumber,
           marks: question.marks,
           questionText: question.questionText,
@@ -54,53 +96,64 @@ export class PaperGenerationService {
 
       const pdfAsset = await this.storageService.uploadServerFile({
         bucket: "generated-papers",
-        fileName: `${questionBank.subject.subjectCode}-${payload.variant}.pdf`,
+        fileName: `${questionBank.subject.subjectCode}-${variant}.pdf`,
         mimeType: "application/pdf",
         body: Buffer.from(pdfBytes),
         size: pdfBytes.byteLength,
         uploadedById: actor.id,
       });
 
+      const diffCat = solution.report.categories.find((c) => c.label === "Difficulty Balance");
+      const overallScore = Math.round(solution.report.overall);
+
       const record = await prisma.generatedPaper.upsert({
-        where: { questionBankId_variant: { questionBankId, variant: payload.variant } },
+        where: { questionBankId_variant: { questionBankId, variant } },
         update: {
           status: PaperGenerationStatus.COMPLETED,
           generatedById: actor.id,
           generatedAt: new Date(),
-          coverageScore: this.calculateCoverageScore(payload.selectedQuestions, moduleRange),
-          difficultyScore: this.calculateDifficultyScore(payload.selectedQuestions),
-          qualityScore: this.calculateQualityScore(payload.selectedQuestions),
-          duplicateRisk: this.calculateDuplicateRisk(payload.selectedQuestions),
-          recommendation: this.buildRecommendation(payload.selectedQuestions),
+          coverageScore: this.calculateCoverageScore(selectedQuestions, moduleRange),
+          difficultyScore: Math.round(diffCat?.earned ?? 0),
+          qualityScore: overallScore,
+          duplicateRisk: 0,
+          recommendation: overallScore >= 70
+            ? "Recommended for dean review; paper shows reasonable balance."
+            : "Review before publishing; quality score below threshold.",
           paperJson: {
-            inventoryWarnings: payload.inventoryWarnings,
-            questionIds: payload.selectedQuestions.map((question) => question.id),
+            questionIds: selectedQuestions.map((question) => question.id),
+            evaluationReport: solution.report,
+            scoreBreakdown: formatReport(solution.report),
+            generationTrace: trace,
           } as Prisma.InputJsonValue,
           paperFileAssetId: pdfAsset.id,
           failureReason: null,
           items: {
             deleteMany: {},
-            create: payload.selectedQuestions.map((question) => ({ questionId: question.id })),
+            create: selectedQuestions.map((question) => ({ questionId: question.id })),
           },
         },
         create: {
           questionBankId,
-          variant: payload.variant,
+          variant,
           status: PaperGenerationStatus.COMPLETED,
           generatedById: actor.id,
           generatedAt: new Date(),
-          coverageScore: this.calculateCoverageScore(payload.selectedQuestions, moduleRange),
-          difficultyScore: this.calculateDifficultyScore(payload.selectedQuestions),
-          qualityScore: this.calculateQualityScore(payload.selectedQuestions),
-          duplicateRisk: this.calculateDuplicateRisk(payload.selectedQuestions),
-          recommendation: this.buildRecommendation(payload.selectedQuestions),
+          coverageScore: this.calculateCoverageScore(selectedQuestions, moduleRange),
+          difficultyScore: Math.round(diffCat?.earned ?? 0),
+          qualityScore: overallScore,
+          duplicateRisk: 0,
+          recommendation: overallScore >= 70
+            ? "Recommended for dean review; paper shows reasonable balance."
+            : "Review before publishing; quality score below threshold.",
           paperJson: {
-            inventoryWarnings: payload.inventoryWarnings,
-            questionIds: payload.selectedQuestions.map((question) => question.id),
+            questionIds: selectedQuestions.map((question) => question.id),
+            evaluationReport: solution.report,
+            scoreBreakdown: formatReport(solution.report),
+            generationTrace: trace,
           } as Prisma.InputJsonValue,
           paperFileAssetId: pdfAsset.id,
           items: {
-            create: payload.selectedQuestions.map((question) => ({ questionId: question.id })),
+            create: selectedQuestions.map((question) => ({ questionId: question.id })),
           },
         },
         include: {
@@ -110,13 +163,13 @@ export class PaperGenerationService {
       });
 
       await Promise.all(
-        payload.selectedQuestions.map((question) =>
+        selectedQuestions.map((question) =>
           recordUsage(question.id, "GENERATED_PAPER", record.id),
         ),
       );
 
       await prisma.paperSnapshot.upsert({
-        where: { questionBankId_variant: { questionBankId, variant: payload.variant } },
+        where: { questionBankId_variant: { questionBankId, variant } },
         update: {
           paperJson: record.paperJson as Prisma.InputJsonValue,
           coverageScore: record.coverageScore,
@@ -125,7 +178,7 @@ export class PaperGenerationService {
         },
         create: {
           questionBankId,
-          variant: payload.variant,
+          variant,
           paperJson: (record.paperJson ?? {}) as Prisma.InputJsonValue,
           coverageScore: record.coverageScore,
           difficultyScore: record.difficultyScore,

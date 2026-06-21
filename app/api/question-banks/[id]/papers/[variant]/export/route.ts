@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const user = await getCurrentUserFromCookies();
     const resolver = new ResponsibilityResolver();
     const auth = await resolver.resolveAsContext(user.id, user);
-    new AuthorizationService(auth).requireAny(["COORDINATOR" as const, "DEAN" as const]);
+    new AuthorizationService(auth).requireAny(["DEAN" as const]);
   } catch {
     return NextResponse.json({ success: false, error: { message: "Unauthorized" } }, { status: 401 });
   }
