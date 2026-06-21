@@ -2,7 +2,9 @@ import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { roleLabels } from "@/lib/constants";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
+import { WorkspaceResolver } from "@/lib/auth/workspace-resolver";
+import { responsibilityLabels } from "@/lib/constants";
 
 const dashboards: Record<string, { href: string; title: string; description: string }> = {
   COE: { href: "/dashboard/coe", title: "COE Dashboard", description: "Manage users, departments, exam cycles, and audit logs" },
@@ -19,17 +21,22 @@ export default async function DashboardIndexPage({
 }) {
   const user = await getCurrentUserFromCookies();
   const params = await searchParams;
-  const userDashboard = dashboards[user.role];
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(user.id, user);
+  const workspace = new WorkspaceResolver().getFirstWorkspace(auth);
+  const workspaceType = workspace?.responsibility.type ?? "";
+  const userDashboard = workspaceType ? dashboards[workspaceType] : null;
+  const label = responsibilityLabels[workspaceType as keyof typeof responsibilityLabels] ?? workspaceType;
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Dashboard"
-        description="Your role-based workspace"
+        description="Your workspace"
       />
       {params.denied ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          Access Denied. You are signed in as {roleLabels[user.role]}, so the {roleLabels[params.denied as keyof typeof roleLabels] ?? params.denied} workspace is unavailable.
+          Access Denied. You are signed in as {label}, so the {responsibilityLabels[params.denied as keyof typeof responsibilityLabels] ?? params.denied} workspace is unavailable.
         </div>
       ) : null}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

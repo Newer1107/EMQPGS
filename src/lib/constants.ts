@@ -7,7 +7,7 @@ import {
   QuestionStatus,
   RbtLevel,
   RecordStatus,
-  Role,
+  ResponsibilityType,
   UserStatus,
 } from "@prisma/client";
 
@@ -25,7 +25,7 @@ export const ACCESS_COOKIE = "emqpgs_access_token";
 export const REFRESH_COOKIE = "emqpgs_refresh_token";
 export const CSRF_COOKIE = "emqpgs_csrf_token";
 
-export const roleLabels: Record<Role, string> = {
+export const responsibilityLabels: Record<ResponsibilityType, string> = {
   COE: "Controller of Examination",
   COORDINATOR: "Coordinator",
   MODERATOR: "Moderator",
@@ -111,32 +111,3 @@ export const ENTITY_TYPES = {
   DEAN_REVIEW: "DEAN_REVIEW",
   NOTIFICATION: "NOTIFICATION",
 } as const;
-
-export const rbacMatrix: Record<Role, string[]> = {
-  COE: [
-    "users:create",
-    "users:update",
-    "users:disable",
-    "departments:manage",
-    "exam-cycles:manage",
-    "subjects:read",
-    "question-banks:read",
-    "audit:read",
-    "reports:read",
-    "papers:read",
-    "exports:manage",
-    "dean-selections:read",
-    "monitoring:read",
-  ],
-  COORDINATOR: [
-    "subjects:manage",
-    "question-banks:manage",
-    "assignments:manage",
-    "notifications:read",
-    "reports:read",
-    "papers:read",
-  ],
-  MODERATOR: ["question-banks:review", "notifications:read", "reports:read", "papers:read"],
-  CONTRIBUTOR: ["question-banks:contribute", "notifications:read"],
-  DEAN: ["question-banks:read", "reports:read", "notifications:read", "papers:read", "dean-selections:manage"],
-};

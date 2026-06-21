@@ -5,7 +5,7 @@ export class DepartmentRepository {
   list() {
     return prisma.department.findMany({
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { users: true, subjects: true } } },
+      include: { _count: { select: { subjects: true } } },
     });
   }
 

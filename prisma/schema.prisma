@@ -7,12 +7,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+enum ResponsibilityType {
   COE
+  DEAN
   COORDINATOR
   MODERATOR
   CONTRIBUTOR
-  DEAN
+}
+
+enum ScopeType {
+  INSTITUTION
+  DEPARTMENT
+  QUESTION_BANK
 }
 
 enum UserStatus {
@@ -200,57 +206,52 @@ model SubjectVersion {
 }
 
 model Department {
-  id                     String                            @id @default(cuid())
-  name                   String
-  code                   String                            @unique
-  hodName                String
-  isActive               Boolean                           @default(true)
-  createdAt              DateTime                          @default(now())
-  updatedAt              DateTime                          @updatedAt
-  users                  User[]
-  coordinatorAssignments CoordinatorDepartmentAssignment[]
-  subjects               Subject[]
-  curriculumSchemes      CurriculumScheme[]
-  batches                Batch[]
-  curriculumSubjects     CurriculumSubject[]
-  batchSemesters         BatchSemester[]                   @relation("batchSemesterAcademicUnit")
+  id                  String              @id @default(cuid())
+  name                String
+  code                String              @unique
+  hodName             String
+  isActive            Boolean             @default(true)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  homeDepartmentUsers User[]              @relation("UserHomeDepartment")
+  subjects            Subject[]
+  curriculumSchemes   CurriculumScheme[]
+  batches             Batch[]
+  curriculumSubjects  CurriculumSubject[]
+  batchSemesters      BatchSemester[]     @relation("batchSemesterAcademicUnit")
 }
 
 model User {
-  id                         String                            @id @default(cuid())
-  name                       String
-  email                      String                            @unique
-  passwordHash               String
-  role                       Role
-  status                     UserStatus                        @default(ACTIVE)
-  lastLoginAt                DateTime?
-  departmentId               String?
-  resetTokenHash             String?
-  resetTokenExpiry           DateTime?
-  createdAt                  DateTime                          @default(now())
-  updatedAt                  DateTime                          @updatedAt
-  department                 Department?                       @relation(fields: [departmentId], references: [id])
-  coordinatorDepartments     CoordinatorDepartmentAssignment[] @relation("coordinatorDepartmentUser")
-  moderatorBankAssignments   ModeratorBankAssignment[]         @relation("moderatorBankUser")
-  contributorBankAssignments ContributorBankAssignment[]       @relation("contributorBankUser")
-  notifications              Notification[]
-  auditLogs                  AuditLog[]
-  questionBanks              QuestionBank[]                    @relation("questionBankCreator")
-  createdQuestions           QuestionLibraryItem[]             @relation("questionCreator")
-  ownedQuestions             QuestionLibraryItem[]             @relation("questionOwner")
-  moderationEvents           ModerationEvent[]                 @relation("moderationEventActor")
-  revisionChanges            QuestionRevision[]                @relation("revisionChangedBy")
-  ownershipToUser            QuestionOwnershipHistory[]        @relation("ownershipToUser")
-  ownershipFromUser          QuestionOwnershipHistory[]        @relation("ownershipFromUser")
-  ownershipTransferredBy     QuestionOwnershipHistory[]        @relation("ownershipTransferredBy")
-  deanReviews                DeanReview[]                      @relation("deanReviewSelector")
-  slotReservations           QuestionSlot[]
-  approvalDecisionsCreated   ApprovalDecision[]
-  exportArtifacts            ExportArtifact[]                  @relation("exportArtifactGenerator")
-  backupsTriggered           SystemBackup[]                    @relation("backupTrigger")
+  id                       String                     @id @default(cuid())
+  name                     String
+  email                    String                     @unique
+  passwordHash             String
+  status                   UserStatus                 @default(ACTIVE)
+  lastLoginAt              DateTime?
+  homeDepartmentId         String?
+  resetTokenHash           String?
+  resetTokenExpiry         DateTime?
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  homeDepartment           Department?                @relation("UserHomeDepartment", fields: [homeDepartmentId], references: [id])
+  responsibilities         ResponsibilityAssignment[]
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  questionBanks            QuestionBank[]             @relation("questionBankCreator")
+  createdQuestions         QuestionLibraryItem[]      @relation("questionCreator")
+  ownedQuestions           QuestionLibraryItem[]      @relation("questionOwner")
+  moderationEvents         ModerationEvent[]          @relation("moderationEventActor")
+  revisionChanges          QuestionRevision[]         @relation("revisionChangedBy")
+  ownershipToUser          QuestionOwnershipHistory[] @relation("ownershipToUser")
+  ownershipFromUser        QuestionOwnershipHistory[] @relation("ownershipFromUser")
+  ownershipTransferredBy   QuestionOwnershipHistory[] @relation("ownershipTransferredBy")
+  deanReviews              DeanReview[]               @relation("deanReviewSelector")
+  slotReservations         QuestionSlot[]
+  approvalDecisionsCreated ApprovalDecision[]
+  exportArtifacts          ExportArtifact[]           @relation("exportArtifactGenerator")
+  backupsTriggered         SystemBackup[]             @relation("backupTrigger")
 
-  @@index([role])
-  @@index([departmentId])
+  @@index([homeDepartmentId])
 }
 
 model ExamCycle {
@@ -311,16 +312,15 @@ model QuestionBank {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  subject                Subject                     @relation(fields: [subjectId], references: [id])
-  batchSemester          BatchSemester               @relation(fields: [batchSemesterId], references: [id])
-  academicYear           AcademicYear                @relation(fields: [academicYearId], references: [id])
-  createdBy              User                        @relation("questionBankCreator", fields: [createdById], references: [id])
-  moderatorAssignments   ModeratorBankAssignment[]
-  contributorAssignments ContributorBankAssignment[]
-  aiReports              AiReport[]
-  generatedPapers        GeneratedPaper[]
-  deanReview             DeanReview?
-  exportArtifacts        ExportArtifact[]
+  subject       Subject       @relation(fields: [subjectId], references: [id])
+  batchSemester BatchSemester @relation(fields: [batchSemesterId], references: [id])
+  academicYear  AcademicYear  @relation(fields: [academicYearId], references: [id])
+  createdBy     User          @relation("questionBankCreator", fields: [createdById], references: [id])
+
+  aiReports       AiReport[]
+  generatedPapers GeneratedPaper[]
+  deanReview      DeanReview?
+  exportArtifacts ExportArtifact[]
 
   slots             QuestionSlot[]
   pattern           PaperPattern?
@@ -505,15 +505,25 @@ model PaperSnapshot {
   @@unique([questionBankId, variant])
 }
 
-model CoordinatorDepartmentAssignment {
-  id            String     @id @default(cuid())
-  coordinatorId String
-  departmentId  String
-  assignedAt    DateTime   @default(now())
-  coordinator   User       @relation("coordinatorDepartmentUser", fields: [coordinatorId], references: [id])
-  department    Department @relation(fields: [departmentId], references: [id])
+model ResponsibilityAssignment {
+  id             String             @id @default(cuid())
+  userId         String
+  responsibility ResponsibilityType
+  scopeType      ScopeType
+  scopeId        String? // Department.id or QuestionBank.id (app-validated)
+  activeFrom     DateTime           @default(now())
+  activeTo       DateTime?
+  assignedById   String?
+  assignedAt     DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
-  @@unique([coordinatorId, departmentId])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, responsibility, scopeType, scopeId])
+  @@index([userId])
+  @@index([responsibility, scopeType, scopeId])
+  @@index([activeTo])
 }
 
 model SubjectExamCycleLink {
@@ -590,28 +600,6 @@ model ModerationEvent {
 
   @@index([questionId, createdAt])
   @@index([moderatorId, createdAt])
-}
-
-model ModeratorBankAssignment {
-  id             String       @id @default(cuid())
-  moderatorId    String
-  questionBankId String
-  assignedAt     DateTime     @default(now())
-  moderator      User         @relation("moderatorBankUser", fields: [moderatorId], references: [id])
-  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
-
-  @@unique([moderatorId, questionBankId])
-}
-
-model ContributorBankAssignment {
-  id             String       @id @default(cuid())
-  contributorId  String
-  questionBankId String
-  assignedAt     DateTime     @default(now())
-  contributor    User         @relation("contributorBankUser", fields: [contributorId], references: [id])
-  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
-
-  @@unique([contributorId, questionBankId])
 }
 
 model AiReport {

@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { SubjectVersionService } from "@/modules/subject-versions/service";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
@@ -17,9 +17,9 @@ export const PATCH = withApiHandler(
       include: { subject: { select: { departmentId: true } } },
     });
     if (!version) throw new NotFoundError("Subject version not found");
-    await deptUtils.assertDepartmentAccess(context.user!, version.subject.departmentId);
+    await deptUtils.assertDepartmentAccess(context.auth!, version.subject.departmentId);
 
     return service.archive(id);
   },
-  { roles: [Role.COORDINATOR], audit: { action: "SUBJECT_VERSION_ARCHIVED", entityType: "SUBJECT_VERSION" } },
+  { responsibility: ["COORDINATOR" as ResponsibilityType], audit: { action: "SUBJECT_VERSION_ARCHIVED", entityType: "SUBJECT_VERSION" } },
 );

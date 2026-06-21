@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { BatchService } from "@/modules/batches/service";
@@ -16,5 +16,5 @@ export const POST = withApiHandler(
     const payload = checkSchema.parse(await request.json());
     return service.checkPrerequisites(payload.admissionYear, payload.curriculumSchemeId);
   },
-  { roles: [Role.COE] },
+  { responsibility: ["COE" as ResponsibilityType] },
 );

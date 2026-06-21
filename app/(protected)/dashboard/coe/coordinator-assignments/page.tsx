@@ -1,4 +1,4 @@
-import { Role, UserStatus } from "@prisma/client";
+import type { ResponsibilityType } from "@prisma/client";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -11,16 +11,18 @@ import { CoordinatorAssignmentForm } from "./assign-form";
 
 export default async function CoordinatorAssignmentsPage() {
   await getCurrentUserFromCookies();
-  const [assignments, coordinators, departments] = await Promise.all([
-    prisma.coordinatorDepartmentAssignment.findMany({
-      include: {
-        coordinator: { select: { id: true, name: true, email: true } },
-        department: { select: { id: true, name: true, code: true } },
-      },
+
+  const [rawAssignments, coordinators, departments] = await Promise.all([
+    prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COORDINATOR" as ResponsibilityType, scopeType: "DEPARTMENT" },
+      include: { user: { select: { id: true, name: true, email: true } } },
       orderBy: { assignedAt: "desc" },
     }),
     prisma.user.findMany({
-      where: { role: Role.COORDINATOR, status: UserStatus.ACTIVE },
+      where: {
+        status: "ACTIVE",
+        responsibilities: { some: { responsibility: "COORDINATOR" as ResponsibilityType } },
+      },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
@@ -30,6 +32,17 @@ export default async function CoordinatorAssignmentsPage() {
       orderBy: { name: "asc" },
     }),
   ]);
+
+  const deptLookup = new Map(departments.map((d) => [d.id, d]));
+
+  const assignments = rawAssignments
+    .filter((a) => a.scopeId && deptLookup.has(a.scopeId))
+    .map((a) => ({
+      id: a.id,
+      coordinator: a.user,
+      department: deptLookup.get(a.scopeId!)!,
+      assignedAt: a.assignedAt,
+    }));
 
   return (
     <div className="space-y-6">

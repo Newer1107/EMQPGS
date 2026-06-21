@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { CoordinatorDepartmentAssignmentService } from "@/modules/coordinator-departments/service";
@@ -8,7 +8,7 @@ const service = new CoordinatorDepartmentAssignmentService();
 
 export const GET = withApiHandler(
   async () => service.list(),
-  { roles: [Role.COE] },
+  { responsibility: ["COE" as ResponsibilityType] },
 );
 
 export const POST = withApiHandler(
@@ -17,7 +17,7 @@ export const POST = withApiHandler(
     return service.create(payload);
   },
   {
-    roles: [Role.COE],
+    responsibility: ["COE" as ResponsibilityType],
     successStatus: 201,
     audit: {
       action: "COORDINATOR_DEPARTMENT_ASSIGNED",

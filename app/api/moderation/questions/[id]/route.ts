@@ -1,4 +1,4 @@
-import { Role, QuestionStatus } from "@prisma/client";
+import { ResponsibilityType, QuestionStatus } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
@@ -21,5 +21,5 @@ export const GET = withApiHandler(
     if (!question) throw new NotFoundError("Question not found");
     return question;
   },
-  { roles: [Role.MODERATOR] },
+  { responsibility: ["MODERATOR" as ResponsibilityType] },
 );

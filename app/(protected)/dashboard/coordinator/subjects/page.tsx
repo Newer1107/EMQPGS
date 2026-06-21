@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -9,8 +10,10 @@ import { Badge } from "@/components/ui/badge";
 
 export default async function SubjectsManagementPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const subjectService = new SubjectManagementService();
-  const subjects = await subjectService.listSubjects(actor);
+  const subjects = await subjectService.listSubjects(auth);
 
   return (
     <div className="space-y-6">

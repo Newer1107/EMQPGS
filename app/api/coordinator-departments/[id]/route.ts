@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { CoordinatorDepartmentAssignmentService } from "@/modules/coordinator-departments/service";
 
@@ -10,7 +10,7 @@ export const DELETE = withApiHandler(
     return service.delete(id);
   },
   {
-    roles: [Role.COE],
+    responsibility: ["COE" as ResponsibilityType],
     audit: {
       action: "COORDINATOR_DEPARTMENT_ASSIGNMENT_REMOVED",
       entityType: "COORDINATOR_DEPARTMENT_ASSIGNMENT",

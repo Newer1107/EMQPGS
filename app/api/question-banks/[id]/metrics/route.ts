@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { QuestionBankMetricsService } from "@/modules/question-bank-metrics/service";
 
@@ -9,5 +9,5 @@ export const GET = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     return service.getMetrics(questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.COE, Role.DEAN] },
+  { responsibility: ["COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "COE" as ResponsibilityType, "DEAN" as ResponsibilityType] },
 );

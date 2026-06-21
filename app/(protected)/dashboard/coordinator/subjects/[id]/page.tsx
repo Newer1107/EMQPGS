@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,8 @@ import { ExamCycleStatus } from "@prisma/client";
 export default async function SubjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
 
   const subject = await prisma.subject.findUnique({
@@ -30,7 +33,7 @@ export default async function SubjectDetailPage({ params }: { params: Promise<{ 
   });
   if (!subject) notFound();
 
-  await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+  await deptUtils.assertDepartmentAccess(auth, subject.departmentId);
 
   const curriculumPlacements = subject.curriculumSubjects ?? [];
   const isPlaced = curriculumPlacements.length > 0;

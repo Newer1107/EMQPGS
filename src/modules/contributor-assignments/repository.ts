@@ -1,13 +1,6 @@
 import { prisma } from "@/lib/db";
 
 export class ContributorAssignmentRepository {
-  findContributorById(id: string) {
-    return prisma.user.findUnique({
-      where: { id },
-      select: { id: true, role: true, name: true, email: true },
-    });
-  }
-
   findQuestionBankById(id: string) {
     return prisma.questionBank.findUnique({
       where: { id },
@@ -16,28 +9,47 @@ export class ContributorAssignmentRepository {
   }
 
   findDuplicate(contributorId: string, questionBankId: string) {
-    return prisma.contributorBankAssignment.findUnique({
-      where: { contributorId_questionBankId: { contributorId, questionBankId } },
+    return prisma.responsibilityAssignment.findFirst({
+      where: {
+        userId: contributorId,
+        responsibility: "CONTRIBUTOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 
   create(contributorId: string, questionBankId: string) {
-    return prisma.contributorBankAssignment.create({
-      data: { contributorId, questionBankId },
+    return prisma.responsibilityAssignment.create({
+      data: {
+        userId: contributorId,
+        responsibility: "CONTRIBUTOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 
   delete(contributorId: string, questionBankId: string) {
-    return prisma.contributorBankAssignment.delete({
-      where: { contributorId_questionBankId: { contributorId, questionBankId } },
+    return prisma.responsibilityAssignment.deleteMany({
+      where: {
+        userId: contributorId,
+        responsibility: "CONTRIBUTOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 
   listByBank(questionBankId: string) {
-    return prisma.contributorBankAssignment.findMany({
-      where: { questionBankId },
+    return prisma.responsibilityAssignment.findMany({
+      where: {
+        responsibility: "CONTRIBUTOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
       include: {
-        contributor: { select: { id: true, name: true, email: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
   }

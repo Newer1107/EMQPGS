@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { Role } from "@prisma/client";
+import type { ResponsibilityType } from "@prisma/client";
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { AppError, ForbiddenError, UnauthorizedError } from "@/lib/errors";
@@ -9,9 +9,13 @@ import { logAudit } from "@/lib/audit";
 import { assertCsrfProtection } from "@/lib/csrf";
 import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
+import type { AuthContext } from "@/lib/types";
 
 type RouteOptions = {
-  roles?: Role[];
+  /** Require one or more responsibility types. User must have at least one. */
+  responsibility?: ResponsibilityType | ResponsibilityType[];
   successStatus?: number;
   audit?: {
     action: string;
@@ -22,7 +26,7 @@ type RouteOptions = {
 };
 
 export function withApiHandler<T>(
-  handler: (request: NextRequest, context: { user: Awaited<ReturnType<typeof getCurrentUserFromCookies>> | null }) => Promise<T>,
+  handler: (request: NextRequest, context: { user: Awaited<ReturnType<typeof getCurrentUserFromCookies>> | null; auth?: AuthContext }) => Promise<T>,
   options?: RouteOptions,
 ) {
   return async (request: NextRequest) => {
@@ -32,17 +36,27 @@ export function withApiHandler<T>(
       await enforceRateLimit([request.method, request.nextUrl.pathname, meta.ipAddress ?? "unknown"]);
       await assertCsrfProtection(request.method);
 
-      const user = options?.roles?.length ? await getCurrentUserFromCookies() : await getOptionalUser();
+      let user: Awaited<ReturnType<typeof getCurrentUserFromCookies>> | null = null;
+      let auth: AuthContext | undefined;
 
-      if (options?.roles?.length && !user) {
-        throw new UnauthorizedError();
+      if (options?.responsibility) {
+        user = await getCurrentUserFromCookies();
+        const resolver = new ResponsibilityResolver();
+        auth = await resolver.resolveAsContext(user.id, user);
+        const required = Array.isArray(options.responsibility) ? options.responsibility : [options.responsibility];
+        new AuthorizationService(auth).requireAny(required);
+      } else {
+        // No responsibility required — user is optional (e.g., public endpoints)
+        try {
+          user = await getCurrentUserFromCookies();
+          const resolver = new ResponsibilityResolver();
+          auth = await resolver.resolveAsContext(user.id, user);
+        } catch {
+          // Not authenticated — that's OK for public endpoints
+        }
       }
 
-      if (options?.roles?.length && user && !options.roles.includes(user.role)) {
-        throw new ForbiddenError();
-      }
-
-      const result = await handler(request, { user });
+      const result = await handler(request, { user, auth });
       if (options?.audit && user) {
         await logAudit({
           actorId: user.id,
@@ -68,14 +82,6 @@ export function withApiHandler<T>(
       return handleApiError(error, request, correlationId);
     }
   };
-}
-
-async function getOptionalUser() {
-  try {
-    return await getCurrentUserFromCookies();
-  } catch {
-    return null;
-  }
 }
 
 function translatePrismaError(error: Prisma.PrismaClientKnownRequestError): AppError {

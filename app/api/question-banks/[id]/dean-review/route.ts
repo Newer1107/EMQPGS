@@ -1,5 +1,6 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 
 import { ReportingCoordinatorService } from "@/modules/coordinator/reporting-coordinator.service";
 import { DeanReviewService } from "@/modules/production/dean-review.service";
@@ -11,19 +12,20 @@ const coordinatorService = new ReportingCoordinatorService();
 export const GET = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
-    if (context.user!.role === Role.COORDINATOR) {
-      return coordinatorService.getDeanReviewStatus(context.user!, questionBankId);
+    const authz = new AuthorizationService(context.auth!);
+    if (authz.has("COORDINATOR" as ResponsibilityType)) {
+      return coordinatorService.getDeanReviewStatus(context.auth!, questionBankId);
     }
-    return service.getDeanReviewWorkspace(questionBankId, context.user!);
+    return service.getDeanReviewWorkspace(questionBankId, context.auth!);
   },
-  { roles: [Role.COORDINATOR, Role.DEAN] },
+  { responsibility: ["COORDINATOR" as ResponsibilityType, "DEAN" as ResponsibilityType] },
 );
 
 export const POST = withApiHandler(
   async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = deanReviewSchema.parse(await request.json());
-    return service.submitDeanReview(questionBankId, payload, context.user!);
+    return service.submitDeanReview(questionBankId, payload, context.auth!);
   },
-  { roles: [Role.DEAN], successStatus: 201 },
+  { responsibility: ["DEAN" as ResponsibilityType], successStatus: 201 },
 );

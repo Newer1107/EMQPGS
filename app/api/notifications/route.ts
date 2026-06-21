@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { NotificationService } from "@/modules/notifications/service";
@@ -16,7 +16,7 @@ const markReadSchema = z.union([
 
 export const GET = withApiHandler(async (_request, context) => {
   return service.listForUser(context.user!.id, 25);
-}, { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] });
+}, { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType, "DEAN" as ResponsibilityType] });
 
 export const PATCH = withApiHandler(async (request, context) => {
     const payload = markReadSchema.parse(await request.json());
@@ -24,4 +24,4 @@ export const PATCH = withApiHandler(async (request, context) => {
     return service.markAllAsRead(context.user!.id);
   }
   return service.markAsRead(context.user!.id, payload.notificationIds);
-}, { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR, Role.DEAN] });
+}, { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType, "DEAN" as ResponsibilityType] });

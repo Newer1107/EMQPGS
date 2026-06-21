@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
@@ -15,13 +15,13 @@ export const PUT = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
     const payload = subjectUpdateSchema.parse(await request.json());
-    return service.updateSubject(context.user!, id, {
+    return service.updateSubject(context.auth!, id, {
       ...(payload.name !== undefined ? { subjectName: payload.name } : {}),
       ...(payload.code !== undefined ? { subjectCode: payload.code } : {}),
       ...(payload.credits !== undefined ? { creditLoad: Math.trunc(payload.credits) } : {}),
     });
   },
-  { roles: [Role.COORDINATOR], audit: { action: "SUBJECT_UPDATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COORDINATOR" as ResponsibilityType], audit: { action: "SUBJECT_UPDATED", entityType: "SUBJECT", getEntityId: (result) => (result as { id?: string }).id } },
 );
 
 export const PATCH = PUT;

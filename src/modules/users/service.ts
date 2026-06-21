@@ -2,13 +2,13 @@ import bcrypt from "bcryptjs";
 import { UserStatus } from "@prisma/client";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { UserRepository } from "@/modules/users/repository";
-import { UserInput } from "@/modules/users/validation";
+import type { UserInput } from "@/modules/users/validation";
 
 export class UserService {
   constructor(private readonly repository = new UserRepository()) {}
 
-  list(take?: number, skip?: number, role?: string) {
-    return this.repository.list(take, skip, role);
+  list(take?: number, skip?: number) {
+    return this.repository.list(take, skip);
   }
 
   findByEmail(email: string) {

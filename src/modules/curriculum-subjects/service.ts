@@ -4,7 +4,7 @@ import { withUniqueCheck } from "@/lib/db-helpers";
 import { CurriculumSubjectRepository } from "@/modules/curriculum-subjects/repository";
 import type { CurriculumSubjectInput, CurriculumSubjectUpdateInput } from "@/modules/curriculum-subjects/validation";
 import type { Prisma } from "@prisma/client";
-import type { Actor } from "@/lib/types";
+import type { AuthContext } from "@/lib/types";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { AutoInitializeService } from "@/modules/auto-initialize/service";
 
@@ -56,10 +56,10 @@ export class CurriculumSubjectService {
     return withUniqueCheck(() => this.repository.create(data));
   }
 
-  async createWithDepartmentCheck(data: CurriculumSubjectInput, actor: Actor) {
+  async createWithDepartmentCheck(data: CurriculumSubjectInput, authContext: AuthContext) {
     const subject = await prisma.subject.findUnique({ where: { id: data.subjectId }, include: { department: true } });
     if (!subject) throw new NotFoundError("Subject not found");
-    await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, subject.departmentId);
 
     const duplicate = await this.repository.list({
       curriculumSchemeId: data.curriculumSchemeId,

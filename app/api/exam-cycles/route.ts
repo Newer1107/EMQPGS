@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { ExamCycleService } from "@/modules/exam-cycles/service";
@@ -12,12 +12,12 @@ export const GET = withApiHandler(async (request) => {
   const batchId = request.nextUrl.searchParams.get("batchId");
   if (batchId) return service.findByBatch(batchId);
   return service.list(take, skip);
-}, { roles: [Role.COE, Role.COORDINATOR] });
+}, { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });
 
 export const POST = withApiHandler(
   async (request) => {
     const payload = examCycleSchema.parse(await request.json());
     return service.create(payload);
   },
-  { roles: [Role.COE], audit: { action: "EXAM_CYCLE_CREATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "EXAM_CYCLE_CREATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },
 );

@@ -3,10 +3,10 @@ import {
   PaperGenerationStatus,
   PaperVariant,
   RecordStatus,
-  Role,
   type Prisma,
 } from "@prisma/client";
-import { type Actor } from "@/lib/types";
+import type { AuthContext } from "@/lib/types";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
@@ -112,14 +112,14 @@ export class DeanReviewService {
     private readonly notificationService = new NotificationService(),
   ) {}
 
-  async getDeanDashboardData(actor: Actor): Promise<DeanDashboardData> {
-    this.assertDean(actor);
-    await this.ensureDeanNotifications(actor);
+  async getDeanDashboardData(authContext: AuthContext): Promise<DeanDashboardData> {
+    new AuthorizationService(authContext).requireDean();
+    await this.ensureDeanNotifications(authContext);
 
     const [questionBanks, notifications, unreadNotificationCount] = await Promise.all([
-      this.listDeanQuestionBanks(actor),
-      this.notificationService.listForUser(actor.id, 25),
-      this.notificationService.unreadCount(actor.id),
+      this.listDeanQuestionBanks(authContext),
+      this.notificationService.listForUser(authContext.user.id, 25),
+      this.notificationService.unreadCount(authContext.user.id),
     ]);
 
     const items = questionBanks.map((questionBank) => this.mapDeanDashboardItem(questionBank));
@@ -153,10 +153,10 @@ export class DeanReviewService {
     };
   }
 
-  async getDeanReviewWorkspace(questionBankId: string, actor: Actor): Promise<DeanReviewWorkspace> {
-    this.assertDean(actor);
-    const questionBank = await this.findDeanQuestionBank(questionBankId, actor);
-    await this.notificationService.markByActionUrlAsRead(actor.id, `/dashboard/dean/review?bank=${questionBankId}`);
+  async getDeanReviewWorkspace(questionBankId: string, authContext: AuthContext): Promise<DeanReviewWorkspace> {
+    new AuthorizationService(authContext).requireDean();
+    const questionBank = await this.findDeanQuestionBank(questionBankId, authContext);
+    await this.notificationService.markByActionUrlAsRead(authContext.user.id, `/dashboard/dean/review?bank=${questionBankId}`);
 
     return {
       bankId: questionBank.id,
@@ -198,9 +198,9 @@ export class DeanReviewService {
     };
   }
 
-  async submitDeanReview(questionBankId: string, payload: DeanReviewInput, actor: Actor) {
-    this.assertDean(actor);
-    const questionBank = await this.findDeanQuestionBank(questionBankId, actor);
+  async submitDeanReview(questionBankId: string, payload: DeanReviewInput, authContext: AuthContext) {
+    new AuthorizationService(authContext).requireDean();
+    const questionBank = await this.findDeanQuestionBank(questionBankId, authContext);
 
     if (questionBank.deanReview) {
       throw new AppError("A dean selection has already been submitted for this question bank.", 409, "DEAN_REVIEW_LOCKED");
@@ -224,22 +224,21 @@ export class DeanReviewService {
         regularPaper: payload.regularPaper,
         supplementaryPaper: payload.supplementaryPaper,
         ktPaper: payload.ktPaper,
-        reviewedById: actor.id,
+        reviewedById: authContext.user.id,
       },
       include: {
         reviewedBy: true,
       },
     });
 
-    const coeUsers = await prisma.user.findMany({
-      where: {
-        role: Role.COE,
-        departmentId: questionBank.subject.departmentId,
-      },
+    const coeResponsibilityAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COE", scopeType: "INSTITUTION" },
+      include: { user: true },
     });
-    const coordinatorAssignments = await prisma.coordinatorDepartmentAssignment.findMany({
-      where: { departmentId: questionBank.subject.departmentId },
-      include: { coordinator: true },
+    const coeUsers = coeResponsibilityAssignments.map((ra) => ra.user);
+    const coordinatorAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: questionBank.subject.departmentId },
+      include: { user: true },
     });
 
     await Promise.all([
@@ -252,9 +251,9 @@ export class DeanReviewService {
           NotificationType.ACTION_REQUIRED,
         ),
       ),
-      ...coordinatorAssignments.map(({ coordinator }) =>
+      ...coordinatorAssignments.map(({ user }) =>
         this.notificationService.create(
-          coordinator.id,
+          user.id,
           "Dean review complete",
           `Dean review is complete for ${questionBank.subject.subjectName}. Papers have been assigned.`,
           `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
@@ -262,17 +261,17 @@ export class DeanReviewService {
         ),
       ),
       this.notificationService.create(
-        actor.id,
+        authContext.user.id,
         "Selection confirmed",
         `Your selection for ${questionBank.subject.subjectName} has been submitted successfully.`,
         `/dashboard/dean/review?bank=${questionBankId}`,
         NotificationType.SUCCESS,
       ),
-      this.notificationService.markByActionUrlAsRead(actor.id, `/dashboard/dean/review?bank=${questionBankId}`),
+      this.notificationService.markByActionUrlAsRead(authContext.user.id, `/dashboard/dean/review?bank=${questionBankId}`),
     ]);
 
     await logAudit({
-      actorId: actor.id,
+      actorId: authContext.user.id,
       action: "DEAN_SELECTION_SUBMITTED",
       entityType: ENTITY_TYPES.DEAN_REVIEW,
       entityId: review.id,
@@ -300,23 +299,21 @@ export class DeanReviewService {
     };
   }
 
-  private assertDean(actor: Actor) {
-    if (actor.role !== Role.DEAN) {
-      throw new ForbiddenError("Only the dean can access this resource.");
+
+
+  private deanDepartmentFilter(authContext: AuthContext): { departmentId?: { in: string[] } } {
+    const deptIds = new AuthorizationService(authContext).getScopeIds("DEAN", "DEPARTMENT");
+    if (deptIds.length > 0) {
+      return { departmentId: { in: deptIds } };
     }
-    // Dean is institution-wide; no departmentId required.
+    return {};
   }
 
-  private deanDepartmentFilter(actor: Actor): { departmentId?: string } {
-    const departmentId = (actor as { departmentId?: string }).departmentId;
-    return departmentId ? { departmentId } : {};
-  }
-
-  private async listDeanQuestionBanks(actor: Actor) {
+  private async listDeanQuestionBanks(authContext: AuthContext) {
     return prisma.questionBank.findMany({
       where: {
         recordStatus: RecordStatus.LOCKED,
-        subject: this.deanDepartmentFilter(actor),
+        subject: this.deanDepartmentFilter(authContext),
         generatedPapers: {
           some: { status: PaperGenerationStatus.COMPLETED },
         },
@@ -326,12 +323,12 @@ export class DeanReviewService {
     });
   }
 
-  private async findDeanQuestionBank(questionBankId: string, actor: Actor): Promise<DeanWorkspaceQuestionBank> {
+  private async findDeanQuestionBank(questionBankId: string, authContext: AuthContext): Promise<DeanWorkspaceQuestionBank> {
     const questionBank = await prisma.questionBank.findFirst({
       where: {
         id: questionBankId,
         recordStatus: RecordStatus.LOCKED,
-        subject: this.deanDepartmentFilter(actor),
+        subject: this.deanDepartmentFilter(authContext),
       },
       include: deanWorkspaceInclude,
     });
@@ -387,8 +384,8 @@ export class DeanReviewService {
     };
   }
 
-  private async ensureDeanNotifications(actor: Actor) {
-    const questionBanks = await this.listDeanQuestionBanks(actor);
+  private async ensureDeanNotifications(authContext: AuthContext) {
+    const questionBanks = await this.listDeanQuestionBanks(authContext);
     const readyNotifications = questionBanks
       .filter((questionBank) => !questionBank.deanReview)
       .map((questionBank) => {
@@ -399,11 +396,11 @@ export class DeanReviewService {
 
         notificationsToCreate.push(
           prisma.notification.upsert({
-            where: { id: `dean-ready-${questionBank.id}-${actor.id}` },
+            where: { id: `dean-ready-${questionBank.id}-${authContext.user.id}` },
             update: {},
             create: {
-              id: `dean-ready-${questionBank.id}-${actor.id}`,
-              recipientId: actor.id,
+              id: `dean-ready-${questionBank.id}-${authContext.user.id}`,
+              recipientId: authContext.user.id,
               title: "Papers ready for review",
               message: `Papers for ${questionBank.subject.subjectName} are ready for your review.`,
               actionUrl: readyActionUrl,
@@ -415,11 +412,11 @@ export class DeanReviewService {
         if (ageInDays >= DEAN_REVIEW_REMINDER_DAYS) {
           notificationsToCreate.push(
             prisma.notification.upsert({
-              where: { id: `dean-reminder-${questionBank.id}-${actor.id}-${DEAN_REVIEW_REMINDER_DAYS}` },
+              where: { id: `dean-reminder-${questionBank.id}-${authContext.user.id}-${DEAN_REVIEW_REMINDER_DAYS}` },
               update: {},
               create: {
-                id: `dean-reminder-${questionBank.id}-${actor.id}-${DEAN_REVIEW_REMINDER_DAYS}`,
-                recipientId: actor.id,
+                id: `dean-reminder-${questionBank.id}-${authContext.user.id}-${DEAN_REVIEW_REMINDER_DAYS}`,
+                recipientId: authContext.user.id,
                 title: "Pending review reminder",
                 message: `Reminder: ${questionBank.subject.subjectName} review has been pending for ${ageInDays} days.`,
                 actionUrl: readyActionUrl,

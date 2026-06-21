@@ -11,6 +11,7 @@ import { RecentActivity, type ActivityEvent } from "@/components/dashboard/recen
 import { StatCard } from "@/components/dashboard/stat-card";
 import type { Severity } from "@/components/dashboard/types";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { CoordinatorService, type AttentionItem, type BankStatusItem } from "@/modules/coordinator/service";
 import { questionBankPhaseLabels } from "@/lib/constants";
 
@@ -49,8 +50,10 @@ function greeting(hour: number): string {
 
 export default async function CoordinatorDashboardPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const service = new CoordinatorService();
-  const data = await service.getDashboard(actor);
+  const data = await service.getDashboard(auth);
 
   const totalBanks =
     data.phaseDistribution.drafting +

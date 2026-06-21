@@ -10,9 +10,8 @@ const refreshSecret = new TextEncoder().encode(env.JWT_REFRESH_SECRET);
 export type TokenPayload = {
   sub: string;
   email: string;
-  role: string;
   name: string;
-  departmentId?: string | null;
+  homeDepartmentId?: string | null;
   type: "access" | "refresh";
 };
 

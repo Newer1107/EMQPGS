@@ -9,6 +9,7 @@ import { logAudit } from "@/lib/audit";
 import { getRequestMeta } from "@/lib/api-context";
 import { env } from "@/lib/env";
 import { getOrCreateCsrfToken } from "@/lib/csrf";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -22,9 +23,8 @@ export const POST = withApiHandler(async (request) => {
   const tokenPayload = {
     sub: user.id,
     email: user.email,
-    role: user.role,
     name: user.name,
-    departmentId: user.departmentId,
+    homeDepartmentId: user.homeDepartmentId,
   };
 
   const [accessToken, refreshToken] = await Promise.all([
@@ -44,17 +44,25 @@ export const POST = withApiHandler(async (request) => {
     action: "LOGIN",
     entityType: "AUTH",
     entityId: user.id,
-    metadata: { email: user.email, role: user.role },
+    metadata: { email: user.email },
     ...meta,
   });
+
+  const resolver = new ResponsibilityResolver();
+  const responsibilities = await resolver.resolve(user.id);
 
   return {
     user: {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role,
-      department: user.department?.name ?? null,
+      homeDepartment: user.homeDepartment?.name ?? null,
     },
+    responsibilities: responsibilities.map((r) => ({
+      id: r.id,
+      type: r.type,
+      scopeType: r.scopeType,
+      scopeId: r.scopeId,
+    })),
   };
 });

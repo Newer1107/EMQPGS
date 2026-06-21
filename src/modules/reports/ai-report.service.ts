@@ -63,14 +63,14 @@ export class AiReportService {
       },
     });
 
-    const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
-      where: { departmentId: questionBank.subject.departmentId },
-      include: { coordinator: true },
+    const coordinatorAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: questionBank.subject.departmentId },
+      include: { user: true },
     });
     await Promise.all(
-      coordinators.map(({ coordinator }) =>
+      coordinatorAssignments.map(({ user }) =>
         this.notificationService.create(
-          coordinator.id,
+          user.id,
           "AI analysis ready",
           `AI analysis report is ready for ${questionBank.subject.subjectName}.`,
           `/dashboard/coordinator/question-banks?bank=${questionBankId}`,

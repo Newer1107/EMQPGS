@@ -1,11 +1,11 @@
 import {
   ExportArtifactStatus,
   ExportFormat,
-  Role,
   type Prisma,
 } from "@prisma/client";
-import { type Actor } from "@/lib/types";
+import type { AuthContext } from "@/lib/types";
 import { prisma } from "@/lib/db";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 import { env } from "@/lib/env";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
@@ -74,8 +74,8 @@ export class ExportService {
     });
   }
 
-  async createExport(input: ExportInput, actor: Actor) {
-    if (actor.role !== Role.COE) throw new ForbiddenError("Only COE can create exports");
+  async createExport(input: ExportInput, authContext: AuthContext) {
+    new AuthorizationService(authContext).requireCoe();
     const questionBank = await prisma.questionBank.findUnique({
       where: { id: input.questionBankId },
       include: exportQuestionBankInclude,
@@ -86,7 +86,7 @@ export class ExportService {
     const artifact = await prisma.exportArtifact.create({
       data: {
         questionBankId: questionBank.id,
-        generatedById: actor.id,
+        generatedById: authContext.user.id,
         format: input.format,
         status: ExportArtifactStatus.PENDING,
         metadata: {
@@ -144,7 +144,7 @@ export class ExportService {
         mimeType,
         body: buffer,
         size: buffer.byteLength,
-        uploadedById: actor.id,
+        uploadedById: authContext.user.id,
       });
 
       return prisma.exportArtifact.update({
@@ -170,8 +170,8 @@ export class ExportService {
     }
   }
 
-  async createExportDownloadLink(exportArtifactId: string, actor: Actor) {
-    if (actor.role !== Role.COE) throw new ForbiddenError("Only COE can download export artifacts");
+  async createExportDownloadLink(exportArtifactId: string, authContext: AuthContext) {
+    new AuthorizationService(authContext).requireCoe();
     const artifact = await prisma.exportArtifact.findUnique({
       where: { id: exportArtifactId },
       include: { fileAsset: true },

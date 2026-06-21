@@ -3,8 +3,8 @@ import { prisma } from "@/lib/db";
 import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { QuestionSlotRepository } from "@/modules/question-slots/repository";
-
-type Actor = { id: string; role: string };
+import { AuthorizationService } from "@/lib/auth/authorization-service";
+import type { AuthContext } from "@/lib/types";
 
 export class QuestionSlotService {
   constructor(
@@ -15,7 +15,7 @@ export class QuestionSlotService {
     return this.repository.findByQuestionBank(questionBankId);
   }
 
-  async assignToSlot(slotId: string, questionId: string, actor: Actor) {
+  async assignToSlot(slotId: string, questionId: string, authContext: AuthContext) {
     const slot = await this.repository.findById(slotId);
     if (!slot) throw new NotFoundError("Slot not found");
 
@@ -23,9 +23,14 @@ export class QuestionSlotService {
     if (!bank) throw new NotFoundError("Question bank not found");
     ensureQuestionBankMutable(bank.recordStatus);
 
-    if (actor.role !== "COORDINATOR") {
-      const assignment = await prisma.contributorBankAssignment.findUnique({
-        where: { contributorId_questionBankId: { contributorId: actor.id, questionBankId: slot.questionBankId } },
+    if (!new AuthorizationService(authContext).has("COORDINATOR" as const)) {
+      const assignment = await prisma.responsibilityAssignment.findFirst({
+        where: {
+          userId: authContext.user.id,
+          responsibility: "CONTRIBUTOR",
+          scopeType: "QUESTION_BANK",
+          scopeId: slot.questionBankId,
+        },
       });
       if (!assignment) {
         throw new AppError("You are no longer assigned to contribute to this question bank.", 403);
@@ -58,7 +63,7 @@ export class QuestionSlotService {
     });
   }
 
-  async unassignFromSlot(slotId: string, actor: Actor) {
+  async unassignFromSlot(slotId: string, _authContext: AuthContext) {
     const slot = await this.repository.findById(slotId);
     if (!slot) throw new NotFoundError("Slot not found");
 

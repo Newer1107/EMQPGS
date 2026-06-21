@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { QuestionSlotService } from "@/modules/question-slots/service";
 
@@ -9,5 +9,5 @@ export const GET = withApiHandler(
     const questionBankId = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     return service.list(questionBankId);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] },
+  { responsibility: ["COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType] },
 );

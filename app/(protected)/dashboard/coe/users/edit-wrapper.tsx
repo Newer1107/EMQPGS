@@ -8,10 +8,10 @@ type UserData = {
   id: string;
   name: string;
   email: string;
-  role: string;
   status: string;
-  departmentId?: string | null;
-  department?: { id: string; name: string } | null;
+  homeDepartment?: { id: string; name: string } | null;
+  firstResponsibility?: string | null;
+  responsibilities: string[];
 };
 
 type DepartmentOption = { id: string; name: string };

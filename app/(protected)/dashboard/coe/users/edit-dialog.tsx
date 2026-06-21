@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { feedback } from "@/lib/feedback";
-import { Role, UserStatus } from "@prisma/client";
+import { ResponsibilityType, UserStatus } from "@prisma/client";
+import { responsibilityLabels } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,10 +14,10 @@ type UserData = {
   id: string;
   name: string;
   email: string;
-  role: string;
   status: string;
-  departmentId?: string | null;
-  department?: { id: string; name: string } | null;
+  homeDepartment?: { id: string; name: string } | null;
+  firstResponsibility?: string | null;
+  responsibilities: string[];
 };
 
 type DepartmentOption = { id: string; name: string };
@@ -25,8 +26,8 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
-  const [role, setRole] = useState(user.role);
-  const [departmentId, setDepartmentId] = useState(user.departmentId ?? "");
+  const [responsibility, setResponsibility] = useState(user.firstResponsibility ?? "");
+  const [homeDepartmentId, setHomeDepartmentId] = useState(user.homeDepartment?.id ?? "");
   const [status, setStatus] = useState(user.status);
   const [password, setPassword] = useState("");
 
@@ -34,7 +35,7 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
     e.preventDefault();
     setLoading(true);
     try {
-      const body: Record<string, unknown> = { name, email, role, departmentId: departmentId || null, status };
+      const body: Record<string, unknown> = { name, email, responsibility, homeDepartmentId: homeDepartmentId || null, status };
       if (password) body.password = password;
       const response = await apiFetch(`/api/users/${user.id}`, {
         method: "PATCH",
@@ -74,10 +75,10 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
             <Input id="edit-email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="edit-role">Role</Label>
-            <Select id="edit-role" value={role} onChange={(e) => setRole(e.target.value)}>
-              {Object.values(Role).map((r) => (
-                <option key={r} value={r}>{r}</option>
+            <Label htmlFor="edit-responsibility">Responsibility</Label>
+            <Select id="edit-responsibility" value={responsibility} onChange={(e) => setResponsibility(e.target.value)}>
+              {Object.values(ResponsibilityType).map((r) => (
+                <option key={r} value={r}>{responsibilityLabels[r] ?? r}</option>
               ))}
             </Select>
           </div>
@@ -91,7 +92,7 @@ export function EditUserForm({ user, departments, onClose }: { user: UserData; d
           </div>
           <div className="space-y-1">
             <Label htmlFor="edit-department">Department</Label>
-            <Select id="edit-department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+            <Select id="edit-department" value={homeDepartmentId} onChange={(e) => setHomeDepartmentId(e.target.value)}>
               <option value="">No department</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { ModeratorService } from "@/modules/moderation/service";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ import { ModeratorActions } from "@/components/forms/moderator-actions";
 export default async function ModeratorQuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
 
   const question = await prisma.questionLibraryItem.findUnique({
     where: { id },
@@ -31,7 +34,7 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
   if (!question) notFound();
 
   const service = new ModeratorService();
-  const allQuestions = await service.listQuestions(actor);
+  const allQuestions = await service.listQuestions(auth);
   const queueIds = allQuestions.map((q: { id: string }) => q.id);
 
   return (

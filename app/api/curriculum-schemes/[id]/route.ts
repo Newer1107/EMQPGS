@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { CurriculumSchemeService } from "@/modules/curriculum-schemes/service";
@@ -11,7 +11,7 @@ export const GET = withApiHandler(
     const id = request.nextUrl.pathname.split("/").pop()!;
     return service.findById(id);
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );
 
 export const PATCH = withApiHandler(
@@ -20,7 +20,7 @@ export const PATCH = withApiHandler(
     const payload = curriculumSchemeUpdateSchema.parse(await request.json());
     return service.update(id, payload);
   },
-  { roles: [Role.COE], audit: { action: "CURRICULUM_SCHEME_UPDATED", entityType: "CURRICULUM_SCHEME", getEntityId: (r) => (r as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "CURRICULUM_SCHEME_UPDATED", entityType: "CURRICULUM_SCHEME", getEntityId: (r) => (r as { id?: string }).id } },
 );
 
 export const DELETE = withApiHandler(
@@ -28,5 +28,5 @@ export const DELETE = withApiHandler(
     const id = request.nextUrl.pathname.split("/").pop()!;
     return service.delete(id);
   },
-  { roles: [Role.COE], audit: { action: "CURRICULUM_SCHEME_DELETED", entityType: "CURRICULUM_SCHEME", getEntityId: (r) => (r as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "CURRICULUM_SCHEME_DELETED", entityType: "CURRICULUM_SCHEME", getEntityId: (r) => (r as { id?: string }).id } },
 );

@@ -1,13 +1,16 @@
 import { notFound } from "next/navigation";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
 import { BankDetailClient, type SlotItem, type AiReportItem, type GeneratedPaperItem, type DeanReviewItem, type ModeratorInfo, type ContributorInfo } from "./bank-detail-client";
 
 export default async function QuestionBankDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const bankService = new QuestionBankWorkflowService();
-  const bank = await bankService.getQuestionBankDetail(actor, id);
+  const bank = await bankService.getQuestionBankDetail(auth, id);
   if (!bank) notFound();
 
   const totalModules = bank.pattern?.totalModules ?? 6;
@@ -93,7 +96,6 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       examCycleLabel={bs.academicYear?.code ? `${bs.academicYear.code} · Sem ${bs.semesterNumber} · Annual Bank` : ""}
       phase={bank.phase}
       recordStatus={bank.recordStatus}
-      userRole={actor.role}
       totalSlots={totalSlots}
       totalModules={totalModules}
       marksOptions={marksOptions}

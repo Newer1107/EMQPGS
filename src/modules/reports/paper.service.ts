@@ -144,14 +144,14 @@ export class PaperGenerationService {
       metadata: { variants },
     });
 
-    const coordinators = await prisma.coordinatorDepartmentAssignment.findMany({
-      where: { departmentId: questionBank.subject.departmentId },
-      include: { coordinator: true },
+    const coordinatorAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: questionBank.subject.departmentId },
+      include: { user: true },
     });
     await Promise.all(
-      coordinators.map(({ coordinator }) =>
+      coordinatorAssignments.map(({ user }) =>
         this.notificationService.create(
-          coordinator.id,
+          user.id,
           "Paper generation complete",
           `Papers A, B, C have been generated for ${questionBank.subject.subjectName}.`,
           `/dashboard/coordinator/question-banks?bank=${questionBankId}`,

@@ -21,9 +21,8 @@ export const POST = withApiHandler(async () => {
   const accessToken = await signAccessToken({
     sub: user.id,
     email: user.email,
-    role: user.role,
     name: user.name,
-    departmentId: user.departmentId,
+    homeDepartmentId: user.homeDepartmentId,
   });
 
   cookieStore.set(authCookieNames.access, accessToken, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 60 * env.ACCESS_TOKEN_TTL_MINUTES });

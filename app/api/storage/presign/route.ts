@@ -1,5 +1,6 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 
 import { ForbiddenError } from "@/lib/errors";
 import { StorageService } from "@/lib/storage/storage-service";
@@ -16,7 +17,8 @@ const schema = z.object({
 export const POST = withApiHandler(
   async (request, context) => {
     const payload = schema.parse(await request.json());
-    if ((payload.bucket === "exports" || payload.bucket === "system-backups") && context.user?.role !== Role.COE) {
+    const authz = new AuthorizationService(context.auth!);
+    if ((payload.bucket === "exports" || payload.bucket === "system-backups") && !authz.has("COE" as ResponsibilityType)) {
       throw new ForbiddenError("Only COE can create export or backup storage links");
     }
     return new StorageService().createUploadLink({
@@ -24,5 +26,5 @@ export const POST = withApiHandler(
       uploadedById: context.user?.id,
     });
   },
-  { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType] },
 );

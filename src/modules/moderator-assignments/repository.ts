@@ -1,13 +1,6 @@
 import { prisma } from "@/lib/db";
 
 export class ModeratorAssignmentRepository {
-  findModeratorById(id: string) {
-    return prisma.user.findUnique({
-      where: { id },
-      select: { id: true, role: true, name: true, email: true },
-    });
-  }
-
   findQuestionBankById(id: string) {
     return prisma.questionBank.findUnique({
       where: { id },
@@ -16,20 +9,35 @@ export class ModeratorAssignmentRepository {
   }
 
   findDuplicate(moderatorId: string, questionBankId: string) {
-    return prisma.moderatorBankAssignment.findUnique({
-      where: { moderatorId_questionBankId: { moderatorId, questionBankId } },
+    return prisma.responsibilityAssignment.findFirst({
+      where: {
+        userId: moderatorId,
+        responsibility: "MODERATOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 
   create(moderatorId: string, questionBankId: string) {
-    return prisma.moderatorBankAssignment.create({
-      data: { moderatorId, questionBankId },
+    return prisma.responsibilityAssignment.create({
+      data: {
+        userId: moderatorId,
+        responsibility: "MODERATOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 
   delete(moderatorId: string, questionBankId: string) {
-    return prisma.moderatorBankAssignment.delete({
-      where: { moderatorId_questionBankId: { moderatorId, questionBankId } },
+    return prisma.responsibilityAssignment.deleteMany({
+      where: {
+        userId: moderatorId,
+        responsibility: "MODERATOR",
+        scopeType: "QUESTION_BANK",
+        scopeId: questionBankId,
+      },
     });
   }
 }

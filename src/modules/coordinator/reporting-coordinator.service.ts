@@ -4,7 +4,7 @@ import { AppError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
 import { AiReportService } from "@/modules/reports/ai-report.service";
 import { PaperGenerationService } from "@/modules/reports/paper.service";
-import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
+import { DepartmentAccessUtils, type AuthContext } from "@/modules/coordinator/department-utils";
 
 export class ReportingCoordinatorService {
   constructor(
@@ -14,13 +14,13 @@ export class ReportingCoordinatorService {
     private readonly notifications = new NotificationService(),
   ) {}
 
-  async triggerAiAnalysis(actor: Actor, questionBankId: string) {
+  async triggerAiAnalysis(authContext: AuthContext, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: { subject: true },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
     const filledSlotCount = await prisma.questionSlot.count({
       where: { questionBankId, assignedQuestionId: { not: null } },
     });
@@ -28,9 +28,9 @@ export class ReportingCoordinatorService {
       throw new AppError("Question bank does not meet the minimum question threshold for AI analysis.", 409);
     }
 
-    const report = await this.aiReportService.createAiReport(questionBankId, actor);
+    const report = await this.aiReportService.createAiReport(questionBankId, authContext.user);
     await this.notifications.create(
-      actor.id,
+      authContext.user.id,
       "AI analysis ready",
       `AI analysis report is ready for ${bank.subject.subjectName}.`,
       `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
@@ -39,23 +39,23 @@ export class ReportingCoordinatorService {
     return report;
   }
 
-  async listAiReports(actor: Actor, questionBankId: string) {
+  async listAiReports(authContext: AuthContext, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({ where: { id: questionBankId }, include: { subject: true } });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
     return this.aiReportService.listAiReports(questionBankId);
   }
 
-  async triggerPaperGeneration(actor: Actor, questionBankId: string, examType?: ExamType) {
+  async triggerPaperGeneration(authContext: AuthContext, questionBankId: string, examType?: ExamType) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: { subject: true },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
-    const generatedPapers = await this.paperService.generatePapers(questionBankId, examType ?? ExamType.ENDSEM, actor, ["PAPER_A", "PAPER_B", "PAPER_C"]);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
+    const generatedPapers = await this.paperService.generatePapers(questionBankId, examType ?? ExamType.ENDSEM, authContext.user, ["PAPER_A", "PAPER_B", "PAPER_C"]);
     await this.notifications.create(
-      actor.id,
+      authContext.user.id,
       "Paper generation complete",
       `Papers A, B, C have been generated for ${bank.subject.subjectName}.`,
       `/dashboard/coordinator/question-banks?bank=${questionBankId}`,
@@ -64,10 +64,10 @@ export class ReportingCoordinatorService {
     return generatedPapers;
   }
 
-  async listGeneratedPapers(actor: Actor, questionBankId: string) {
+  async listGeneratedPapers(authContext: AuthContext, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({ where: { id: questionBankId }, include: { subject: true, deanReview: true } });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
     const papers = await this.paperService.listGeneratedPapers(questionBankId);
     return {
       papers,
@@ -75,7 +75,7 @@ export class ReportingCoordinatorService {
     };
   }
 
-  async getDeanReviewStatus(actor: Actor, questionBankId: string) {
+  async getDeanReviewStatus(authContext: AuthContext, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: {
@@ -88,7 +88,7 @@ export class ReportingCoordinatorService {
       },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
 
     return bank.deanReview
       ? {

@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { BatchSemesterService } from "@/modules/batch-semesters/service";
 
@@ -12,5 +12,5 @@ export const GET = withApiHandler(
     if (batchId) return service.findByBatch(batchId);
     return [];
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );

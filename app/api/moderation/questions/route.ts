@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { ModeratorService } from "@/modules/moderation/service";
 
@@ -6,7 +6,7 @@ const service = new ModeratorService();
 
 export const GET = withApiHandler(
   async (_request, context) => {
-    return service.listQuestions(context.user!);
+    return service.listQuestions(context.auth!);
   },
-  { roles: [Role.MODERATOR] },
+  { responsibility: ["MODERATOR" as ResponsibilityType] },
 );

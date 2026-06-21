@@ -10,7 +10,8 @@ import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { logAudit } from "@/lib/audit";
 import { ENTITY_TYPES } from "@/lib/constants";
 import { withOptimisticLock, buildOptimisticUpdate, buildOptimisticWhere } from "@/lib/optimistic-lock";
-import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
+import { DepartmentAccessUtils, type AuthContext } from "@/modules/coordinator/department-utils";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { QuestionBankService } from "@/modules/question-banks/service";
 
@@ -25,8 +26,8 @@ export class QuestionBankWorkflowService {
     private readonly questionBankService = new QuestionBankService(),
   ) {}
 
-  async listQuestionBanks(actor: Actor, filters: BankFilters = {}, take = 50, skip = 0) {
-    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
+  async listQuestionBanks(authContext: AuthContext, filters: BankFilters = {}, take = 50, skip = 0) {
+    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(authContext);
     if (filters.departmentId && !departmentIds.includes(filters.departmentId)) {
       throw new AppError("You do not have access to that department.", 403);
     }
@@ -76,66 +77,68 @@ export class QuestionBankWorkflowService {
     });
   }
 
-  async getQuestionBankDetail(actor: Actor, questionBankId: string) {
-    const bank = await prisma.questionBank.findUnique({
-      where: { id: questionBankId },
-      include: {
-        subject: { include: { department: true } },
-        batchSemester: {
-          include: {
-            academicYear: true,
-            batch: { select: { id: true, name: true } },
-            department: { select: { id: true, name: true } },
-          },
-        },
-        slots: {
-          include: {
-            assignedQuestion: {
-              include: {
-                creator: { select: { id: true, name: true } },
-                subjectVersion: { include: { subject: true } },
-              },
+  async getQuestionBankDetail(authContext: AuthContext, questionBankId: string) {
+    const [bank, moderatorAssignments, contributorAssignments] = await Promise.all([
+      prisma.questionBank.findUnique({
+        where: { id: questionBankId },
+        include: {
+          subject: { include: { department: true } },
+          batchSemester: {
+            include: {
+              academicYear: true,
+              batch: { select: { id: true, name: true } },
+              department: { select: { id: true, name: true } },
             },
           },
-          orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
-        },
-        pattern: true,
-        aiReports: { orderBy: { createdAt: "desc" }, take: 1 },
-        generatedPapers: {
-          orderBy: { variant: "asc" },
-          include: {
-            items: { include: { question: true } },
+          slots: {
+            include: {
+              assignedQuestion: {
+                include: {
+                  creator: { select: { id: true, name: true } },
+                  subjectVersion: { include: { subject: true } },
+                },
+              },
+            },
+            orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
           },
-        },
-        deanReview: { include: { reviewedBy: true } },
-        moderatorAssignments: {
-          include: {
-            moderator: { select: { id: true, name: true, email: true } },
+          pattern: true,
+          aiReports: { orderBy: { createdAt: "desc" }, take: 1 },
+          generatedPapers: {
+            orderBy: { variant: "asc" },
+            include: {
+              items: { include: { question: true } },
+            },
           },
+          deanReview: { include: { reviewedBy: true } },
         },
-        contributorAssignments: {
-          include: {
-            contributor: { select: { id: true, name: true, email: true } },
-          },
-        },
-      },
-    });
+      }),
+      prisma.responsibilityAssignment.findMany({
+        where: { scopeId: questionBankId, scopeType: "QUESTION_BANK", responsibility: "MODERATOR" },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
+      prisma.responsibilityAssignment.findMany({
+        where: { scopeId: questionBankId, scopeType: "QUESTION_BANK", responsibility: "CONTRIBUTOR" },
+        include: { user: { select: { id: true, name: true, email: true } } },
+      }),
+    ]);
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
 
     return {
       ...bank,
+      moderatorAssignments: moderatorAssignments.map((a) => ({ moderator: a.user })),
+      contributorAssignments: contributorAssignments.map((a) => ({ contributor: a.user })),
       bankStatus: bank.recordStatus === RecordStatus.LOCKED ? "LOCKED" : "ACTIVE",
     };
   }
 
-  async lockQuestionBank(actor: Actor, questionBankId: string) {
+  async lockQuestionBank(authContext: AuthContext, questionBankId: string) {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: { subject: true, batchSemester: true },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
     if (bank.recordStatus === RecordStatus.LOCKED) {
       throw new AppError("Question bank is already locked.", 409);
     }
@@ -177,18 +180,18 @@ export class QuestionBankWorkflowService {
     );
   }
 
-  async advancePhase(actor: Actor, id: string, targetPhase: QuestionBankPhase) {
+  async advancePhase(authContext: AuthContext, id: string, targetPhase: QuestionBankPhase) {
     const bank = await prisma.questionBank.findUnique({
       where: { id },
       include: { subject: { select: { departmentId: true } } },
     });
     if (!bank) throw new NotFoundError("Question bank not found");
-    await this.deptUtils.assertDepartmentAccess(actor, bank.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, bank.subject.departmentId);
     return this.questionBankService.advancePhase(id, targetPhase);
   }
 
-  async coordinatorDecision(questionBankId: string, decision: CoordinatorDecision, remark: string | undefined, actor: Actor) {
-    if (actor.role !== "COORDINATOR") throw new ForbiddenError("Only coordinators can approve or reject reports");
+  async coordinatorDecision(questionBankId: string, decision: CoordinatorDecision, remark: string | undefined, authContext: AuthContext) {
+    new AuthorizationService(authContext).requireCoordinator();
     const bank = await prisma.questionBank.findUnique({ where: { id: questionBankId } });
     if (!bank) throw new NotFoundError("Question bank not found");
     ensureQuestionBankMutable(bank.recordStatus);
@@ -207,7 +210,7 @@ export class QuestionBankWorkflowService {
           questionBankId,
           decision,
           remark: remark ?? null,
-          decidedById: actor.id,
+          decidedById: authContext.user.id,
         },
       }),
       prisma.questionBank.update({
@@ -217,7 +220,7 @@ export class QuestionBankWorkflowService {
     ]);
 
     await logAudit({
-      actorId: actor.id,
+      actorId: authContext.user.id,
       action: decision === CoordinatorDecision.APPROVED ? "QUESTION_BANK_APPROVED" : "QUESTION_BANK_REJECTED",
       entityType: ENTITY_TYPES.QUESTION_BANK,
       entityId: questionBankId,

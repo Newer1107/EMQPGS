@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { UserService } from "@/modules/users/service";
@@ -13,7 +13,7 @@ export const PATCH = withApiHandler(
     return service.update(id, payload);
   },
   {
-    roles: [Role.COE],
+    responsibility: ["COE" as ResponsibilityType],
     audit: {
       action: "USER_UPDATED",
       entityType: "USER",
@@ -28,7 +28,7 @@ export const DELETE = withApiHandler(
     return service.disable(id);
   },
   {
-    roles: [Role.COE],
+    responsibility: ["COE" as ResponsibilityType],
     audit: {
       action: "USER_DISABLED",
       entityType: "USER",

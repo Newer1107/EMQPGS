@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { BatchService } from "@/modules/batches/service";
@@ -12,7 +12,7 @@ export const POST = withApiHandler(
     return service.createWithPrerequisites(payload);
   },
   {
-    roles: [Role.COE],
+    responsibility: ["COE" as ResponsibilityType],
     audit: {
       action: "BATCH_CREATED",
       entityType: "BATCH",

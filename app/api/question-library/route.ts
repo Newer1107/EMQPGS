@@ -1,5 +1,6 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 import { AppError } from "@/lib/errors";
 
 import { QuestionLibraryService } from "@/modules/question-library/service";
@@ -22,19 +23,19 @@ export const GET = withApiHandler(async (request) => {
     return service.findBySubjectVersion(subjectVersionId);
   }
   return [];
-}, { roles: [Role.COE, Role.COORDINATOR, Role.MODERATOR, Role.CONTRIBUTOR] });
+}, { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType] });
 
 export const POST = withApiHandler(
   async (request, context) => {
     const payload = questionLibraryItemSchema.parse(await request.json());
     const questionBankId = request.nextUrl.searchParams.get("bankId");
-    const actor = context.user!;
+    const authz = new AuthorizationService(context.auth!);
 
     if (questionBankId) {
-      return service.createForBank({ ...payload, questionBankId }, actor);
+      return service.createForBank({ ...payload, questionBankId }, context.auth!);
     }
 
-    if (actor.role === "CONTRIBUTOR") {
+    if (authz.has("CONTRIBUTOR" as ResponsibilityType)) {
       throw new AppError(
         "Questions submitted by contributors must belong to a Question Bank. Please use the 'bankId' query parameter.",
         400,
@@ -42,7 +43,7 @@ export const POST = withApiHandler(
       );
     }
 
-    return service.create(payload, actor);
+    return service.create(payload, context.auth!);
   },
-  { roles: [Role.CONTRIBUTOR, Role.COORDINATOR], successStatus: 201, audit: { action: "QUESTION_CREATED", entityType: "QUESTION_LIBRARY_ITEM", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["CONTRIBUTOR" as ResponsibilityType, "COORDINATOR" as ResponsibilityType], successStatus: 201, audit: { action: "QUESTION_CREATED", entityType: "QUESTION_LIBRARY_ITEM", getEntityId: (result) => (result as { id?: string }).id } },
 );

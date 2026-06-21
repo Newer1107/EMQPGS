@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { z } from "zod";
 import { withApiHandler } from "@/lib/api-handler";
 
@@ -11,7 +11,7 @@ export const POST = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = transferSchema.parse(await request.json());
-    return service.transferOwnership(id, payload.toUserId, payload.reason, context.user!);
+    return service.transferOwnership(id, payload.toUserId, payload.reason, context.auth!);
   },
-  { roles: [Role.COORDINATOR], audit: { action: "QUESTION_OWNERSHIP_TRANSFERRED", entityType: "QUESTION_LIBRARY_ITEM" } },
+  { responsibility: ["COORDINATOR" as ResponsibilityType], audit: { action: "QUESTION_OWNERSHIP_TRANSFERRED", entityType: "QUESTION_LIBRARY_ITEM" } },
 );

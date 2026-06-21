@@ -1,6 +1,5 @@
-import { Role } from "@prisma/client";
 import { CoordinatorDepartmentAssignmentRepository } from "@/modules/coordinator-departments/repository";
-import { CoordinatorDepartmentAssignmentInput } from "@/modules/coordinator-departments/validation";
+import type { CoordinatorDepartmentAssignmentInput } from "@/modules/coordinator-departments/validation";
 import { AppError, NotFoundError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 
@@ -14,11 +13,15 @@ export class CoordinatorDepartmentAssignmentService {
   async create(data: CoordinatorDepartmentAssignmentInput) {
     const coordinator = await prisma.user.findUnique({
       where: { id: data.coordinatorId },
-      select: { id: true, role: true },
+      select: { id: true },
     });
     if (!coordinator) throw new NotFoundError("Coordinator not found");
-    if (coordinator.role !== Role.COORDINATOR) {
-      throw new AppError("Only users with the COORDINATOR role can be assigned to departments.", 400);
+
+    const hasCoordinatorResp = await prisma.responsibilityAssignment.findFirst({
+      where: { userId: data.coordinatorId, responsibility: "COORDINATOR" },
+    });
+    if (!hasCoordinatorResp) {
+      throw new AppError("Only users with the COORDINATOR responsibility can be assigned to departments.", 400);
     }
 
     const department = await prisma.department.findUnique({ where: { id: data.departmentId } });

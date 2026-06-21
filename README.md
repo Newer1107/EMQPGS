@@ -8,7 +8,7 @@ A full-stack web application for managing the complete lifecycle of academic exa
 
 ## Features
 
-- **Five-role hierarchy**: COE (admin), Coordinator (academic manager), Contributor (question author), Moderator (quality reviewer), Dean (final reviewer)
+- **Responsibility-based authorization**: Dynamic responsibility assignments replace static roles. A single user can hold multiple responsibilities (Coordinator, Moderator, Contributor) simultaneously with different scopes.
 - **Annual question banks**: One bank per (Batch Semester, Subject) — reused across ISE-1, ISE-2, ENDSEM
 - **Automatic initialization**: Banks auto-created when a batch semester is activated
 - **Four-phase question bank lifecycle**: DRAFTING → MODERATION → APPROVAL → COMPLETE
@@ -20,19 +20,35 @@ A full-stack web application for managing the complete lifecycle of academic exa
 - **Dean review workspace**: Side-by-side paper comparison with variant selection
 - **Export pipeline**: PDF/DOCX/ZIP packet generation with MinIO storage
 - **Audit trail**: SHA-256 hash-chained immutable audit logs
-- **Complete RBAC**: Department-scoped coordinator access, role-gated APIs
+- **Responsibility-gated APIs**: Every endpoint authorized via centralized AuthorizationService
 
 ---
 
-## Role Hierarchy
+## Authorization Model
+
+EMQPGS uses a **responsibility-based authorization** model. A User is simply a person — their access is determined by dynamic `ResponsibilityAssignment` records.
 
 ```
-COE (System Admin)
- └── Coordinator (Department Manager)
-      ├── Contributor (Question Author)
-      └── Moderator (Quality Reviewer)
-           └── Dean (Final Approver)
+User (Identity)
+    ↓
+ResponsibilityAssignment[]
+    ↓
+Workspace (active assignment context)
+    ↓
+AuthorizationService (permission checks)
 ```
+
+### Responsibilities
+
+| Type | Scope | Description |
+|------|-------|-------------|
+| COE | Institution | System administration |
+| DEAN | Institution | Final paper review |
+| COORDINATOR | Department | Academic management |
+| MODERATOR | Question Bank | Quality assurance |
+| CONTRIBUTOR | Question Bank | Question creation |
+
+A single user can hold multiple responsibilities simultaneously (e.g., Coordinator in Computer Engineering AND Moderator for a specific question bank). The workspace selector lets users switch between their active responsibilities without logging out.
 
 ---
 
@@ -96,8 +112,7 @@ erDiagram
     SubjectVersion ||--o{ QuestionLibraryItem : library
     QuestionBank ||--o{ QuestionSlot : slots
     QuestionSlot ||--o| QuestionLibraryItem : assigned
-    QuestionBank ||--o{ ModeratorBankAssignment : moderators
-    QuestionBank ||--o{ ContributorBankAssignment : contributors
+    User ||--o{ ResponsibilityAssignment : responsibilities
     QuestionBank ||--o{ GeneratedPaper : papers
     QuestionBank ||--o{ DeanReview : review
     QuestionBank ||--o{ ApprovalDecision : decision
@@ -110,25 +125,32 @@ erDiagram
 
 ---
 
-## Authentication Flow
+## Authentication & Authorization Flow
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant NextAuth
+    participant Login
     participant JWT
     participant DB
-    participant MinIO
+    participant AuthZ
 
-    User->>NextAuth: Login (email + password)
-    NextAuth->>DB: Verify credentials (bcrypt)
-    DB-->>NextAuth: User + role
-    NextAuth->>JWT: Generate access + refresh tokens
+    User->>Login: Login (email + password)
+    Login->>DB: Verify credentials (bcrypt)
+    DB-->>Login: User
+    Login->>DB: Load ResponsibilityAssignments
+    DB-->>Login: []
+    Login->>JWT: Generate tokens (no role — identity only)
     JWT-->>User: Set cookies
-    User->>JWT: API request (cookie)
-    JWT->>JWT: Verify + decode
-    JWT-->>User: Authenticated response
-    Note over JWT: Token refresh on expiry<br/>Blacklist on logout
+
+    User->>AuthZ: API request (cookie)
+    AuthZ->>JWT: Verify + decode
+    JWT-->>AuthZ: User identity
+    AuthZ->>AuthZ: Resolve responsibilities (cached in JWT)
+    AuthZ->>AuthZ: Create AuthorizationService
+    AuthZ->>AuthZ: Check responsibility + scope
+    AuthZ-->>User: Authorized response
+    Note over AuthZ: Every check reduces to:<br/>"Does this user have this<br/>responsibility within this scope?"
 ```
 
 ---
@@ -196,15 +218,15 @@ flowchart LR
 
 All passwords: `Password@123`
 
-| Email | Role | Department |
+| Email | Responsibility | Scope |
 |---|---|---|
-| `coe@emqpgs.local` | COE | COMP |
-| `dean@emqpgs.local` | DEAN | COMP |
-| `coordinator.comp@emqpgs.local` | COORDINATOR | COMP |
-| `coordinator.extc@emqpgs.local` | COORDINATOR | EXTC |
-| `coordinator.hns@emqpgs.local` | COORDINATOR | HNS |
-| `moderator.comp1@emqpgs.local` | MODERATOR | COMP |
-| `contributor1.comp@emqpgs.local` | CONTRIBUTOR | COMP |
+| `coe@emqpgs.local` | COE | Institution |
+| `dean@emqpgs.local` | DEAN | Institution |
+| `coordinator.comp@emqpgs.local` | COORDINATOR | COMP Department |
+| `coordinator.extc@emqpgs.local` | COORDINATOR | EXTC Department |
+| `coordinator.hns@emqpgs.local` | COORDINATOR | HNS Department |
+| `moderator.comp1@emqpgs.local` | — | (assigned to banks at runtime) |
+| `contributor1.comp@emqpgs.local` | — | (assigned to banks at runtime) |
 
 ---
 
@@ -271,22 +293,30 @@ emqpgs/
 │           ├── moderator/    # Moderator dashboard (7 pages)
 │           └── dean/         # Dean dashboard (6 pages)
 ├── src/
-│   ├── components/          # UI components
+│   ├── components/
 │   │   ├── ui/              # shadcn/ui primitives
 │   │   ├── forms/           # Business form components
 │   │   ├── layout/          # App shell, sidebar, navigation
-│   │   └── dashboard/       # Dashboard-specific components
-│   ├── lib/                 # Utilities, auth, audit, errors
+│   │   ├── dashboard/       # Dashboard-specific components
+│   │   └── workspace/       # Workspace picker, switcher
+│   ├── lib/
+│   │   ├── auth/            # Authorization layer
+│   │   │   ├── responsibility-resolver.ts
+│   │   │   ├── workspace-resolver.ts
+│   │   │   └── authorization-service.ts
+│   │   ├── api-context.ts   # Request context (no role)
+│   │   ├── api-handler.ts   # Centralized auth gate
+│   │   └── types.ts         # Actor, AuthContext types
 │   └── modules/             # 28 service modules
 ├── prisma/
-│   ├── schema.prisma        # 34 models, 26 enums
-│   ├── migrations/          # 5 migrations
-│   └── seed.ts              # Demo data seeder
+│   ├── schema.prisma        # ResponsibilityAssignment model
+│   ├── migrations/
+│   └── seed.ts              # Responsibility-based seed data
 ├── tests/
 │   ├── unit/                # 19 test files, 126 tests
 │   └── e2e-validation.mjs   # API-level workflow validation
 ├── docs/
-│   ├── architecture.md      # Domain model, RBAC, invariants
+│   ├── architecture.md      # Domain model, responsibilities
 │   ├── workflow.md          # Phase transitions, state machines
 │   ├── database.md          # All models, relationships, enums
 │   ├── api.md               # API reference
@@ -332,13 +362,14 @@ node tests/e2e-validation.mjs
 ## Security
 
 - **Password hashing**: bcrypt with cost factor 12
-- **JWT**: HMAC-SHA256 with separate secrets for access and refresh tokens
+- **JWT**: HMAC-SHA256 with separate secrets for access and refresh tokens (no role in payload)
 - **CSRF**: Double-submit cookie pattern (HMAC-signed tokens)
 - **Rate limiting**: Per-IP, per-endpoint (configurable window)
 - **Audit trail**: SHA-256 hash-chained immutable log entries
-- **Authorization**: Role-based gate per API route via `withApiHandler`
+- **Authorization**: Centralized `AuthorizationService` — responsibility-gated via `withApiHandler`
+- **Workspace isolation**: Client sends only `assignmentId`; server validates ownership, activity, and scope
 - **Input validation**: Zod schemas on all mutation endpoints
-- **Department isolation**: CoordinatorDepartmentAssignment scopes access
+- **Department isolation**: ResponsibilityAssignment scopes define access (homeDepartment is informational only)
 - **Session management**: Idle timeout, refresh token rotation, blacklist
 
 ---

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { prisma } from "@/lib/db";
 import { questionBankPhaseLabels } from "@/lib/constants";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
@@ -19,10 +20,12 @@ const phaseVariants: Record<string, "success" | "warning" | "info" | "default"> 
 
 export default async function QuestionBanksManagementPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
   const bankService = new QuestionBankWorkflowService();
-  const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
-  const questionBanks = await bankService.listQuestionBanks(actor);
+  const departmentIds = await deptUtils.getAssignedDepartmentIds(auth);
+  const questionBanks = await bankService.listQuestionBanks(auth);
 
   return (
     <div className="space-y-6">

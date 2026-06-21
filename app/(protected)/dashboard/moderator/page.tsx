@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { ModeratorDashboardService } from "@/modules/moderation/dashboard.service";
 import type { Severity } from "@/components/dashboard/types";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -16,8 +17,10 @@ import { StatCard } from "@/components/dashboard/stat-card";
 
 export default async function ModeratorDashboardPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const service = new ModeratorDashboardService();
-  const data = await service.getDashboard(actor);
+  const data = await service.getDashboard(auth);
 
   const oldestPending = data.pendingQueue[0] ?? null;
 

@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { AcademicYearService } from "@/modules/academic-years/service";
@@ -12,7 +12,7 @@ export const PATCH = withApiHandler(
     const payload = academicYearSchema.partial().parse(await request.json());
     return service.update(id, payload);
   },
-  { roles: [Role.COE], audit: { action: "ACADEMIC_YEAR_UPDATED", entityType: "ACADEMIC_YEAR", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "ACADEMIC_YEAR_UPDATED", entityType: "ACADEMIC_YEAR", getEntityId: (result) => (result as { id?: string }).id } },
 );
 
 export const GET = withApiHandler(
@@ -20,5 +20,5 @@ export const GET = withApiHandler(
     const id = request.nextUrl.pathname.split("/").pop()!;
     return service.findById(id);
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );

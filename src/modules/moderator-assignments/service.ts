@@ -1,8 +1,8 @@
-import { Role } from "@prisma/client";
 import { ModeratorAssignmentRepository } from "@/modules/moderator-assignments/repository";
 import type { AssignmentInput } from "@/modules/moderator-assignments/validation";
 import { NotificationService } from "@/modules/notifications/service";
 import { AppError, NotFoundError } from "@/lib/errors";
+import { prisma } from "@/lib/db";
 
 export class ModeratorAssignmentService {
   constructor(
@@ -11,10 +11,17 @@ export class ModeratorAssignmentService {
   ) {}
 
   async assignModerator(questionBankId: string, payload: AssignmentInput) {
-    const moderator = await this.repository.findModeratorById(payload.moderatorId);
+    const moderator = await prisma.user.findUnique({
+      where: { id: payload.moderatorId },
+      select: { id: true, name: true, email: true },
+    });
     if (!moderator) throw new NotFoundError("User not found");
-    if (moderator.role !== Role.MODERATOR) {
-      throw new AppError("Only users with the MODERATOR role can be assigned.", 400);
+
+    const hasModeratorResp = await prisma.responsibilityAssignment.findFirst({
+      where: { userId: payload.moderatorId, responsibility: "MODERATOR" },
+    });
+    if (!hasModeratorResp) {
+      throw new AppError("Only users with the MODERATOR responsibility can be assigned.", 400);
     }
 
     const bank = await this.repository.findQuestionBankById(questionBankId);

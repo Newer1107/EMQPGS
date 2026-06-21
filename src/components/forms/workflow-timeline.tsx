@@ -1,14 +1,16 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { questionBankPhaseLabels, recordStatusLabels } from "@/lib/constants";
+import { questionBankPhaseLabels, recordStatusLabels, responsibilityLabels } from "@/lib/constants";
 
-const PHASE_FLOW = [
-  { phase: "DRAFTING", role: "Contributor", action: "Fill slots with questions" },
-  { phase: "MODERATION", role: "Moderator", action: "Review and approve questions" },
-  { phase: "APPROVAL", role: "Coordinator", action: "Review AI report and decide" },
-  { phase: "COMPLETE", role: "Coordinator", action: "Generate papers, dean review, lock" },
-] as const;
+type ResponsibilityType = keyof typeof responsibilityLabels;
+
+const PHASE_FLOW: { phase: string; responsibility: ResponsibilityType; action: string }[] = [
+  { phase: "DRAFTING", responsibility: "CONTRIBUTOR", action: "Fill slots with questions" },
+  { phase: "MODERATION", responsibility: "MODERATOR", action: "Review and approve questions" },
+  { phase: "APPROVAL", responsibility: "COORDINATOR", action: "Review AI report and decide" },
+  { phase: "COMPLETE", responsibility: "COORDINATOR", action: "Generate papers, dean review, lock" },
+];
 
 type WorkflowTimelineProps = {
   phase: string;
@@ -50,7 +52,7 @@ export function WorkflowTimeline({ phase, recordStatus }: WorkflowTimelineProps)
                     {isNext && <span className="text-xs font-medium text-amber-600">Up next</span>}
                   </div>
                   <p className="text-xs mt-0.5 opacity-75">
-                    {step.role}: {step.action}
+                    {responsibilityLabels[step.responsibility]}: {step.action}
                   </p>
                 </div>
               </div>

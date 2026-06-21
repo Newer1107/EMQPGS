@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { BatchSemesterService } from "@/modules/batch-semesters/service";
@@ -11,7 +11,7 @@ export const GET = withApiHandler(
     const id = request.nextUrl.pathname.split("/").pop()!;
     return service.findById(id);
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );
 
 export const PATCH = withApiHandler(
@@ -20,7 +20,7 @@ export const PATCH = withApiHandler(
     const payload = batchSemesterUpdateSchema.parse(await request.json());
     return service.update(id, payload);
   },
-  { roles: [Role.COE], audit: { action: "BATCH_SEMESTER_UPDATED", entityType: "BATCH_SEMESTER", getEntityId: (r) => (r as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "BATCH_SEMESTER_UPDATED", entityType: "BATCH_SEMESTER", getEntityId: (r) => (r as { id?: string }).id } },
 );
 
 export const POST = withApiHandler(
@@ -39,5 +39,5 @@ export const POST = withApiHandler(
 
     return service.findById(id);
   },
-  { roles: [Role.COE] },
+  { responsibility: ["COE" as ResponsibilityType] },
 );

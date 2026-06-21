@@ -4,12 +4,13 @@ import { DeanReviewService } from "@/modules/production/dean-review.service";
 import { ExportService } from "@/modules/production/export.service";
 import { MonitoringService } from "@/modules/production/monitoring.service";
 import { paginatedResponse, type CursorPaginationInput } from "@/lib/pagination";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 
 export async function getAdminData(input: CursorPaginationInput = {}) {
   const take = Math.min(Math.max(input.take ?? 25, 1), 200);
   const [departments, users, examCycles, subjects, questionBanks, auditLogs, departmentCount, userCount, questionBankCount] = await Promise.all([
     prisma.department.findMany({ orderBy: { createdAt: "desc" } }),
-    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
+    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { homeDepartment: true } }),
     prisma.examCycle.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { batchSemester: { include: { academicYear: true } } } }),
     prisma.subject.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { department: true } }),
     prisma.questionBank.findMany({ orderBy: { createdAt: "desc" }, take: take + 1, include: { subject: true, batchSemester: { include: { academicYear: true } } } }),
@@ -32,22 +33,11 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
 export async function getContributorAssignedBanks(contributorId: string) {
   return prisma.questionBank.findMany({
     where: {
-      OR: [
-        {
-          slots: {
-            some: {
-              OR: [
-                { assignedQuestion: { ownerId: contributorId } },
-              ],
-            },
-          },
+      slots: {
+        some: {
+          assignedQuestion: { ownerId: contributorId },
         },
-        {
-          contributorAssignments: {
-            some: { contributorId },
-          },
-        },
-      ],
+      },
     },
     include: {
       subject: { include: { versions: { where: { status: "ACTIVE" }, take: 1 } } },
@@ -66,12 +56,16 @@ export async function getContributorAssignedBanks(contributorId: string) {
 
 export async function getDeanReviewData() {
   const actor = await getCurrentUserFromCookies();
-  return new DeanReviewService().getDeanDashboardData(actor);
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
+  return new DeanReviewService().getDeanDashboardData(auth);
 }
 
 export async function getDeanReviewWorkspaceData(questionBankId: string) {
   const actor = await getCurrentUserFromCookies();
-  return new DeanReviewService().getDeanReviewWorkspace(questionBankId, actor);
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
+  return new DeanReviewService().getDeanReviewWorkspace(questionBankId, auth);
 }
 
 export async function getCoeProductionData() {

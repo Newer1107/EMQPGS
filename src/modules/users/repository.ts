@@ -1,18 +1,17 @@
 import { prisma } from "@/lib/db";
-import { UserInput } from "@/modules/users/validation";
+import type { UserInput } from "@/modules/users/validation";
 
 const publicUserSelect = {
   id: true,
   name: true,
   email: true,
-  role: true,
   status: true,
   lastLoginAt: true,
-  departmentId: true,
+  homeDepartmentId: true,
   resetTokenExpiry: true,
   createdAt: true,
   updatedAt: true,
-  department: true,
+  homeDepartment: true,
 } as const;
 
 const authUserSelect = {
@@ -22,12 +21,10 @@ const authUserSelect = {
 } as const;
 
 export class UserRepository {
-  list(take = 50, skip = 0, role?: string) {
+  list(take = 50, skip = 0) {
     return prisma.user.findMany({
       take: Math.min(take, 500),
       skip,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      where: role ? { role: role as any } : undefined,
       orderBy: { createdAt: "desc" },
       select: publicUserSelect,
     });

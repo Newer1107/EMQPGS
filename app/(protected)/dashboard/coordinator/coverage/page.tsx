@@ -1,12 +1,15 @@
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { prisma } from "@/lib/db";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { CoverageDashboardClient } from "./coverage-client";
 
 export default async function CoveragePage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
-  const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
+  const departmentIds = await deptUtils.getAssignedDepartmentIds(auth);
 
   const [academicYears, subjects, subjectVersions, questionBanks] = await Promise.all([
     prisma.academicYear.findMany({ orderBy: { startDate: "desc" }, select: { id: true, code: true } }),

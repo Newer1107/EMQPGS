@@ -1,4 +1,4 @@
-import { Role, QuestionBankPhase } from "@prisma/client";
+import { ResponsibilityType, QuestionBankPhase } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { ReadinessEngine } from "@/modules/readiness/engine";
 
@@ -18,5 +18,5 @@ export const GET = withApiHandler(
     });
     return engine.isReady(questionBankId, targetPhase);
   },
-  { roles: [Role.COORDINATOR, Role.MODERATOR] },
+  { responsibility: ["COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType] },
 );

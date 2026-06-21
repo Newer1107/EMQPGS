@@ -8,14 +8,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/client-fetch";
-import { APP_NAME, roleLabels } from "@/lib/constants";
+import { APP_NAME, responsibilityLabels } from "@/lib/constants";
 
 const ROLES = [
-  { key: "COE", label: roleLabels.COE, desc: "System governance & oversight" },
-  { key: "COORDINATOR", label: roleLabels.COORDINATOR, desc: "Workflow & bank management" },
-  { key: "CONTRIBUTOR", label: roleLabels.CONTRIBUTOR, desc: "Question creation" },
-  { key: "MODERATOR", label: roleLabels.MODERATOR, desc: "Quality assurance" },
-  { key: "DEAN", label: roleLabels.DEAN, desc: "Final paper review" },
+  { key: "COE", label: responsibilityLabels.COE, desc: "System governance & oversight" },
+  { key: "COORDINATOR", label: responsibilityLabels.COORDINATOR, desc: "Workflow & bank management" },
+  { key: "CONTRIBUTOR", label: responsibilityLabels.CONTRIBUTOR, desc: "Question creation" },
+  { key: "MODERATOR", label: responsibilityLabels.MODERATOR, desc: "Quality assurance" },
+  { key: "DEAN", label: responsibilityLabels.DEAN, desc: "Final paper review" },
 ];
 
 export default function LoginPage() {

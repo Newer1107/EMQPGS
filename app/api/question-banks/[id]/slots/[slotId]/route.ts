@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { QuestionSlotService } from "@/modules/question-slots/service";
@@ -11,10 +11,10 @@ export const PATCH = withApiHandler(
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
     const payload = assignToSlotSchema.parse(await request.json());
-    return service.assignToSlot(slotId, payload.questionId, context.user!);
+    return service.assignToSlot(slotId, payload.questionId, context.auth!);
   },
   {
-    roles: [Role.CONTRIBUTOR, Role.COORDINATOR],
+    responsibility: ["CONTRIBUTOR" as ResponsibilityType, "COORDINATOR" as ResponsibilityType],
     successStatus: 200,
     audit: { action: "QUESTION_ASSIGNED_TO_SLOT", entityType: "QUESTION_SLOT" },
   },
@@ -24,10 +24,10 @@ export const DELETE = withApiHandler(
   async (request, context) => {
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
-    return service.unassignFromSlot(slotId, context.user!);
+    return service.unassignFromSlot(slotId, context.auth!);
   },
   {
-    roles: [Role.COORDINATOR],
+    responsibility: ["COORDINATOR" as ResponsibilityType],
     audit: { action: "QUESTION_UNASSIGNED_FROM_SLOT", entityType: "QUESTION_SLOT" },
   },
 );

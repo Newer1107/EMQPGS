@@ -1,5 +1,4 @@
-import { RecordStatus } from "@prisma/client";
-import { Role } from "@prisma/client";
+import { ResponsibilityType, RecordStatus } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
@@ -19,5 +18,5 @@ export const POST = withApiHandler(
       "Question bank",
     );
   },
-  { roles: [Role.COORDINATOR], audit: { action: "QUESTION_BANK_UNLOCKED", entityType: "QUESTION_BANK" } },
+  { responsibility: ["COORDINATOR" as ResponsibilityType], audit: { action: "QUESTION_BANK_UNLOCKED", entityType: "QUESTION_BANK" } },
 );

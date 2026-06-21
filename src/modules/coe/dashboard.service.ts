@@ -1,4 +1,4 @@
-import { Role, RecordStatus, QuestionBankPhase, QuestionStatus } from "@prisma/client";
+import { RecordStatus, QuestionBankPhase, QuestionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 type MetricItem = { label: string; value: string | number };
@@ -111,7 +111,7 @@ export class CoeDashboardService {
         where: { generatedPapers: { some: {} }, deanReview: null },
         include: { subject: { select: { subjectName: true, subjectCode: true } } },
       }),
-      prisma.user.groupBy({ by: ["role"], _count: true }),
+      prisma.responsibilityAssignment.groupBy({ by: ["responsibility"], _count: true }),
     ]);
 
     const totalSlots = patternAgg._sum.totalSlots ?? 0;
@@ -122,9 +122,9 @@ export class CoeDashboardService {
     ).length;
 
     const coverageCounts = {
-      moderators: userRoleCounts.find((r) => r.role === Role.MODERATOR)?._count ?? 0,
-      contributors: userRoleCounts.find((r) => r.role === Role.CONTRIBUTOR)?._count ?? 0,
-      coordinators: userRoleCounts.find((r) => r.role === Role.COORDINATOR)?._count ?? 0,
+      moderators: userRoleCounts.find((r) => r.responsibility === "MODERATOR")?._count ?? 0,
+      contributors: userRoleCounts.find((r) => r.responsibility === "CONTRIBUTOR")?._count ?? 0,
+      coordinators: userRoleCounts.find((r) => r.responsibility === "COORDINATOR")?._count ?? 0,
     };
 
     const phaseCounts: Record<string, number> = {};

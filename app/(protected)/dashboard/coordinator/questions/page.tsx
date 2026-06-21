@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +21,10 @@ const statusVariants: Record<string, "success" | "warning" | "danger" | "default
 
 export default async function CoordinatorQuestionsPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
-  const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
+  const departmentIds = await deptUtils.getAssignedDepartmentIds(auth);
 
   const questions = await prisma.questionLibraryItem.findMany({
     where: {

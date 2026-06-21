@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { AppError } from "@/lib/errors";
 
@@ -14,7 +14,7 @@ export const POST = withApiHandler(
     return service.assignContributor(questionBankId, payload);
   },
   {
-    roles: [Role.COORDINATOR],
+    responsibility: ["COORDINATOR" as ResponsibilityType],
     successStatus: 201,
     audit: {
       action: "CONTRIBUTOR_ASSIGNED",
@@ -35,7 +35,7 @@ export const DELETE = withApiHandler(
     return service.unassignContributor(questionBankId, contributorId);
   },
   {
-    roles: [Role.COORDINATOR],
+    responsibility: ["COORDINATOR" as ResponsibilityType],
     successStatus: 200,
     audit: {
       action: "CONTRIBUTOR_UNASSIGNED",
@@ -52,7 +52,7 @@ export const GET = withApiHandler(
     return service.listAssignments(questionBankId);
   },
   {
-    roles: [Role.COORDINATOR],
+    responsibility: ["COORDINATOR" as ResponsibilityType],
     successStatus: 200,
   },
 );

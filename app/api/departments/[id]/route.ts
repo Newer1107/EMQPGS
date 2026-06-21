@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { DepartmentService } from "@/modules/departments/service";
@@ -12,7 +12,7 @@ export const PATCH = withApiHandler(
     const payload = departmentSchema.partial().parse(await request.json());
     return service.update(id, payload);
   },
-  { roles: [Role.COE], audit: { action: "DEPARTMENT_UPDATED", entityType: "DEPARTMENT", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "DEPARTMENT_UPDATED", entityType: "DEPARTMENT", getEntityId: (result) => (result as { id?: string }).id } },
 );
 
 export const DELETE = withApiHandler(
@@ -20,5 +20,5 @@ export const DELETE = withApiHandler(
     const id = request.nextUrl.pathname.split("/").pop()!;
     return service.delete(id);
   },
-  { roles: [Role.COE], audit: { action: "DEPARTMENT_DELETED", entityType: "DEPARTMENT", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "DEPARTMENT_DELETED", entityType: "DEPARTMENT", getEntityId: (result) => (result as { id?: string }).id } },
 );

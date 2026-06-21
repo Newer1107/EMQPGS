@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { z } from "zod";
 import { withApiHandler } from "@/lib/api-handler";
 
@@ -13,7 +13,7 @@ export const PATCH = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = revisionSchema.parse(await request.json());
-    return service.requestRevision(context.user!, id, payload.instructions);
+    return service.requestRevision(context.auth!, id, payload.instructions);
   },
-  { roles: [Role.MODERATOR], audit: { action: "QUESTION_REVISION_REQUESTED", entityType: "QUESTION", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["MODERATOR" as ResponsibilityType], audit: { action: "QUESTION_REVISION_REQUESTED", entityType: "QUESTION", getEntityId: (result) => (result as { id?: string }).id } },
 );

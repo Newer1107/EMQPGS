@@ -1,8 +1,8 @@
-import { Role, SubjectStatus } from "@prisma/client";
+import { SubjectStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { AppError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { withUniqueCheck } from "@/lib/db-helpers";
-import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
+import { DepartmentAccessUtils, type AuthContext } from "@/modules/coordinator/department-utils";
 import { SubjectVersionService } from "@/modules/subject-versions/service";
 
 type SubjectPayload = {
@@ -35,8 +35,8 @@ export class SubjectManagementService {
     private readonly versionService = new SubjectVersionService(),
   ) {}
 
-  async listSubjects(actor: Actor, filters: SubjectFilters = {}) {
-    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
+  async listSubjects(authContext: AuthContext, filters: SubjectFilters = {}) {
+    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(authContext);
     if (filters.departmentId && !departmentIds.includes(filters.departmentId)) {
       throw new ForbiddenError("You do not have access to that department.");
     }
@@ -87,7 +87,7 @@ export class SubjectManagementService {
     });
   }
 
-  async createSubject(actor: Actor, payload: SubjectPayload) {
+  async createSubject(authContext: AuthContext, payload: SubjectPayload) {
     const department = await prisma.department.findUnique({
       where: { id: payload.departmentId },
       select: { id: true },
@@ -95,9 +95,7 @@ export class SubjectManagementService {
     if (!department) {
       throw new NotFoundError("Department not found");
     }
-    if (actor.role === Role.COORDINATOR) {
-      await this.deptUtils.assertDepartmentAccess(actor, payload.departmentId);
-    }
+    await this.deptUtils.assertDepartmentAccess(authContext, payload.departmentId);
 
     const currentAcademicYear = await prisma.academicYear.findFirst({
       where: { status: "ACTIVE" },
@@ -139,10 +137,10 @@ export class SubjectManagementService {
     });
   }
 
-  async updateSubject(actor: Actor, subjectId: string, payload: SubjectUpdatePayload) {
+  async updateSubject(authContext: AuthContext, subjectId: string, payload: SubjectUpdatePayload) {
     const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
     if (!subject) throw new NotFoundError("Subject not found");
-    await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, subject.departmentId);
 
     return prisma.subject.update({
       where: { id: subjectId },
@@ -155,10 +153,10 @@ export class SubjectManagementService {
     });
   }
 
-  async deactivateSubject(actor: Actor, subjectId: string) {
+  async deactivateSubject(authContext: AuthContext, subjectId: string) {
     const subject = await prisma.subject.findUnique({ where: { id: subjectId } });
     if (!subject) throw new NotFoundError("Subject not found");
-    await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, subject.departmentId);
 
     return prisma.subject.update({
       where: { id: subjectId },
@@ -167,7 +165,7 @@ export class SubjectManagementService {
     });
   }
 
-  async linkSubjectToExamCycle(actor: Actor, subjectId: string, examCycleId: string) {
+  async linkSubjectToExamCycle(authContext: AuthContext, subjectId: string, examCycleId: string) {
     const [subject, examCycle] = await Promise.all([
       prisma.subject.findUnique({ where: { id: subjectId } }),
       prisma.examCycle.findUnique({
@@ -178,7 +176,7 @@ export class SubjectManagementService {
 
     if (!subject) throw new NotFoundError("Subject not found");
     if (!examCycle) throw new NotFoundError("Exam cycle not found");
-    await this.deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, subject.departmentId);
     if (examCycle.status !== "ACTIVE") {
       throw new AppError("Only active exam cycles can be linked.", 400);
     }

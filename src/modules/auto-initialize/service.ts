@@ -22,13 +22,17 @@ export class AutoInitializeService {
       include: {
         academicYear: true,
         batch: { include: { curriculumScheme: { include: { curriculumSubjects: { include: { subject: true } } } } } },
-        department: { include: { coordinatorAssignments: { include: { coordinator: true } } } },
+        department: true,
       },
     });
     if (!bs) return { banksCreated: 0, examCyclesCreated: 0, errors: ["Batch semester not found"] };
 
     const result: InitializeResult = { banksCreated: 0, examCyclesCreated: 0, errors: [] };
-    const coeUsers = await prisma.user.findMany({ where: { role: "COE" }, select: { id: true } });
+    const coeResponsibilityAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COE" as const },
+      select: { userId: true },
+    });
+    const coeUsers = coeResponsibilityAssignments.map((ra) => ({ id: ra.userId }));
     const coeId = coeUsers[0]?.id;
     if (!coeId) { result.errors.push("No COE user found — banks cannot be created without a creator"); return result; }
 
@@ -41,7 +45,11 @@ export class AutoInitializeService {
       return result;
     }
 
-    const coordinatorIds = bs.department.coordinatorAssignments.map((a) => a.coordinatorId);
+    const coordinatorAssignments = await prisma.responsibilityAssignment.findMany({
+      where: { scopeId: bs.departmentId, scopeType: "DEPARTMENT", responsibility: "COORDINATOR" },
+      select: { userId: true },
+    });
+    const coordinatorIds = coordinatorAssignments.map((a) => a.userId);
 
     await prisma.$transaction(async (tx) => {
       for (const cs of curriculumSubjects) {

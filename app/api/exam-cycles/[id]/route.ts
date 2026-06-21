@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { ExamCycleService } from "@/modules/exam-cycles/service";
@@ -12,5 +12,5 @@ export const PATCH = withApiHandler(
     const payload = examCycleSchema.partial().parse(await request.json());
     return service.update(id, payload);
   },
-  { roles: [Role.COE], audit: { action: "EXAM_CYCLE_UPDATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "EXAM_CYCLE_UPDATED", entityType: "EXAM_CYCLE", getEntityId: (result) => (result as { id?: string }).id } },
 );

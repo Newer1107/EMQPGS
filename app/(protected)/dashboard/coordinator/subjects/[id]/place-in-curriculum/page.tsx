@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { PlacementForm } from "./placement-form";
 import { PageHeader } from "@/components/dashboard/page-header";
@@ -8,6 +9,8 @@ import { PageHeader } from "@/components/dashboard/page-header";
 export default async function PlaceInCurriculumPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
 
   const subject = await prisma.subject.findUnique({
@@ -20,7 +23,7 @@ export default async function PlaceInCurriculumPage({ params }: { params: Promis
     },
   });
   if (!subject) notFound();
-  await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+  await deptUtils.assertDepartmentAccess(auth, subject.departmentId);
 
   const existingPlacements = subject.curriculumSubjects ?? [];
 

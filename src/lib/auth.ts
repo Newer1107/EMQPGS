@@ -1,7 +1,6 @@
 import Credentials from "next-auth/providers/credentials";
 import NextAuth from "next-auth";
 import { z } from "zod";
-import { Role } from "@prisma/client";
 import { env } from "@/lib/env";
 import { UserService } from "@/modules/users/service";
 
@@ -28,8 +27,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           email: user.email,
           name: user.name,
-          role: user.role,
-          departmentId: user.departmentId,
+          homeDepartmentId: user.homeDepartmentId,
         };
       },
     }),
@@ -37,16 +35,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.role = (user as { role: Role }).role;
-        token.departmentId = (user as { departmentId?: string | null }).departmentId ?? null;
+        token.homeDepartmentId = (user as { homeDepartmentId?: string | null }).homeDepartmentId ?? null;
       }
       return token;
     },
     session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? "";
-        session.user.role = token.role as Role;
-        session.user.departmentId = token.departmentId as string | null;
+        session.user.homeDepartmentId = token.homeDepartmentId as string | null;
       }
       return session;
     },

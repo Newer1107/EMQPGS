@@ -2,42 +2,50 @@ import { prisma } from "@/lib/db";
 
 export class CoordinatorDepartmentAssignmentRepository {
   list() {
-    return prisma.coordinatorDepartmentAssignment.findMany({
+    return prisma.responsibilityAssignment.findMany({
+      where: { responsibility: "COORDINATOR", scopeType: "DEPARTMENT" },
       include: {
-        coordinator: { select: { id: true, name: true, email: true, role: true } },
-        department: { select: { id: true, name: true, code: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
       orderBy: { assignedAt: "desc" },
     });
   }
 
   findById(id: string) {
-    return prisma.coordinatorDepartmentAssignment.findUnique({
+    return prisma.responsibilityAssignment.findUnique({
       where: { id },
       include: {
-        coordinator: { select: { id: true, name: true, email: true, role: true } },
-        department: { select: { id: true, name: true, code: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
   }
 
   findByCoordinatorAndDepartment(coordinatorId: string, departmentId: string) {
-    return prisma.coordinatorDepartmentAssignment.findUnique({
-      where: { coordinatorId_departmentId: { coordinatorId, departmentId } },
+    return prisma.responsibilityAssignment.findFirst({
+      where: {
+        userId: coordinatorId,
+        responsibility: "COORDINATOR",
+        scopeType: "DEPARTMENT",
+        scopeId: departmentId,
+      },
     });
   }
 
   create(data: { coordinatorId: string; departmentId: string }) {
-    return prisma.coordinatorDepartmentAssignment.create({
-      data,
+    return prisma.responsibilityAssignment.create({
+      data: {
+        userId: data.coordinatorId,
+        responsibility: "COORDINATOR",
+        scopeType: "DEPARTMENT",
+        scopeId: data.departmentId,
+      },
       include: {
-        coordinator: { select: { id: true, name: true, email: true, role: true } },
-        department: { select: { id: true, name: true, code: true } },
+        user: { select: { id: true, name: true, email: true } },
       },
     });
   }
 
   delete(id: string) {
-    return prisma.coordinatorDepartmentAssignment.delete({ where: { id } });
+    return prisma.responsibilityAssignment.delete({ where: { id } });
   }
 }

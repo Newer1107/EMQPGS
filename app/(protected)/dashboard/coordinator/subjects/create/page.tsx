@@ -1,12 +1,15 @@
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { SubjectForm } from "@/components/forms/subject-form";
 import { prisma } from "@/lib/db";
 
 export default async function CreateSubjectPage() {
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
-  const departmentIds = await deptUtils.getAssignedDepartmentIds(actor);
+  const departmentIds = await deptUtils.getAssignedDepartmentIds(auth);
   const departments = await prisma.department.findMany({ where: { id: { in: departmentIds } }, orderBy: { name: "asc" } });
 
   return (

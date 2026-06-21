@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { ExportService } from "@/modules/production/export.service";
@@ -11,13 +11,13 @@ export const GET = withApiHandler(
     const questionBankId = request.nextUrl.searchParams.get("questionBankId") ?? undefined;
     return service.listExportArtifacts(questionBankId);
   },
-  { roles: [Role.COE] },
+  { responsibility: ["COE" as ResponsibilityType] },
 );
 
 export const POST = withApiHandler(
   async (request, context) => {
     const payload = exportRequestSchema.parse(await request.json());
-    return service.createExport(payload, context.user!);
+    return service.createExport(payload, context.auth!);
   },
-  { roles: [Role.COE], audit: { action: "EXPORT_REQUESTED", entityType: "EXPORT_ARTIFACT" } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "EXPORT_REQUESTED", entityType: "EXPORT_ARTIFACT" } },
 );

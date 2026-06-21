@@ -1,5 +1,5 @@
 import { QuestionStatus } from "@prisma/client";
-import { type Actor } from "@/lib/types";
+import type { Actor, AuthContext } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { NotificationService } from "@/modules/notifications/service";
 import { ModeratorService } from "@/modules/moderation/service";
@@ -11,8 +11,8 @@ export class ModeratorDashboardService {
     private readonly moderatorService = new ModeratorService(),
   ) {}
 
-  async getDashboard(actor: Actor) {
-    const bankIds = await this.moderatorService.getAssignedBankIds(actor);
+  async getDashboard(authContext: AuthContext) {
+    const bankIds = await this.moderatorService.getAssignedBankIds(authContext);
 
     const questionCounts = await prisma.questionLibraryItem.groupBy({
       by: ["status"],
@@ -27,12 +27,12 @@ export class ModeratorDashboardService {
 
     const [awaitingRevisionResubmission, recentModerationActivity, quickAccessBanks, pendingQuestionsByBank, perBankStats, pendingQueue, notifications] = await Promise.all([
       this.getAwaitingRevisionResubmission(bankIds),
-      this.getRecentModerationActivity(actor),
+      this.getRecentModerationActivity(authContext),
       this.getQuickAccessBanks(bankIds),
       this.getPendingQuestionsByBank(bankIds),
       this.getPerBankStats(bankIds),
       this.getPendingQueue(bankIds),
-      this.notifications.listForUser(actor.id, 50),
+      this.notifications.listForUser(authContext.user.id, 50),
     ]);
 
     return {
@@ -79,9 +79,9 @@ export class ModeratorDashboardService {
     }));
   }
 
-  private async getRecentModerationActivity(actor: Actor) {
+  private async getRecentModerationActivity(authContext: AuthContext) {
     const events = await prisma.moderationEvent.findMany({
-      where: { moderatorId: actor.id },
+      where: { moderatorId: authContext.user.id },
       include: {
         question: {
           select: { id: true, subjectVersion: { include: { subject: { select: { subjectName: true } } } } },

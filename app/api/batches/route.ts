@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { BatchService } from "@/modules/batches/service";
@@ -12,7 +12,7 @@ export const GET = withApiHandler(
     if (departmentId) return service.findByDepartment(departmentId);
     return service.list();
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );
 
 export const POST = withApiHandler(
@@ -20,5 +20,5 @@ export const POST = withApiHandler(
     const payload = batchSchema.parse(await request.json());
     return service.create(payload);
   },
-  { roles: [Role.COE], audit: { action: "BATCH_CREATED", entityType: "BATCH", getEntityId: (r) => (r as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "BATCH_CREATED", entityType: "BATCH", getEntityId: (r) => (r as { id?: string }).id } },
 );

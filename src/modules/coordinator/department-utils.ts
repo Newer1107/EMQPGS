@@ -1,29 +1,25 @@
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
-import { type Actor } from "@/lib/types";
-export { type Actor };
+import { AuthorizationService } from "@/lib/auth/authorization-service";
+import type { AuthContext } from "@/lib/types";
+export type { AuthContext };
 
 export class DepartmentAccessUtils {
-  async getAssignedDepartmentIds(actor: Actor) {
-    if (actor.role === Role.COE) {
+  async getAssignedDepartmentIds(authContext: AuthContext) {
+    const authz = new AuthorizationService(authContext);
+    if (authz.has("COE" as const, "INSTITUTION" as const)) {
       const all = await prisma.department.findMany({ select: { id: true } });
       return all.map((d) => d.id);
     }
-    if (actor.role !== Role.COORDINATOR) throw new ForbiddenError("Only coordinators and COE can access this resource.");
-    const assignments = await prisma.coordinatorDepartmentAssignment.findMany({
-      where: { coordinatorId: actor.id },
-      select: { departmentId: true },
-    });
-    const departmentIds = assignments.map((assignment) => assignment.departmentId);
+    const departmentIds = authz.getScopeIds("COORDINATOR" as const, "DEPARTMENT" as const);
     if (departmentIds.length === 0) {
-      throw new ForbiddenError("Coordinator is not assigned to any departments.");
+      throw new ForbiddenError("Only coordinators and COE can access this resource.");
     }
     return departmentIds;
   }
 
-  async assertDepartmentAccess(actor: Actor, departmentId: string) {
-    const assignedDepartmentIds = await this.getAssignedDepartmentIds(actor);
+  async assertDepartmentAccess(authContext: AuthContext, departmentId: string) {
+    const assignedDepartmentIds = await this.getAssignedDepartmentIds(authContext);
     if (!assignedDepartmentIds.includes(departmentId)) {
       throw new ForbiddenError("You do not have access to that department.");
     }

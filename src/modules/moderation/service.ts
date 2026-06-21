@@ -4,13 +4,13 @@ import {
   QuestionBankPhase,
   QuestionStatus,
   RecordStatus,
-  Role,
 } from "@prisma/client";
-import { type Actor } from "@/lib/types";
+import { type AuthContext } from "@/lib/types";
 import { prisma } from "@/lib/db";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { NotificationService } from "@/modules/notifications/service";
+import { AuthorizationService } from "@/lib/auth/authorization-service";
 
 
 export class ModeratorService {
@@ -18,21 +18,19 @@ export class ModeratorService {
     private readonly notifications = new NotificationService(),
   ) {}
 
-  async getAssignedBankIds(actor: Actor) {
-    if (actor.role !== Role.MODERATOR) {
-      throw new ForbiddenError("Only moderators can access this resource.");
-    }
+  async getAssignedBankIds(authContext: AuthContext) {
+    new AuthorizationService(authContext).requireModerator();
 
-    const assignments = await prisma.moderatorBankAssignment.findMany({
-      where: { moderatorId: actor.id },
-      select: { questionBankId: true },
-    });
+    const bankIds = authContext.responsibilities
+      .filter((r) => r.type === "MODERATOR" && r.scopeType === "QUESTION_BANK")
+      .map((r) => r.scopeId)
+      .filter((id): id is string => id !== null);
 
-    return assignments.map((assignment) => assignment.questionBankId);
+    return bankIds;
   }
 
-  async listQuestions(actor: Actor) {
-    const bankIds = await this.getAssignedBankIds(actor);
+  async listQuestions(authContext: AuthContext) {
+    const bankIds = await this.getAssignedBankIds(authContext);
     return prisma.questionLibraryItem.findMany({
       where: {
         slotAssignments: { some: { questionBankId: { in: bankIds } } },
@@ -61,21 +59,21 @@ export class ModeratorService {
     });
   }
 
-  async approveQuestion(actor: Actor, questionId: string) {
-    return this.moderate(actor, questionId, QuestionStatus.APPROVED, "QUESTION_APPROVED");
+  async approveQuestion(authContext: AuthContext, questionId: string) {
+    return this.moderate(authContext, questionId, QuestionStatus.APPROVED, "QUESTION_APPROVED");
   }
 
-  async rejectQuestion(actor: Actor, questionId: string, reason: string) {
+  async rejectQuestion(authContext: AuthContext, questionId: string, reason: string) {
     if (!reason.trim()) throw new AppError("Rejection reason is required.", 400);
-    return this.moderate(actor, questionId, QuestionStatus.REJECTED, "QUESTION_REJECTED", reason);
+    return this.moderate(authContext, questionId, QuestionStatus.REJECTED, "QUESTION_REJECTED", reason);
   }
 
-  async requestRevision(actor: Actor, questionId: string, instructions: string) {
+  async requestRevision(authContext: AuthContext, questionId: string, instructions: string) {
     if (!instructions.trim()) throw new AppError("Revision instructions are required.", 400);
-    return this.moderate(actor, questionId, QuestionStatus.REVISION_REQUESTED, "REVISION_REQUESTED", instructions);
+    return this.moderate(authContext, questionId, QuestionStatus.REVISION_REQUESTED, "REVISION_REQUESTED", instructions);
   }
 
-  private async moderate(actor: Actor, questionId: string, status: QuestionStatus, action: string, note?: string) {
+  private async moderate(authContext: AuthContext, questionId: string, status: QuestionStatus, action: string, note?: string) {
     const question = await prisma.questionLibraryItem.findUnique({
       where: { id: questionId },
       include: { creator: true, subjectVersion: { include: { subject: true } } },
@@ -116,7 +114,7 @@ export class ModeratorService {
     await prisma.moderationEvent.create({
       data: {
         questionId,
-        moderatorId: actor.id,
+        moderatorId: authContext.user.id,
         action,
         note: note ?? null,
       },

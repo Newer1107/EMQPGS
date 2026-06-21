@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,8 @@ import { OwnershipTransferForm } from "@/components/forms/ownership-transfer-for
 export default async function CoordinatorQuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
 
   const question = await prisma.questionLibraryItem.findUnique({
@@ -23,7 +26,7 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
     },
   });
   if (!question) notFound();
-  await deptUtils.assertDepartmentAccess(actor, question.subjectVersion.subject.departmentId);
+  await deptUtils.assertDepartmentAccess(auth, question.subjectVersion.subject.departmentId);
 
   const [ownershipHistory, revisionHistory, usageHistory] = await Promise.all([
     prisma.questionOwnershipHistory.findMany({
@@ -44,7 +47,13 @@ export default async function CoordinatorQuestionDetailPage({ params }: { params
   ]);
 
   const users = await prisma.user.findMany({
-    where: { role: { in: ["CONTRIBUTOR", "COORDINATOR"] } },
+    where: {
+      responsibilities: {
+        some: {
+          responsibility: { in: ["CONTRIBUTOR", "COORDINATOR"] },
+        },
+      },
+    },
     orderBy: { name: "asc" },
   });
 

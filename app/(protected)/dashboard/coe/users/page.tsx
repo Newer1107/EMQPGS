@@ -1,28 +1,41 @@
-import { Role, UserStatus } from "@prisma/client";
+import { ResponsibilityType, UserStatus } from "@prisma/client";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { EmptyState } from "@/components/dashboard/empty-state";
 import { SimpleForm } from "@/components/dashboard/simple-form";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { getAdminData } from "@/lib/server-data";
-import { roleLabels, userStatusLabels } from "@/lib/constants";
+import { prisma } from "@/lib/db";
+import { responsibilityLabels, userStatusLabels } from "@/lib/constants";
 import { UserActions } from "./user-actions";
 import { EditUserFormWrapper } from "./edit-wrapper";
 
 export default async function UsersManagementPage() {
-  const data = await getAdminData();
-  const departments = data.departments as Array<{ id: string; name: string }>;
-  const users = data.users as Array<{ id: string; name: string; email: string; role: string; status: string; department?: { id: string; name: string } | null }>;
+  const [departments, users] = await Promise.all([
+    prisma.department.findMany({ orderBy: { createdAt: "desc" } }),
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      include: { homeDepartment: true, responsibilities: true },
+    }),
+  ]);
 
   const activeUsers = users.filter((u) => u.status === "ACTIVE").length;
   const disabledUsers = users.filter((u) => u.status === "DISABLED").length;
+  const flatUsers = users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    status: u.status,
+    homeDepartment: u.homeDepartment,
+    firstResponsibility: u.responsibilities[0]?.responsibility ?? null,
+    responsibilities: u.responsibilities.map((r) => r.responsibility),
+  }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Users"
-        description="Manage institutional users and their roles"
+        description="Manage institutional users and their responsibilities"
       />
 
       <div className="grid gap-4 sm:grid-cols-4">
@@ -52,7 +65,7 @@ export default async function UsersManagementPage() {
                 <TH>Name</TH>
                 <TH>Email</TH>
                 <TH>Department</TH>
-                <TH>Role</TH>
+                <TH>Responsibility</TH>
                 <TH>Status</TH>
                 <TH>Actions</TH>
               </TR>
@@ -61,16 +74,22 @@ export default async function UsersManagementPage() {
               {users.length === 0 && (
                 <TR>
                   <TD colSpan={6}>
-                    <EmptyState message="No users have been created yet" description="Create a user to assign roles and grant access to the system." />
+                    <EmptyState message="No users have been created yet" description="Create a user to assign responsibilities and grant access to the system." />
                   </TD>
                 </TR>
               )}
-              {users.map((user) => (
+              {flatUsers.map((user) => (
                 <TR key={user.id}>
                   <TD className="font-medium">{user.name}</TD>
                   <TD>{user.email}</TD>
-                  <TD>{user.department?.name ?? "-"}</TD>
-                  <TD><Badge>{roleLabels[user.role as keyof typeof roleLabels] ?? user.role}</Badge></TD>
+                  <TD>{user.homeDepartment?.name ?? "-"}</TD>
+                  <TD>
+                    {user.firstResponsibility ? (
+                      <Badge>{responsibilityLabels[user.firstResponsibility as keyof typeof responsibilityLabels] ?? user.firstResponsibility}</Badge>
+                    ) : (
+                      <span className="text-xs text-[var(--text-tertiary)]">None</span>
+                    )}
+                  </TD>
                   <TD>
                     <Badge variant={user.status === "ACTIVE" ? "success" : "danger"}>
                       {userStatusLabels[user.status as keyof typeof userStatusLabels] ?? user.status}
@@ -94,8 +113,8 @@ export default async function UsersManagementPage() {
           fields={[
             { name: "name", label: "Full Name", type: "text", placeholder: "e.g. Dr. Anil Sharma" },
             { name: "email", label: "Email Address", type: "email", placeholder: "e.g. anil.sharma@college.edu" },
-            { name: "departmentId", label: "Department", type: "select", options: departments.map((d) => ({ value: d.id, label: d.name })) },
-            { name: "role", label: "Role", type: "select", options: Object.values(Role).map((role) => ({ value: role, label: roleLabels[role] ?? role })) },
+            { name: "homeDepartmentId", label: "Department", type: "select", options: departments.map((d) => ({ value: d.id, label: d.name })) },
+            { name: "responsibility", label: "Responsibility", type: "select", options: Object.values(ResponsibilityType).map((rt) => ({ value: rt, label: responsibilityLabels[rt] ?? rt })) },
             { name: "status", label: "Account Status", type: "select", options: Object.values(UserStatus).map((s) => ({ value: s, label: userStatusLabels[s] ?? s })) },
             { name: "password", label: "Password", type: "text", placeholder: "Minimum 8 characters" },
           ]}

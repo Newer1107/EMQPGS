@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { TeachingGroupService } from "@/modules/teaching-groups/service";
@@ -12,7 +12,7 @@ export const GET = withApiHandler(
     if (!batchId) return [];
     return service.findByBatch(batchId);
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );
 
 function isBulkPayload(p: unknown): p is { batchId: string; groups: Array<{ groupNumber: number; name: string; description?: string }> } {
@@ -29,5 +29,5 @@ export const POST = withApiHandler(
     const bulkResult = teachingGroupBulkSchema.parse(raw);
     return service.bulkCreate(bulkResult);
   },
-  { roles: [Role.COE], audit: { action: "TEACHING_GROUP_CREATED", entityType: "TEACHING_GROUP", getEntityId: (r) => (Array.isArray(r) ? r[0]?.id : (r as { id?: string }).id) } },
+  { responsibility: ["COE" as ResponsibilityType], audit: { action: "TEACHING_GROUP_CREATED", entityType: "TEACHING_GROUP", getEntityId: (r) => (Array.isArray(r) ? r[0]?.id : (r as { id?: string }).id) } },
 );

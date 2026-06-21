@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
+import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
@@ -11,6 +12,8 @@ import { SubjectVersionForm } from "@/components/forms/subject-version-form";
 export default async function SubjectVersionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const actor = await getCurrentUserFromCookies();
+  const resolver = new ResponsibilityResolver();
+  const auth = await resolver.resolveAsContext(actor.id, actor);
   const deptUtils = new DepartmentAccessUtils();
 
   const subject = await prisma.subject.findUnique({
@@ -18,7 +21,7 @@ export default async function SubjectVersionsPage({ params }: { params: Promise<
     include: { department: true },
   });
   if (!subject) notFound();
-  await deptUtils.assertDepartmentAccess(actor, subject.departmentId);
+  await deptUtils.assertDepartmentAccess(auth, subject.departmentId);
 
   const versions = await prisma.subjectVersion.findMany({
     where: { subjectId: id },

@@ -84,7 +84,6 @@ type BankDetailClientProps = {
   examCycleLabel: string;
   phase: string;
   recordStatus: string;
-  userRole: string;
   totalSlots: number;
   totalModules: number;
   marksOptions: number[];

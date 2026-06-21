@@ -8,7 +8,7 @@ import {
 import { prisma } from "@/lib/db";
 import { ForbiddenError, NotFoundError } from "@/lib/errors";
 import { NotificationService } from "@/modules/notifications/service";
-import { DepartmentAccessUtils, type Actor } from "@/modules/coordinator/department-utils";
+import { DepartmentAccessUtils, type AuthContext } from "@/modules/coordinator/department-utils";
 
 type QuestionFilters = {
   subjectId?: string;
@@ -103,8 +103,8 @@ export class CoordinatorService {
     private readonly deptUtils = new DepartmentAccessUtils(),
   ) {}
 
-  async getDashboard(actor: Actor) {
-    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
+  async getDashboard(authContext: AuthContext) {
+    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(authContext);
 
     const [departments, activeCycles, banks, recentQuestions, notifications] = await Promise.all([
       prisma.department.findMany({
@@ -144,8 +144,7 @@ export class CoordinatorService {
               assignedQuestion: { select: { status: true } },
             },
           },
-          moderatorAssignments: { select: { id: true } },
-          contributorAssignments: { select: { id: true } },
+          _count: { select: { slots: true } },
           aiReports: {
             orderBy: { createdAt: "desc" },
             take: 1,
@@ -169,10 +168,19 @@ export class CoordinatorService {
         orderBy: { submittedAt: "desc" },
         take: 12,
       }),
-      this.notifications.listForUser(actor.id, 25),
+      this.notifications.listForUser(authContext.user.id, 25),
     ]);
 
     const unreadNotificationCount = notifications.filter((item) => !item.isRead).length;
+
+    const bankIds = banks.map((b) => b.id);
+    const moderatorAssignments = bankIds.length > 0
+      ? await prisma.responsibilityAssignment.findMany({
+          where: { scopeId: { in: bankIds }, scopeType: "QUESTION_BANK", responsibility: "MODERATOR" },
+          select: { scopeId: true },
+        })
+      : [];
+    const bankIdsWithModerator = new Set(moderatorAssignments.map((a) => a.scopeId).filter((id): id is string => id !== null));
 
     const bankStatuses: BankStatusItem[] = banks.map((bank) => {
       const totalSlots = bank.pattern?.totalSlots ?? 126;
@@ -198,7 +206,7 @@ export class CoordinatorService {
         ? Math.round((approvedCount / totalSlots) * 100)
         : 0;
       const daysInPhase = computeDaysInPhase(bank.updatedAt);
-      const hasModerator = bank.moderatorAssignments.length > 0;
+      const hasModerator = bankIdsWithModerator.has(bank.id);
       const aiReportStatus = bank.aiReports[0]?.status ?? null;
       const hasGeneratedPapers = bank.generatedPapers.length > 0;
       const hasDeanReview = bank.deanReview !== null;
@@ -366,8 +374,8 @@ export class CoordinatorService {
     };
   }
 
-  async listQuestions(actor: Actor, filters: QuestionFilters = {}) {
-    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(actor);
+  async listQuestions(authContext: AuthContext, filters: QuestionFilters = {}) {
+    const departmentIds = await this.deptUtils.getAssignedDepartmentIds(authContext);
     if (filters.subjectId) {
       const subject = await prisma.subject.findUnique({
         where: { id: filters.subjectId },
@@ -408,7 +416,7 @@ export class CoordinatorService {
     });
   }
 
-  async getQuestionDetail(actor: Actor, questionId: string) {
+  async getQuestionDetail(authContext: AuthContext, questionId: string) {
     const question = await prisma.questionLibraryItem.findUnique({
       where: { id: questionId },
       include: {
@@ -417,7 +425,7 @@ export class CoordinatorService {
       },
     });
     if (!question) throw new NotFoundError("Question not found");
-    await this.deptUtils.assertDepartmentAccess(actor, question.subjectVersion.subject.departmentId);
+    await this.deptUtils.assertDepartmentAccess(authContext, question.subjectVersion.subject.departmentId);
 
     return {
       ...question,

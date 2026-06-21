@@ -4,65 +4,55 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { APP_NAME } from "@/lib/constants";
+import { APP_NAME, responsibilityLabels } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 
 interface NavItem {
   label: string;
   href: string;
-  roles: string[];
+  workspaceTypes: string[];
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Overview", roles: ["COE", "COORDINATOR", "MODERATOR", "CONTRIBUTOR", "DEAN"] },
+  { href: "/dashboard", label: "Overview", workspaceTypes: ["COE", "COORDINATOR", "MODERATOR", "CONTRIBUTOR", "DEAN"] },
   // COE
-  { href: "/dashboard/coe", label: "Overview", roles: ["COE"] },
-  { href: "/dashboard/coe/users", label: "Users", roles: ["COE"] },
-  { href: "/dashboard/coe/departments", label: "Departments", roles: ["COE"] },
-  { href: "/dashboard/coe/exam-cycles", label: "Exam Cycles", roles: ["COE"] },
-  { href: "/dashboard/coe/academic-years", label: "Academic Years", roles: ["COE"] },
-  { href: "/dashboard/coe/monitoring", label: "Monitoring", roles: ["COE"] },
-  { href: "/dashboard/coe/production", label: "Production", roles: ["COE"] },
-  { href: "/dashboard/coe/audit", label: "Audit Log", roles: ["COE"] },
-  { href: "/dashboard/coe/coordinator-assignments", label: "Coordinators", roles: ["COE"] },
+  { href: "/dashboard/coe", label: "Overview", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/users", label: "Users", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/departments", label: "Departments", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/exam-cycles", label: "Exam Cycles", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/academic-years", label: "Academic Years", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/monitoring", label: "Monitoring", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/production", label: "Production", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/audit", label: "Audit Log", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/coordinator-assignments", label: "Coordinators", workspaceTypes: ["COE"] },
   // Academic Setup
-  { href: "/dashboard/coe/academic-setup", label: "Academic Setup", roles: ["COE"] },
-
-  { href: "/dashboard/coe/curriculum", label: "Curriculum", roles: ["COE"] },
-  { href: "/dashboard/coe/batches", label: "Batches", roles: ["COE"] },
+  { href: "/dashboard/coe/academic-setup", label: "Academic Setup", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/curriculum", label: "Curriculum", workspaceTypes: ["COE"] },
+  { href: "/dashboard/coe/batches", label: "Batches", workspaceTypes: ["COE"] },
   // Coordinator
-  { href: "/dashboard/coordinator", label: "Coordinator Dashboard", roles: ["COORDINATOR"] },
-  { href: "/dashboard/coordinator/subjects", label: "Subjects", roles: ["COORDINATOR"] },
-  { href: "/dashboard/coordinator/question-banks", label: "Question Banks", roles: ["COORDINATOR"] },
-  { href: "/dashboard/coordinator/assignments", label: "Assignments", roles: ["COORDINATOR"] },
-  { href: "/dashboard/coordinator/questions", label: "Questions", roles: ["COORDINATOR"] },
-  { href: "/dashboard/coordinator/coverage", label: "Coverage", roles: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator", label: "Coordinator Dashboard", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/subjects", label: "Subjects", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/question-banks", label: "Question Banks", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/assignments", label: "Assignments", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/questions", label: "Questions", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/coverage", label: "Coverage", workspaceTypes: ["COORDINATOR"] },
   // Moderator
-  { href: "/dashboard/moderator", label: "Moderator Dashboard", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/questions", label: "Review Queue", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/approved", label: "Approved", roles: ["MODERATOR"] },
-  { href: "/dashboard/moderator/rejected", label: "Rejected", roles: ["MODERATOR"] },
-  // Signed Reports page removed — signed report workflow no longer exists
+  { href: "/dashboard/moderator", label: "Moderator Dashboard", workspaceTypes: ["MODERATOR"] },
+  { href: "/dashboard/moderator/questions", label: "Review Queue", workspaceTypes: ["MODERATOR"] },
+  { href: "/dashboard/moderator/approved", label: "Approved", workspaceTypes: ["MODERATOR"] },
+  { href: "/dashboard/moderator/rejected", label: "Rejected", workspaceTypes: ["MODERATOR"] },
   // Contributor
-  { href: "/dashboard/contributor", label: "Contributor Dashboard", roles: ["CONTRIBUTOR"] },
-  { href: "/dashboard/contributor/my-subjects", label: "My Subjects", roles: ["CONTRIBUTOR"] },
-  { href: "/dashboard/contributor/submit-question", label: "Submit Question", roles: ["CONTRIBUTOR"] },
-  { href: "/dashboard/contributor/questions", label: "My Submissions", roles: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor", label: "Contributor Dashboard", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/my-subjects", label: "My Subjects", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/submit-question", label: "Submit Question", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/questions", label: "My Submissions", workspaceTypes: ["CONTRIBUTOR"] },
   // Dean
-  { href: "/dashboard/dean", label: "Dean Dashboard", roles: ["DEAN"] },
-  { href: "/dashboard/dean/review", label: "Review Papers", roles: ["DEAN"] },
-  { href: "/dashboard/dean/readiness-overview", label: "Readiness Overview", roles: ["DEAN"] },
-  { href: "/dashboard/dean/reports", label: "Reports", roles: ["DEAN"] },
+  { href: "/dashboard/dean", label: "Dean Dashboard", workspaceTypes: ["DEAN"] },
+  { href: "/dashboard/dean/review", label: "Review Papers", workspaceTypes: ["DEAN"] },
+  { href: "/dashboard/dean/readiness-overview", label: "Readiness Overview", workspaceTypes: ["DEAN"] },
+  { href: "/dashboard/dean/reports", label: "Reports", workspaceTypes: ["DEAN"] },
 ];
-
-const roleLabels: Record<string, string> = {
-  COE: "Controller of Examination",
-  COORDINATOR: "Coordinator",
-  MODERATOR: "Moderator",
-  CONTRIBUTOR: "Contributor",
-  DEAN: "Dean",
-};
 
 function getSection(href: string): string {
   if (href === "/dashboard") return "Overview";
@@ -89,13 +79,13 @@ const sectionOrder = ["Overview", "Administration", "Academic", "Review", "Contr
 
 export function AppShell({
   children,
-  role,
+  workspaceType,
   userName,
   userEmail,
   badgeCounts = {},
 }: {
   children: React.ReactNode;
-  role: string;
+  workspaceType: string;
   userName: string;
   userEmail: string;
   badgeCounts?: Record<string, number>;
@@ -104,7 +94,7 @@ export function AppShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const filteredNavItems = navItems.filter((item) => item.roles.includes(role));
+  const filteredNavItems = navItems.filter((item) => item.workspaceTypes.includes(workspaceType));
 
   const grouped = new Map<string, NavItem[]>();
   for (const item of filteredNavItems) {
@@ -165,7 +155,7 @@ export function AppShell({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{APP_NAME}</p>
-                <p className="truncate text-xs text-[var(--text-tertiary)]">{roleLabels[role] ?? role}</p>
+                <p className="truncate text-xs text-[var(--text-tertiary)]">{responsibilityLabels[workspaceType as keyof typeof responsibilityLabels] ?? workspaceType}</p>
               </div>
             </div>
           )}

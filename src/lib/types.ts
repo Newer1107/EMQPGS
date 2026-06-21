@@ -1,2 +1,21 @@
-import type { User } from "@prisma/client";
-export type Actor = Pick<User, "id" | "role" | "email" | "name">;
+import type { ResponsibilityType, ScopeType } from "@prisma/client";
+
+export type Actor = {
+  id: string;
+  email: string;
+  name: string;
+};
+
+export type ResponsibilityInfo = {
+  id: string;
+  type: ResponsibilityType;
+  scopeType: ScopeType;
+  scopeId: string | null;
+  activeFrom: Date;
+  activeTo: Date | null;
+};
+
+export type AuthContext = {
+  user: Actor;
+  responsibilities: ResponsibilityInfo[];
+};

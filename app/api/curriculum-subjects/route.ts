@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 
 import { CurriculumSubjectService } from "@/modules/curriculum-subjects/service";
@@ -11,13 +11,13 @@ export const GET = withApiHandler(
     const filters = curriculumSubjectFilterSchema.parse(Object.fromEntries(request.nextUrl.searchParams));
     return service.list(filters);
   },
-  { roles: [Role.COE, Role.COORDINATOR] },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] },
 );
 
 export const POST = withApiHandler(
   async (request, context) => {
     const payload = curriculumSubjectSchema.parse(await request.json());
-    return service.createWithDepartmentCheck(payload, context.user!);
+    return service.createWithDepartmentCheck(payload, context.auth!);
   },
-  { roles: [Role.COE, Role.COORDINATOR], audit: { action: "CURRICULUM_SUBJECT_CREATED", entityType: "CURRICULUM_SUBJECT", getEntityId: (r) => (r as { id?: string }).id } },
+  { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType], audit: { action: "CURRICULUM_SUBJECT_CREATED", entityType: "CURRICULUM_SUBJECT", getEntityId: (r) => (r as { id?: string }).id } },
 );
