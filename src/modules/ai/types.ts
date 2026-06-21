@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type CoverageMetric = {
   label: string;
   total: number;
@@ -34,3 +36,12 @@ export type AiQuestionBankReport = {
     difficultyDistribution: Array<{ label: string; value: number }>;
   };
 };
+
+export const aiOverlaySchema = z.object({
+  executiveSummary: z.string(),
+  missingAreas: z.array(z.string()),
+  qualityFindings: z.array(z.string()),
+  bloomsBalance: z.string(),
+}).strict();
+
+export type AiOverlay = z.infer<typeof aiOverlaySchema>;

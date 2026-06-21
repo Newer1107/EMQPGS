@@ -4,6 +4,7 @@ import type { AiQuestionBankReport, CoverageMetric, DistributionMetric } from "@
 type QuestionBankWithQuestions = Prisma.QuestionBankGetPayload<{
   include: {
     subject: true;
+    pattern: true;
     slots: {
       include: { assignedQuestion: true };
       where: { assignedQuestionId: { not: null } };
@@ -15,13 +16,51 @@ const outcomeOrder = Object.values(CourseOutcome);
 const rbtOrder = Object.values(RbtLevel);
 const difficultyOrder = Object.values(DifficultyLevel);
 
+const STOP_WORDS = new Set([
+  "the", "a", "an", "is", "are", "was", "were", "be", "been", "being",
+  "have", "has", "had", "do", "does", "did", "will", "would", "can", "could",
+  "shall", "should", "may", "might", "must", "to", "of", "in", "for", "on",
+  "with", "at", "by", "from", "as", "into", "through", "during", "before",
+  "after", "above", "below", "between", "out", "off", "over", "under",
+  "again", "further", "then", "once", "here", "there", "when", "where",
+  "why", "how", "all", "each", "every", "both", "few", "more", "most",
+  "other", "some", "such", "no", "nor", "not", "only", "own", "same",
+  "so", "than", "too", "very", "just", "because", "but", "and", "or",
+  "if", "while", "that", "this", "these", "those", "it", "its",
+  "what", "which", "who", "whom", "whose", "about", "explain", "define",
+  "describe", "list", "state", "discuss", "write", "what", "compute",
+  "find", "show", "prove", "derive", "solve", "evaluate", "determine",
+]);
+
+function normalize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  const intersection = new Set([...a].filter((x) => b.has(x)));
+  const union = new Set([...a, ...b]);
+  return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
 export class AnalysisEngine {
   buildDeterministicReport(questionBank: QuestionBankWithQuestions): AiQuestionBankReport {
     const questions = questionBank.slots
       .map((slot) => slot.assignedQuestion)
       .filter((q): q is NonNullable<typeof q> => q !== null);
     const approvedQuestions = questions.filter((question) => question.status === QuestionStatus.APPROVED);
-    const moduleCoverage = Array.from({ length: 6 }, (_, index) => this.buildModuleCoverage(index + 1, approvedQuestions));
+
+    const totalModules = questionBank.pattern?.totalModules ?? 6;
+    const marksOptions = (questionBank.pattern?.marksPattern as number[]) ?? [2, 5, 10];
+    const slotsPerModule = questionBank.pattern?.slotsPerModule ?? 7;
+    const moduleTargetTotal = marksOptions.length * slotsPerModule;
+
+    const moduleCoverage = Array.from({ length: totalModules }, (_, index) =>
+      this.buildModuleCoverage(index + 1, moduleTargetTotal, approvedQuestions),
+    );
     const coDistribution = this.buildDistribution(outcomeOrder, approvedQuestions.map((question) => question.coMapping));
     const rbtDistribution = this.buildDistribution(rbtOrder, approvedQuestions.map((question) => question.rbtLevel));
     const difficultyDistribution = this.buildDistribution(
@@ -30,9 +69,12 @@ export class AnalysisEngine {
     );
     const duplicates = this.detectDuplicates(approvedQuestions);
     const missingAreas = this.findMissingAreas(moduleCoverage, coDistribution, rbtDistribution, difficultyDistribution);
-    const qualityFindings = this.assessQuality(approvedQuestions);
+    const qualityFindings = this.assessQuality(difficultyDistribution);
     const inventory = {
       approvedQuestions: approvedQuestions.length,
+      remainingWarning: approvedQuestions.length > 0 && approvedQuestions.length < totalModules * marksOptions.length,
+      remainingCritical: approvedQuestions.length > 0 && approvedQuestions.length < totalModules,
+      exhausted: approvedQuestions.length === 0,
     };
 
     return {
@@ -44,7 +86,7 @@ export class AnalysisEngine {
       missingAreas,
       qualityFindings,
       bloomsBalance: this.assessBloomsBalance(rbtDistribution),
-      inventory: { ...inventory, remainingWarning: false, remainingCritical: false, exhausted: false },
+      inventory,
       executiveSummary: "",
       chartData: {
         moduleCoverage: moduleCoverage.map((m) => ({ module: `Module ${m.label}`, approved: m.approved, target: m.total })),
@@ -55,12 +97,12 @@ export class AnalysisEngine {
     };
   }
 
-  private buildModuleCoverage(moduleNumber: number, questions: Array<{ moduleNumber: number; status: QuestionStatus }>): CoverageMetric {
+  private buildModuleCoverage(moduleNumber: number, targetTotal: number, questions: Array<{ moduleNumber: number; status: QuestionStatus }>): CoverageMetric {
     return {
       label: String(moduleNumber),
-      total: 21,
+      total: targetTotal,
       approved: questions.filter((question) => question.moduleNumber === moduleNumber).length,
-      missing: 21 - questions.filter((question) => question.moduleNumber === moduleNumber).length,
+      missing: targetTotal - questions.filter((question) => question.moduleNumber === moduleNumber).length,
     };
   }
 
@@ -75,8 +117,21 @@ export class AnalysisEngine {
     }));
   }
 
-  private detectDuplicates(questions: Array<{ id: string; questionText: string }>): Array<{ questionId: string; similarToQuestionId: string; score: number }> {
-    return [];
+  private detectDuplicates(
+    questions: Array<{ id: string; questionText: string }>,
+    threshold = 0.7,
+  ): Array<{ questionId: string; similarToQuestionId: string; score: number }> {
+    const tokens = questions.map((q) => new Set(normalize(q.questionText)));
+    const results: Array<{ questionId: string; similarToQuestionId: string; score: number }> = [];
+    for (let i = 0; i < questions.length; i++) {
+      for (let j = i + 1; j < questions.length; j++) {
+        const score = jaccardSimilarity(tokens[i], tokens[j]);
+        if (score >= threshold) {
+          results.push({ questionId: questions[i].id, similarToQuestionId: questions[j].id, score: Math.round(score * 100) / 100 });
+        }
+      }
+    }
+    return results;
   }
 
   private findMissingAreas(
@@ -95,15 +150,14 @@ export class AnalysisEngine {
     for (const rbt of rbtDistribution) {
       if (rbt.count === 0) missing.push(`${rbt.key} level not represented.`);
     }
+    for (const diff of difficultyDistribution) {
+      if (diff.count === 0) missing.push(`${diff.key} difficulty has no questions.`);
+    }
     return missing;
   }
 
-  private assessQuality(questions: Array<{ difficultyLevel: string | null }>): string[] {
+  private assessQuality(difficultyDistribution: DistributionMetric[]): string[] {
     const findings: string[] = [];
-    const difficultyDistribution = this.buildDistribution(
-      difficultyOrder,
-      questions.map((q) => q.difficultyLevel).filter(Boolean) as DifficultyLevel[],
-    );
     const easyCount = difficultyDistribution.find((d) => d.key === DifficultyLevel.EASY)?.count ?? 0;
     const hardCount = difficultyDistribution.find((d) => d.key === DifficultyLevel.HARD)?.count ?? 0;
     if (easyCount > hardCount * 2) findings.push("Disproportionately many easy questions.");

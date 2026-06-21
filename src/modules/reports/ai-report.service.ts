@@ -7,16 +7,20 @@ import { NotificationService } from "@/modules/notifications/service";
 import { ENTITY_TYPES } from "@/lib/constants";
 import { OllamaService } from "@/modules/ai/ollama-service";
 import { AnalysisEngine } from "@/modules/reports/analysis-engine";
-
+import { aiOverlaySchema, type AiOverlay } from "@/modules/ai/types";
+import type { AiProviderResult } from "@/modules/ai/ai-provider";
 
 const analysisInclude = {
   subject: true,
   batchSemester: { include: { academicYear: true } },
+  pattern: true,
   slots: {
     include: { assignedQuestion: true },
     where: { assignedQuestionId: { not: null } },
   },
 } satisfies Prisma.QuestionBankInclude;
+
+const AI_UNAVAILABLE_SUMMARY = "AI analysis unavailable. Showing deterministic analysis only.";
 
 export class AiReportService {
   constructor(
@@ -31,24 +35,18 @@ export class AiReportService {
 
     const deterministicReport = this.analysisEngine.buildDeterministicReport(questionBank);
 
-    let report: Record<string, unknown>;
-    try {
-      const aiOverlay = await this.ollamaService.analyzeQuestionBank(this.buildOllamaPrompt(questionBank, deterministicReport));
-      report = {
-        ...deterministicReport,
-        ...aiOverlay,
-        chartData: deterministicReport.chartData,
-      };
-    } catch {
-      report = {
-        ...deterministicReport,
-        executiveSummary: "AI analysis unavailable. Deterministic report only.",
-        missingAreas: [],
-        qualityFindings: [],
-        bloomsBalance: "Not analyzed (Ollama unavailable).",
-        chartData: deterministicReport.chartData,
-      };
-    }
+    const aiResult = await this.ollamaService.analyze(this.buildOllamaPrompt(questionBank, deterministicReport));
+
+    const overlay = this.parseAiOverlay(aiResult);
+
+    const report: Record<string, unknown> = {
+      ...deterministicReport,
+      executiveSummary: overlay?.executiveSummary ?? AI_UNAVAILABLE_SUMMARY,
+      missingAreas: overlay?.missingAreas ?? deterministicReport.missingAreas,
+      qualityFindings: overlay?.qualityFindings ?? deterministicReport.qualityFindings,
+      bloomsBalance: overlay?.bloomsBalance ?? deterministicReport.bloomsBalance,
+      chartData: deterministicReport.chartData,
+    };
 
     const reportRecord = await prisma.aiReport.create({
       data: {
@@ -58,7 +56,7 @@ export class AiReportService {
         generatedById: actor.id,
         summary: (report.executiveSummary as string) ?? "",
         reportJson: report as Prisma.InputJsonValue,
-        chartData: (report.chartData ?? deterministicReport.chartData) as Prisma.InputJsonValue,
+        chartData: deterministicReport.chartData as Prisma.InputJsonValue,
         generatedAt: new Date(),
       },
     });
@@ -101,6 +99,16 @@ export class AiReportService {
     });
   }
 
+  private parseAiOverlay(result: AiProviderResult<string>): AiOverlay | null {
+    if (!result.success) return null;
+    try {
+      const parsed = JSON.parse(result.data);
+      return aiOverlaySchema.parse(parsed);
+    } catch {
+      return null;
+    }
+  }
+
   private getQuestionBankForAnalysis(questionBankId: string) {
     return prisma.questionBank.findUnique({
       where: { id: questionBankId },
@@ -113,22 +121,31 @@ export class AiReportService {
     report: ReturnType<AnalysisEngine["buildDeterministicReport"]>,
   ) {
     return `
-You are analyzing a university question bank. Return strict JSON only.
+You are an academic quality auditor reviewing a university question bank.
+
+Role and principles:
+- You are a domain expert in curriculum design and assessment.
+- Use ONLY the supplied metrics below. Do not invent statistics.
+- Do not recalculate, modify, or estimate numerical values.
+- Do not change any counts, percentages, or coverage figures.
+- Only provide qualitative commentary on the supplied data.
+- Return valid JSON only — no preamble, no markdown.
+
 Context:
 - Subject: ${questionBank.subject.subjectCode} ${questionBank.subject.subjectName}
-      - Academic Year: ${questionBank.batchSemester.academicYear.code}
-      - Semester: ${questionBank.batchSemester.semesterNumber}
+- Academic Year: ${questionBank.batchSemester.academicYear.code}
+- Semester: ${questionBank.batchSemester.semesterNumber}
 - Approved Questions: ${report.inventory.approvedQuestions}
 
 Deterministic metrics:
 ${JSON.stringify(report, null, 2)}
 
-Return JSON with optional improved fields:
+Return ONLY this JSON structure with your narrative assessment:
 {
-  "executiveSummary": "string",
-  "missingAreas": ["string"],
-  "qualityFindings": ["string"],
-  "bloomsBalance": "string"
+  "executiveSummary": "2-3 sentence summary of overall question bank quality, coverage strengths, and key gaps",
+  "missingAreas": ["list specific modules, COs, RBT levels, or difficulty tiers with no or very few approved questions"],
+  "qualityFindings": ["list specific quality concerns such as imbalance, over-representation, or structural issues"],
+  "bloomsBalance": "one-sentence assessment of lower-order vs higher-order thinking distribution"
 }
 `.trim();
   }
