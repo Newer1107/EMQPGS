@@ -1,13 +1,10 @@
 import { Prisma, QuestionStatus, RecordStatus } from "@prisma/client";
-import type { AuthContext } from "@/lib/types";
-import { AuthorizationService } from "@/lib/auth/authorization-service";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
 import { withOptimisticLock } from "@/lib/optimistic-lock";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
-
 
 export async function recordUsage(questionId: string, sourceType: string, sourceId: string, examCycleId?: string | null) {
   return prisma.questionUsageHistory.create({
@@ -63,21 +60,13 @@ export class QuestionLibraryService {
     return { moduleCoverage, coCoverage, rbtCoverage, diffCoverage, approvedCount: approved.length, totalCount: questions.length };
   }
 
-  /** @deprecated Contributors must use createForBank(). This path is for coordinator/import use only. */
-  async create(input: QuestionLibraryItemInput, authContext: AuthContext) {
-    if (new AuthorizationService(authContext).has("CONTRIBUTOR" as const, "QUESTION_BANK" as const)) {
-      throw new AppError(
-        "Contributors must create questions within a Question Bank.",
-        400,
-        "CONTRIBUTOR_CREATE_WITHOUT_BANK",
-      );
-    }
+  async create(input: QuestionLibraryItemInput, ctx: { userId: string }) {
     return prisma.$transaction(async (tx) => {
       const question = await tx.questionLibraryItem.create({
         data: {
           ...input,
-          createdById: authContext.user.id,
-          ownerId: authContext.user.id,
+          createdById: ctx.userId,
+          ownerId: ctx.userId,
         },
       });
 
@@ -92,7 +81,7 @@ export class QuestionLibraryService {
           snapshotRbt: question.rbtLevel,
           snapshotDifficulty: question.difficultyLevel,
           snapshotTeachingIndex: question.teachingIndex,
-          changedById: authContext.user.id,
+          changedById: ctx.userId,
           changeReason: "Initial creation",
         },
       });
@@ -101,27 +90,14 @@ export class QuestionLibraryService {
     });
   }
 
-  async createForBank(input: QuestionLibraryItemInput & { questionBankId: string }, authContext: AuthContext) {
+  async createForBank(input: QuestionLibraryItemInput & { questionBankId: string }, ctx: { userId: string }) {
     const { questionBankId: slotBankId, ...createData } = input;
-    if (!new AuthorizationService(authContext).has("COORDINATOR" as const)) {
-      const assignment = await prisma.responsibilityAssignment.findFirst({
-        where: {
-          userId: authContext.user.id,
-          responsibility: "CONTRIBUTOR",
-          scopeType: "QUESTION_BANK",
-          scopeId: slotBankId,
-        },
-      });
-      if (!assignment) {
-        throw new AppError("You are no longer assigned to contribute to this question bank.", 403);
-      }
-    }
     return prisma.$transaction(async (tx) => {
       const question = await tx.questionLibraryItem.create({
         data: {
           ...createData,
-          createdById: authContext.user.id,
-          ownerId: authContext.user.id,
+          createdById: ctx.userId,
+          ownerId: ctx.userId,
         },
       });
 
@@ -136,7 +112,7 @@ export class QuestionLibraryService {
           snapshotRbt: question.rbtLevel,
           snapshotDifficulty: question.difficultyLevel,
           snapshotTeachingIndex: question.teachingIndex,
-          changedById: authContext.user.id,
+          changedById: ctx.userId,
           changeReason: "Initial creation",
         },
       });
@@ -169,11 +145,11 @@ export class QuestionLibraryService {
     });
   }
 
-  async update(id: string, input: Partial<QuestionLibraryItemInput>, authContext: AuthContext) {
+  async update(id: string, input: Partial<QuestionLibraryItemInput>, ctx: { userId: string; isCoordinator?: boolean }) {
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
-    const isCoordinator = new AuthorizationService(authContext).has("COORDINATOR" as const);
-    if (question.ownerId !== authContext.user.id && !isCoordinator) {
+    const isCoordinator = ctx.isCoordinator ?? false;
+    if (question.ownerId !== ctx.userId && !isCoordinator) {
       throw new ForbiddenError("You cannot edit this question");
     }
 
@@ -212,7 +188,7 @@ export class QuestionLibraryService {
             snapshotRbt: u.rbtLevel,
             snapshotDifficulty: u.difficultyLevel,
             snapshotTeachingIndex: u.teachingIndex,
-            changedById: authContext.user.id,
+            changedById: ctx.userId,
           },
         });
       }
@@ -230,10 +206,10 @@ export class QuestionLibraryService {
     return updated;
   }
 
-  async submit(id: string, authContext: AuthContext) {
+  async submit(id: string, ctx: { userId: string }) {
     const question = await this.repository.findById(id);
     if (!question) throw new NotFoundError("Question not found");
-    if (question.ownerId !== authContext.user.id) throw new ForbiddenError("Only the owner can submit this question");
+    if (question.ownerId !== ctx.userId) throw new ForbiddenError("Only the owner can submit this question");
     if (question.status !== QuestionStatus.DRAFT && question.status !== QuestionStatus.REVISION_REQUESTED) {
       throw new AppError("Question cannot be submitted in its current status.", 409);
     }
@@ -251,10 +227,9 @@ export class QuestionLibraryService {
     return this.repository.updateStatus(id, nextStatus, new Date());
   }
 
-  async transferOwnership(questionId: string, toUserId: string, reason: string | undefined, authContext: AuthContext) {
+  async transferOwnership(questionId: string, toUserId: string, reason: string | undefined, ctx: { userId: string }) {
     const question = await this.repository.findById(questionId);
     if (!question) throw new NotFoundError("Question not found");
-    new AuthorizationService(authContext).requireCoordinator();
 
     const targetUser = await prisma.user.findUnique({ where: { id: toUserId }, select: { id: true, status: true } });
     if (!targetUser) throw new NotFoundError("Target user not found");
@@ -271,7 +246,7 @@ export class QuestionLibraryService {
           questionId,
           fromUserId: question.ownerId,
           toUserId,
-          transferredById: authContext.user.id,
+          transferredById: ctx.userId,
           reason: reason ?? null,
         },
       });

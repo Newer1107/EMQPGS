@@ -7,11 +7,11 @@ import { assignToSlotSchema } from "@/modules/question-slots/validation";
 const service = new QuestionSlotService();
 
 export const PATCH = withApiHandler(
-  async (request, context) => {
+  async (request) => {
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
     const payload = assignToSlotSchema.parse(await request.json());
-    return service.assignToSlot(slotId, payload.questionId, context.auth!);
+    return service.assignToSlot(slotId, payload.questionId);
   },
   {
     responsibility: ["CONTRIBUTOR" as ResponsibilityType, "COORDINATOR" as ResponsibilityType],
@@ -21,10 +21,10 @@ export const PATCH = withApiHandler(
 );
 
 export const DELETE = withApiHandler(
-  async (request, context) => {
+  async (request) => {
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
-    return service.unassignFromSlot(slotId, context.auth!);
+    return service.unassignFromSlot(slotId);
   },
   {
     responsibility: ["COORDINATOR" as ResponsibilityType],

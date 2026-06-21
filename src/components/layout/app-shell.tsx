@@ -50,7 +50,6 @@ const navItems: NavItem[] = [
   { href: "/dashboard/moderator/rejected", label: "Rejected", workspaceTypes: ["MODERATOR"] },
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", workspaceTypes: ["CONTRIBUTOR"] },
-  { href: "/dashboard/contributor/my-subjects", label: "My Subjects", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/submit-question", label: "Submit Question", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/questions", label: "My Submissions", workspaceTypes: ["CONTRIBUTOR"] },
   // Dean

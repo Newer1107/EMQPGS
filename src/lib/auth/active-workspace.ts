@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
 import { ACTIVE_WS_COOKIE } from "@/lib/constants";
 import { WorkspaceDisplayResolver, type WorkspaceDisplay } from "@/lib/auth/workspace-display";
+import { WORKSPACE_PRIORITY } from "@/lib/workspace-priority";
 import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 export type ActiveWorkspace = {
@@ -14,15 +15,6 @@ export type ActiveWorkspace = {
 };
 
 const SCOPES = ["INSTITUTION", "DEPARTMENT", "QUESTION_BANK"] as const;
-
-// Priority order: highest wins when auto-selecting
-export const WORKSPACE_PRIORITY: Record<string, number> = {
-  COE: 5,
-  DEAN: 4,
-  COORDINATOR: 3,
-  MODERATOR: 2,
-  CONTRIBUTOR: 1,
-};
 
 export class ActiveWorkspaceService {
   constructor(private readonly displayResolver = new WorkspaceDisplayResolver()) {}

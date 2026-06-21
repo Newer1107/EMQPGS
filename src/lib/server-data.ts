@@ -30,6 +30,11 @@ export async function getAdminData(input: CursorPaginationInput = {}) {
   };
 }
 
+/**
+ * @deprecated Workspace-scoped Contributor pages should use ActiveWorkspace.scopeId
+ * and query the specific question bank directly. This function queries ALL banks
+ * a user has questions in, which is only appropriate for COE/admin reporting screens.
+ */
 export async function getContributorAssignedBanks(contributorId: string) {
   return prisma.questionBank.findMany({
     where: {

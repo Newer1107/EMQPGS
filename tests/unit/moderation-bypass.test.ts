@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QuestionStatus, Role } from "@prisma/client";
+import { QuestionStatus } from "@prisma/client";
 import { QuestionLibraryService } from "@/modules/question-library/service";
 
 const baseQuestion = {
@@ -81,8 +81,8 @@ vi.mock("@prisma/client", () => ({
 
 import { prisma } from "@/lib/db";
 
-const contributor = { id: "contrib-1", role: Role.CONTRIBUTOR, name: "Contributor", email: "contrib@test.com" };
-const coordinator = { id: "coord-1", role: Role.COORDINATOR, name: "Coordinator", email: "coord@test.com" };
+const contributor = { userId: "contrib-1" };
+const coordinator = { userId: "coord-1", isCoordinator: true };
 
 function setupQuestion(status: string) {
   vi.mocked(prisma.questionLibraryItem.findUnique).mockResolvedValue({

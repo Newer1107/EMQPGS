@@ -1,7 +1,6 @@
 import { QuestionStatus } from "@prisma/client";
 import Link from "next/link";
-import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
+import { getWorkspaceContext } from "@/lib/auth/get-workspace-context";
 import { ModeratorService } from "@/modules/moderation/service";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DataTableCard } from "@/components/dashboard/data-table-card";
@@ -11,19 +10,14 @@ import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { questionStatusLabels } from "@/lib/constants";
 
 export default async function ModeratorRejectedPage() {
-  const actor = await getCurrentUserFromCookies();
-  const resolver = new ResponsibilityResolver();
-  const auth = await resolver.resolveAsContext(actor.id, actor);
+  const { context: ctx } = await getWorkspaceContext("MODERATOR");
   const service = new ModeratorService();
-  const allQuestions = await service.listQuestions(auth);
+  const allQuestions = await service.listQuestions(ctx);
   const questions = allQuestions.filter((q) => q.status === QuestionStatus.REJECTED);
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Rejected Questions"
-        description="Questions that have been rejected by moderators."
-      />
+      <PageHeader title="Rejected Questions" description="Questions rejected in your current workspace." />
       <DataTableCard title={`Rejected (${questions.length})`}>
         <Table>
           <THead><TR><TH>Subject</TH><TH>Module</TH><TH>Marks</TH><TH>Status</TH><TH>Contributor</TH><TH>Rejected On</TH><TH>Actions</TH></TR></THead>

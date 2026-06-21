@@ -1,11 +1,7 @@
 import { PageHeader } from "@/components/dashboard/page-header";
-import { Card, CardContent } from "@/components/ui/card";
-import { EmptyState } from "@/components/dashboard/empty-state";
 import { QuestionFormWrapper } from "./question-form-wrapper";
 import { NextStepGuidance } from "@/components/forms/next-step-guidance";
-import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { getContributorAssignedBanks } from "@/lib/server-data";
-import type { SlotInfo } from "@/components/forms/slot-demand";
+import { getWorkspaceContext } from "@/lib/auth/get-workspace-context";
 
 export default async function ContributorSubmitQuestionPage({
   searchParams,
@@ -13,61 +9,26 @@ export default async function ContributorSubmitQuestionPage({
   searchParams: Promise<{ module?: string; marks?: string; subjectVersionId?: string; submitted?: string }>;
 }) {
   const params = await searchParams;
-  const actor = await getCurrentUserFromCookies();
-  const banks = await getContributorAssignedBanks(actor.id);
+  const { context: ctx } = await getWorkspaceContext("CONTRIBUTOR");
+  const versionId = ctx.subjectVersion?.id ?? "";
 
-  const assignedSubjectVersions = banks
-    .flatMap((b) => b.subject.versions.map((v) => ({ id: v.id, title: v.title, subject: { subjectCode: b.subject.subjectCode, subjectName: b.subject.subjectName } })))
-    .filter((v, i, a) => a.findIndex((x) => x.id === v.id) === i)
-    .sort((a, b) => a.subject.subjectName.localeCompare(b.subject.subjectName));
-
-  if (assignedSubjectVersions.length === 0) {
-    return (
-      <div className="space-y-6">
-        <PageHeader title="Submit Question" description="Create a new question for a subject you are assigned to." />
-        <Card>
-          <CardContent className="py-12">
-            <EmptyState
-              message="No subjects assigned"
-              description="You have not been assigned to any question banks. Contact your coordinator to get started."
-            />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const slotData = ctx.questionBank.slots.map((s) => ({
+    moduleNumber: s.moduleNumber,
+    marks: s.marks,
+    slotNumber: s.slotNumber,
+    filled: s.assignedQuestion !== null,
+  }));
 
   const initialValues =
     params.module && params.marks
-      ? {
-          moduleNumber: Number(params.module),
-          marks: Number(params.marks),
-          subjectVersionId: params.subjectVersionId ?? undefined,
-        }
+      ? { moduleNumber: Number(params.module), marks: Number(params.marks), subjectVersionId: versionId }
       : undefined;
-
-  const bankIdBySubjectVersionId: Record<string, string> = {};
-  const slotDataMap: Record<string, SlotInfo[]> = {};
-  for (const bank of banks) {
-    for (const v of bank.subject.versions) {
-      if (!bankIdBySubjectVersionId[v.id]) {
-        bankIdBySubjectVersionId[v.id] = bank.id;
-      }
-      const entries = bank.slots.map((s) => ({
-        moduleNumber: s.moduleNumber,
-        marks: s.marks,
-        slotNumber: s.slotNumber,
-        filled: s.assignedQuestion !== null,
-      }));
-      (slotDataMap[v.id] ??= []).push(...entries);
-    }
-  }
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Submit Question"
-        description="Create a new question for one of your assigned subjects."
+        title={`Submit Question — ${ctx.subject.subjectName}`}
+        description={`${ctx.subject.subjectCode} · Semester ${ctx.batchSemester.semesterNumber} · ${ctx.batchSemester.academicYear.code}`}
       />
       {params.submitted === "true" && (
         <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800 flex items-center gap-2">
@@ -84,13 +45,13 @@ export default async function ContributorSubmitQuestionPage({
       )}
       <NextStepGuidance context="question_created" />
       <QuestionFormWrapper
-        subjectVersions={assignedSubjectVersions}
+        subjectVersions={[{ id: versionId, title: ctx.subject.subjectName, subject: { subjectCode: ctx.subject.subjectCode, subjectName: ctx.subject.subjectName } }]}
         endpoint="/api/question-library"
         title="Create Question"
         redirectOnSuccess="/dashboard/contributor/questions"
         initialValues={initialValues}
-        slotDataMap={slotDataMap}
-        bankIdBySubjectVersionId={bankIdBySubjectVersionId}
+        slotDataMap={{ [versionId]: slotData }}
+        bankIdBySubjectVersionId={{ [versionId]: ctx.bankId }}
         currentSubjectVersionId={params.subjectVersionId}
       />
     </div>

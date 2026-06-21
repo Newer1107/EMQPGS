@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { QuestionStatus, Role, type QuestionLibraryItem, type User } from "@prisma/client";
+import { QuestionStatus, type QuestionLibraryItem } from "@prisma/client";
 import { QuestionLibraryService, recordUsage } from "@/modules/question-library/service";
-import { NotFoundError, ForbiddenError, AppError } from "@/lib/errors";
+import { NotFoundError, AppError } from "@/lib/errors";
 
 vi.mock("@/lib/db", () => {
   const mockQuestion = { id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5, questionText: "What is the capital of France?", coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "MEDIUM", teachingIndex: "3.1", status: "DRAFT", createdById: "user-1", ownerId: "user-1", moderatorRemark: null, submittedAt: null, reviewedAt: null, createdAt: new Date(), updatedAt: new Date() };
@@ -28,8 +28,8 @@ vi.mock("@/lib/db", () => {
 
 import { prisma } from "@/lib/db";
 
-const mockActor: User = { id: "user-1", name: "Test User", email: "test@test.com", role: Role.CONTRIBUTOR, status: "ACTIVE" as any, lastLoginAt: null, departmentId: null, resetTokenHash: null, resetTokenExpiry: null, createdAt: new Date(), updatedAt: new Date(), passwordHash: "hash" };
-const mockCoordinator: User = { ...mockActor, id: "coord-1", role: Role.COORDINATOR };
+const actorCtx = { userId: "user-1" };
+const coordinatorCtx = { userId: "coord-1", isCoordinator: true };
 const mockQuestion: QuestionLibraryItem & { slotAssignments?: Array<unknown> } = {
   id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5,
   questionText: "What is the capital of France?",
@@ -45,10 +45,6 @@ function mockRepoFindById(overrides: Partial<QuestionLibraryItem> = {}) {
   (prisma.questionLibraryItem.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockQuestion, ...overrides });
 }
 
-function mockRepoUpdate(overrides: Partial<QuestionLibraryItem> = {}) {
-  (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockQuestion, ...overrides });
-}
-
 describe("Question Governance Hardening", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -58,63 +54,63 @@ describe("Question Governance Hardening", () => {
     (prisma.questionRevision.count as ReturnType<typeof vi.fn>).mockResolvedValue(0);
     (prisma.questionRevision.create as ReturnType<typeof vi.fn>).mockResolvedValue({});
     (prisma.questionLibraryItem.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "new-owner", status: "ACTIVE", role: "CONTRIBUTOR" });
+    (prisma.user.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "new-owner", status: "ACTIVE" });
   });
 
   describe("1. Revision coverage — every tracked field change creates a revision", () => {
     it("creates revision when questionText changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { questionText: "New text?" }, mockActor as any);
+      await service.update("q-1", { questionText: "New text?" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when moduleNumber changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { moduleNumber: 4 }, mockActor as any);
+      await service.update("q-1", { moduleNumber: 4 }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when marks changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { marks: 10 }, mockActor as any);
+      await service.update("q-1", { marks: 10 }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when coMapping changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { coMapping: "CO2" }, mockActor as any);
+      await service.update("q-1", { coMapping: "CO2" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when rbtLevel changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { rbtLevel: "L3" }, mockActor as any);
+      await service.update("q-1", { rbtLevel: "L3" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when difficultyLevel changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { difficultyLevel: "HARD" }, mockActor as any);
+      await service.update("q-1", { difficultyLevel: "HARD" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("creates revision when teachingIndex changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { teachingIndex: "4.2" }, mockActor as any);
+      await service.update("q-1", { teachingIndex: "4.2" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledTimes(1);
     });
 
     it("does NOT create revision when only status changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.update("q-1", { status: QuestionStatus.PENDING }, mockActor as any);
+      await service.update("q-1", { status: QuestionStatus.PENDING }, actorCtx);
       expect(prisma.questionRevision.create).not.toHaveBeenCalled();
     });
 
@@ -122,7 +118,7 @@ describe("Question Governance Hardening", () => {
       mockRepoFindById();
       (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockQuestion, questionText: "Updated?" });
       const service = new QuestionLibraryService();
-      await service.update("q-1", { questionText: "Updated?" }, mockActor as any);
+      await service.update("q-1", { questionText: "Updated?" }, actorCtx);
       expect(prisma.questionRevision.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -143,36 +139,28 @@ describe("Question Governance Hardening", () => {
     it("creates QuestionOwnershipHistory on transfer via transaction", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.transferOwnership("q-1", "new-owner", "Reassigning", mockCoordinator as any);
+      await service.transferOwnership("q-1", "new-owner", "Reassigning", coordinatorCtx);
       expect(prisma.$transaction).toHaveBeenCalled();
-    });
-
-    it("throws ForbiddenError for non-coordinator", async () => {
-      mockRepoFindById();
-      const service = new QuestionLibraryService();
-      await expect(service.transferOwnership("q-1", "new-owner", "test", mockActor as any)).rejects.toThrow(ForbiddenError);
     });
 
     it("throws NotFoundError for missing question", async () => {
       (prisma.questionLibraryItem.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(null);
       const service = new QuestionLibraryService();
-      await expect(service.transferOwnership("q-1", "new-owner", "test", mockCoordinator as any)).rejects.toThrow(NotFoundError);
+      await expect(service.transferOwnership("q-1", "new-owner", "test", coordinatorCtx)).rejects.toThrow(NotFoundError);
     });
 
     it("updates the ownerId on the question inside transaction", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      const result = await service.transferOwnership("q-1", "new-owner", undefined, mockCoordinator as any);
+      const result = await service.transferOwnership("q-1", "new-owner", undefined, coordinatorCtx);
       expect((result as any).ownerId).toBe("new-owner");
     });
 
-    it("does not use `as any` — history record has non-nullable fromUserId", async () => {
-      mockRepoFindById();
-      const { prisma: mockPrisma } = await import("@/lib/db");
+    it("records transferredById from context", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
-      await service.transferOwnership("q-1", "new-owner", "test", mockCoordinator as any);
-      const tx = (mockPrisma as any).$transaction;
+      await service.transferOwnership("q-1", "new-owner", "test", coordinatorCtx);
+      const tx = prisma.$transaction;
       expect(tx).toHaveBeenCalled();
     });
   });
@@ -216,7 +204,7 @@ describe("Question Governance Hardening", () => {
         subjectVersionId: "sv-1", moduleNumber: 1, marks: 2,
         questionText: "Test question?",
         coMapping: "CO1", rbtLevel: "L1",
-      }, mockCoordinator as any);
+      }, { userId: "coord-1" });
       expect(prisma.questionRevision.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
@@ -233,7 +221,7 @@ describe("Question Governance Hardening", () => {
       mockRepoFindById({ status: QuestionStatus.DRAFT });
       (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockQuestion, status: QuestionStatus.PENDING });
       const service = new QuestionLibraryService();
-      await service.submit("q-1", mockActor as any);
+      await service.submit("q-1", actorCtx);
       expect(prisma.questionLibraryItem.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ status: QuestionStatus.PENDING, submittedAt: expect.any(Date) }),

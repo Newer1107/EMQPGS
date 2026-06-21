@@ -1,11 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AppError } from "@/lib/errors";
 import { QuestionLibraryService } from "@/modules/question-library/service";
 import { QuestionSlotService } from "@/modules/question-slots/service";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
-    contributorBankAssignment: { findUnique: vi.fn() },
     questionLibraryItem: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     questionSlot: { findFirst: vi.fn(), update: vi.fn(), findUnique: vi.fn(), findMany: vi.fn() },
     questionRevision: { create: vi.fn(), count: vi.fn() },
@@ -50,7 +48,6 @@ vi.mock("@prisma/client", () => ({
     REVISION_SUBMITTED: "REVISION_SUBMITTED",
   },
   RecordStatus: { LOCKED: "LOCKED", ACTIVE: "ACTIVE" },
-  Role: { COORDINATOR: "COORDINATOR", CONTRIBUTOR: "CONTRIBUTOR" },
   Prisma: {
     PrismaClientKnownRequestError: class PrismaClientKnownRequestError extends Error {
       code: string;
@@ -64,8 +61,7 @@ vi.mock("@prisma/client", () => ({
 
 import { prisma } from "@/lib/db";
 
-const contributor = { id: "contrib-1", role: "CONTRIBUTOR", name: "Alice", email: "alice@test.com" } as any;
-const coordinator = { id: "coord-1", role: "COORDINATOR", name: "Coord", email: "coord@test.com" } as any;
+const userId = "user-1";
 const bankId = "bank-1";
 const slotId = "slot-1";
 const questionId = "q-1";
@@ -96,7 +92,7 @@ const mockSlot = {
 };
 
 const mockBank = { id: bankId, recordStatus: "ACTIVE" } as any;
-const mockQuestion = { id: questionId, ownerId: contributor.id };
+const mockQuestion = { id: questionId, ownerId: userId };
 
 function setupCreateForBankMocks() {
   vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
@@ -114,79 +110,42 @@ function setupAssignToSlotMocks() {
   vi.mocked(prisma.questionSlot.update).mockResolvedValue({ id: slotId, assignedQuestionId: questionId } as any);
 }
 
-describe("Model B — Contributor Assignment Enforcement", () => {
+describe("QuestionLibraryService.createForBank", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("createForBank", () => {
-    it("allows assigned contributor to create question", async () => {
-      vi.mocked(prisma.contributorBankAssignment.findUnique).mockResolvedValue({ id: "assn-1" } as any);
-      setupCreateForBankMocks();
+  it("creates question with userId context", async () => {
+    setupCreateForBankMocks();
+    const service = new QuestionLibraryService();
+    const result = await service.createForBank({ ...baseInput, questionBankId: bankId }, { userId });
+    expect(result).toBeDefined();
+  });
+});
 
-      const service = new QuestionLibraryService();
-      const result = await service.createForBank({ ...baseInput, questionBankId: bankId }, contributor);
-      expect(result).toBeDefined();
-      expect(prisma.contributorBankAssignment.findUnique).toHaveBeenCalledWith({
-        where: { contributorId_questionBankId: { contributorId: contributor.id, questionBankId: bankId } },
-      });
-    });
-
-    it("blocks unassigned contributor with 403", async () => {
-      vi.mocked(prisma.contributorBankAssignment.findUnique).mockResolvedValue(null);
-
-      const service = new QuestionLibraryService();
-      await expect(
-        service.createForBank({ ...baseInput, questionBankId: bankId }, contributor)
-      ).rejects.toThrow(AppError);
-      await expect(
-        service.createForBank({ ...baseInput, questionBankId: bankId }, contributor)
-      ).rejects.toThrow("You are no longer assigned to contribute to this question bank.");
-    });
-
-    it("allows coordinator to bypass assignment check", async () => {
-      setupCreateForBankMocks();
-
-      const service = new QuestionLibraryService();
-      const result = await service.createForBank({ ...baseInput, questionBankId: bankId }, coordinator);
-      expect(result).toBeDefined();
-      expect(prisma.contributorBankAssignment.findUnique).not.toHaveBeenCalled();
-    });
+describe("QuestionSlotService.assignToSlot", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  describe("assignToSlot", () => {
-    it("allows assigned contributor to assign to slot", async () => {
-      vi.mocked(prisma.contributorBankAssignment.findUnique).mockResolvedValue({ id: "assn-1" } as any);
-      setupAssignToSlotMocks();
+  it("assigns question to slot", async () => {
+    setupAssignToSlotMocks();
+    const service = new QuestionSlotService();
+    const result = await service.assignToSlot(slotId, questionId);
+    expect(result).toBeDefined();
+  });
 
-      const service = new QuestionSlotService();
-      const result = await service.assignToSlot(slotId, questionId, contributor);
-      expect(result).toBeDefined();
-      expect(prisma.contributorBankAssignment.findUnique).toHaveBeenCalledWith({
-        where: { contributorId_questionBankId: { contributorId: contributor.id, questionBankId: bankId } },
-      });
-    });
+  it("rejects when slot not found", async () => {
+    setupAssignToSlotMocks();
+    vi.mocked(prisma.questionSlot.findUnique).mockResolvedValue(null);
+    const service = new QuestionSlotService();
+    await expect(service.assignToSlot("nonexistent", questionId)).rejects.toThrow("Slot not found");
+  });
 
-    it("blocks unassigned contributor with 403", async () => {
-      vi.mocked(prisma.contributorBankAssignment.findUnique).mockResolvedValue(null);
-      setupAssignToSlotMocks();
-
-      const service = new QuestionSlotService();
-      await expect(
-        service.assignToSlot(slotId, questionId, contributor)
-      ).rejects.toThrow(AppError);
-      await expect(
-        service.assignToSlot(slotId, questionId, contributor)
-      ).rejects.toThrow("You are no longer assigned to contribute to this question bank.");
-    });
-
-    it("allows coordinator to bypass assignment check", async () => {
-      setupAssignToSlotMocks();
-
-      const service = new QuestionSlotService();
-      const result = await service.assignToSlot(slotId, questionId, coordinator);
-      expect(result).toBeDefined();
-      expect(prisma.contributorBankAssignment.findUnique).not.toHaveBeenCalled();
-    });
+  it("rejects when question not found", async () => {
+    setupAssignToSlotMocks();
+    vi.mocked(prisma.questionLibraryItem.findUnique).mockResolvedValue(null);
+    const service = new QuestionSlotService();
+    await expect(service.assignToSlot(slotId, "nonexistent")).rejects.toThrow("Question not found");
   });
 });

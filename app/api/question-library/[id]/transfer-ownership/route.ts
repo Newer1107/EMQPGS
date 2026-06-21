@@ -11,7 +11,7 @@ export const POST = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = transferSchema.parse(await request.json());
-    return service.transferOwnership(id, payload.toUserId, payload.reason, context.auth!);
+    return service.transferOwnership(id, payload.toUserId, payload.reason, { userId: context.auth!.user.id });
   },
   { responsibility: ["COORDINATOR" as ResponsibilityType], audit: { action: "QUESTION_OWNERSHIP_TRANSFERRED", entityType: "QUESTION_LIBRARY_ITEM" } },
 );

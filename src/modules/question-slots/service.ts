@@ -3,8 +3,6 @@ import { prisma } from "@/lib/db";
 import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { QuestionSlotRepository } from "@/modules/question-slots/repository";
-import { AuthorizationService } from "@/lib/auth/authorization-service";
-import type { AuthContext } from "@/lib/types";
 
 export class QuestionSlotService {
   constructor(
@@ -15,27 +13,13 @@ export class QuestionSlotService {
     return this.repository.findByQuestionBank(questionBankId);
   }
 
-  async assignToSlot(slotId: string, questionId: string, authContext: AuthContext) {
+  async assignToSlot(slotId: string, questionId: string) {
     const slot = await this.repository.findById(slotId);
     if (!slot) throw new NotFoundError("Slot not found");
 
     const bank = await prisma.questionBank.findUnique({ where: { id: slot.questionBankId } });
     if (!bank) throw new NotFoundError("Question bank not found");
     ensureQuestionBankMutable(bank.recordStatus);
-
-    if (!new AuthorizationService(authContext).has("COORDINATOR" as const)) {
-      const assignment = await prisma.responsibilityAssignment.findFirst({
-        where: {
-          userId: authContext.user.id,
-          responsibility: "CONTRIBUTOR",
-          scopeType: "QUESTION_BANK",
-          scopeId: slot.questionBankId,
-        },
-      });
-      if (!assignment) {
-        throw new AppError("You are no longer assigned to contribute to this question bank.", 403);
-      }
-    }
 
     if (slot.isLocked) {
       throw new AppError("Slot is locked and cannot be modified.", 409);
@@ -63,7 +47,7 @@ export class QuestionSlotService {
     });
   }
 
-  async unassignFromSlot(slotId: string, _authContext: AuthContext) {
+  async unassignFromSlot(slotId: string) {
     const slot = await this.repository.findById(slotId);
     if (!slot) throw new NotFoundError("Slot not found");
 

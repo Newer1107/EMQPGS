@@ -5,35 +5,20 @@ import {
   QuestionStatus,
   RecordStatus,
 } from "@prisma/client";
-import { type AuthContext } from "@/lib/types";
 import { prisma } from "@/lib/db";
-import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
+import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { NotificationService } from "@/modules/notifications/service";
-import { AuthorizationService } from "@/lib/auth/authorization-service";
-
 
 export class ModeratorService {
   constructor(
     private readonly notifications = new NotificationService(),
   ) {}
 
-  async getAssignedBankIds(authContext: AuthContext) {
-    new AuthorizationService(authContext).requireModerator();
-
-    const bankIds = authContext.responsibilities
-      .filter((r) => r.type === "MODERATOR" && r.scopeType === "QUESTION_BANK")
-      .map((r) => r.scopeId)
-      .filter((id): id is string => id !== null);
-
-    return bankIds;
-  }
-
-  async listQuestions(authContext: AuthContext) {
-    const bankIds = await this.getAssignedBankIds(authContext);
+  async listQuestions(ctx: { bankId: string }) {
     return prisma.questionLibraryItem.findMany({
       where: {
-        slotAssignments: { some: { questionBankId: { in: bankIds } } },
+        slotAssignments: { some: { questionBankId: ctx.bankId } },
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -59,21 +44,21 @@ export class ModeratorService {
     });
   }
 
-  async approveQuestion(authContext: AuthContext, questionId: string) {
-    return this.moderate(authContext, questionId, QuestionStatus.APPROVED, "QUESTION_APPROVED");
+  async approveQuestion(ctx: { userId: string }, questionId: string) {
+    return this.moderate(ctx.userId, questionId, QuestionStatus.APPROVED, "QUESTION_APPROVED");
   }
 
-  async rejectQuestion(authContext: AuthContext, questionId: string, reason: string) {
+  async rejectQuestion(ctx: { userId: string }, questionId: string, reason: string) {
     if (!reason.trim()) throw new AppError("Rejection reason is required.", 400);
-    return this.moderate(authContext, questionId, QuestionStatus.REJECTED, "QUESTION_REJECTED", reason);
+    return this.moderate(ctx.userId, questionId, QuestionStatus.REJECTED, "QUESTION_REJECTED", reason);
   }
 
-  async requestRevision(authContext: AuthContext, questionId: string, instructions: string) {
+  async requestRevision(ctx: { userId: string }, questionId: string, instructions: string) {
     if (!instructions.trim()) throw new AppError("Revision instructions are required.", 400);
-    return this.moderate(authContext, questionId, QuestionStatus.REVISION_REQUESTED, "REVISION_REQUESTED", instructions);
+    return this.moderate(ctx.userId, questionId, QuestionStatus.REVISION_REQUESTED, "REVISION_REQUESTED", instructions);
   }
 
-  private async moderate(authContext: AuthContext, questionId: string, status: QuestionStatus, action: string, note?: string) {
+  private async moderate(actorId: string, questionId: string, status: QuestionStatus, action: string, note?: string) {
     const question = await prisma.questionLibraryItem.findUnique({
       where: { id: questionId },
       include: { creator: true, subjectVersion: { include: { subject: true } } },
@@ -114,7 +99,7 @@ export class ModeratorService {
     await prisma.moderationEvent.create({
       data: {
         questionId,
-        moderatorId: authContext.user.id,
+        moderatorId: actorId,
         action,
         note: note ?? null,
       },

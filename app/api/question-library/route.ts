@@ -32,7 +32,7 @@ export const POST = withApiHandler(
     const authz = new AuthorizationService(context.auth!);
 
     if (questionBankId) {
-      return service.createForBank({ ...payload, questionBankId }, context.auth!);
+      return service.createForBank({ ...payload, questionBankId }, { userId: context.auth!.user.id });
     }
 
     if (authz.has("CONTRIBUTOR" as ResponsibilityType)) {
@@ -43,7 +43,7 @@ export const POST = withApiHandler(
       );
     }
 
-    return service.create(payload, context.auth!);
+    return service.create(payload, { userId: context.auth!.user.id });
   },
   { responsibility: ["CONTRIBUTOR" as ResponsibilityType, "COORDINATOR" as ResponsibilityType], successStatus: 201, audit: { action: "QUESTION_CREATED", entityType: "QUESTION_LIBRARY_ITEM", getEntityId: (result) => (result as { id?: string }).id } },
 );

@@ -13,7 +13,7 @@ export const PATCH = withApiHandler(
   async (request, context) => {
     const id = request.nextUrl.pathname.split("/").slice(-2)[0]!;
     const payload = revisionSchema.parse(await request.json());
-    return service.requestRevision(context.auth!, id, payload.instructions);
+    return service.requestRevision({ userId: context.auth!.user.id }, id, payload.instructions);
   },
   { responsibility: ["MODERATOR" as ResponsibilityType], audit: { action: "QUESTION_REVISION_REQUESTED", entityType: "QUESTION", getEntityId: (result) => (result as { id?: string }).id } },
 );
