@@ -1,5 +1,5 @@
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ActiveWorkspaceService, type ActiveWorkspace } from "@/lib/auth/active-workspace";
+import { ActiveWorkspaceResolver, type ActiveWorkspace } from "@/lib/auth/workspace-resolver";
 import { WorkspaceContextResolver, type WorkspaceContext } from "@/lib/auth/workspace-context";
 import { ForbiddenError } from "@/lib/errors";
 import type { ResponsibilityType } from "@prisma/client";
@@ -24,8 +24,8 @@ export async function getWorkspaceContext(
   expectedResponsibility: ResponsibilityType,
 ): Promise<WorkspaceSession> {
   const user = await getCurrentUserFromCookies();
-  const aws = new ActiveWorkspaceService();
-  const active = await aws.resolve(user.id);
+  const resolver = new ActiveWorkspaceResolver();
+  const active = await resolver.resolve(user.id);
 
   if (!active) {
     throw new ForbiddenError("No active workspace.");

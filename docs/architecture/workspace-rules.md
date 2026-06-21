@@ -59,7 +59,74 @@ This function:
 5. Loads the full `WorkspaceContext` in one query
 6. In development mode, runs invariant assertions
 
-No page should manually call `ActiveWorkspaceService.resolve()` + `WorkspaceContextResolver.resolve()`.
+No page should manually call `ActiveWorkspaceResolver.resolve()` + `WorkspaceContextResolver.resolve()` — use `getWorkspaceContext()` instead.
+
+## 4a. Three-Layer Workspace Resolution
+
+Workspace resolution is split into three independent components, each with exactly one responsibility.
+
+```
+ActiveWorkspaceResolver    — Read-only: resolves workspace from cookie, validates, returns null on invalid
+WorkspaceSelector          — Pure decision: picks best workspace from a list, no HTTP state
+WorkspaceCookieManager     — HTTP writes: set/clear/get cookie, only called from Route Handlers
+```
+
+### ActiveWorkspaceResolver
+
+Read-only. Resolves the active workspace from the cookie. Validates the assignment exists, belongs to the user, and is within its active date range. Returns `ActiveWorkspace | null`.
+
+**Safe to call from:** Server Components, Route Handlers, Server Actions, Middleware, Tests.
+
+**Never:** sets cookies, clears cookies, redirects, or mutates HTTP state. If the cookie is stale or invalid, returns `null`. Does not attempt cookie repair — that is the responsibility of a downstream Route Handler or the workspace activation flow.
+
+```ts
+const resolver = new ActiveWorkspaceResolver();
+const active = await resolver.resolve(userId);
+if (!active) { /* redirect or show appropriate UI */ }
+```
+
+### WorkspaceSelector
+
+Pure decision engine. Applies priority ordering to choose the best workspace from a list of active assignments. No HTTP state access, no database queries in its pure form.
+
+```ts
+const picked = new WorkspaceSelector().pickDefault(activeAssignments);
+// { assignmentId: "...", responsibility: "CONTRIBUTOR" } | null
+```
+
+A convenience method `pickDefaultForUser(userId)` queries the database and applies the same logic.
+
+### WorkspaceCookieManager
+
+**Only** component allowed to mutate workspace cookies. Set, clear, and get the active workspace cookie.
+
+May only be called from contexts that can write cookies: Route Handlers, Server Actions, Middleware.
+
+```ts
+const cm = new WorkspaceCookieManager();
+await cm.set(assignmentId);    // write cookie (Route Handler only)
+await cm.clear();              // clear cookie (Route Handler only)
+const id = await cm.get();     // read cookie (safe everywhere)
+```
+
+### Automatic Workspace Selection Flow
+
+```
+Login → Route Handler (sets session cookie)
+  ↓
+Dashboard page → ActiveWorkspaceResolver.resolve(userId)
+  ├─ Valid cookie → redirect to /dashboard/{type}
+  └─ Invalid/no cookie → WorkspaceSelector.pickDefaultForUser(userId)
+       ├─ 1+ assignments → redirect to /api/auth/workspace?assignmentId=X
+       │    ↓
+       │    Route Handler → CookieManager.set() → redirect to dashboard
+       ├─ 1 assignment → GET /api/auth/workspace?assignmentId=X
+       └─ 0 assignments → redirect to /workspace-select
+```
+
+**Server Components never write cookies.** Cookie writes only happen in:
+- `GET /api/auth/workspace` — auto-activation (Route Handler)
+- `POST /api/auth/workspace` — workspace switching (Route Handler)
 
 ## 5. Authorization Flows Through AuthorizationService
 
@@ -130,7 +197,7 @@ Each layer has strict responsibilities. No layer reaches across another.
 ```
 Authentication          ← auth cookies, withApiHandler
     ↓
-Workspace Resolution   ← getWorkspaceContext(), ActiveWorkspaceService
+Workspace Resolution   ← getWorkspaceContext(), ActiveWorkspaceResolver
     ↓
 Authorization          ← AuthorizationService (in API routes and layouts only)
     ↓

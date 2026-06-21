@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import type { ActiveWorkspace } from "@/lib/auth/active-workspace";
+import type { ActiveWorkspace } from "@/lib/auth/workspace-resolver";
 import type { Subject, SubjectVersion, BatchSemester, Batch, AcademicYear, Department, Prisma } from "@prisma/client";
 
 const questionBankInclude = {

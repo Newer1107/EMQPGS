@@ -61,7 +61,9 @@ vi.mock("@/modules/users/service", () => ({
 import { prisma } from "@/lib/db";
 import { cookies } from "next/headers";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ActiveWorkspaceService } from "@/lib/auth/active-workspace";
+import { ActiveWorkspaceResolver } from "@/lib/auth/workspace-resolver";
+import { WorkspaceSelector } from "@/lib/auth/workspace-selector";
+import { WorkspaceCookieManager } from "@/lib/auth/workspace-cookie-manager";
 import { WORKSPACE_PRIORITY } from "@/lib/workspace-priority";
 import { WorkspaceContextResolver } from "@/lib/auth/workspace-context";
 import { getWorkspaceContext } from "@/lib/auth/get-workspace-context";
@@ -119,140 +121,151 @@ function createAuthCtx(overrides = {}) {
   };
 }
 
-describe("ActiveWorkspaceService", () => {
-  let service: ActiveWorkspaceService;
+describe("ActiveWorkspaceResolver (read-only)", () => {
+  let resolver: ActiveWorkspaceResolver;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new ActiveWorkspaceService();
+    resolver = new ActiveWorkspaceResolver();
     vi.mocked(cookies).mockResolvedValue(mockCookieStore as never);
   });
 
-  describe("resolve()", () => {
-    it("returns null when no cookie", async () => {
-      mockCookieStore.get.mockReturnValue(null);
-      const result = await service.resolve("user-1");
-      expect(result).toBeNull();
-    });
-
-    it("returns null for deleted assignment", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-1" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
-        ...mockAssignment, deletedAt: new Date(),
-      } as never);
-      const result = await service.resolve("user-1");
-      expect(result).toBeNull();
-    });
-
-    it("returns null for expired assignment", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-1" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
-        ...mockAssignment,
-        activeFrom: new Date(Date.now() - 86400000 * 30),
-        activeTo: new Date(Date.now() - 86400000),
-      } as never);
-      const result = await service.resolve("user-1");
-      expect(result).toBeNull();
-    });
-
-    it("returns null for wrong user assignment", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-1" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
-        ...mockAssignment, userId: "other-user",
-      } as never);
-      const result = await service.resolve("user-1");
-      expect(result).toBeNull();
-    });
-
-    it("returns ActiveWorkspace for valid assignment", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-1" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(mockAssignment as never);
-      vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
-        subject: { subjectName: "Operating Systems" },
-        batchSemester: { semesterNumber: 5, batch: { name: "BE Computer" }, academicYear: { code: "2026-27" } },
-      } as never);
-
-      const result = await service.resolve("user-1");
-      expect(result).not.toBeNull();
-      expect(result!.assignmentId).toBe("assign-1");
-      expect(result!.responsibility).toBe("CONTRIBUTOR");
-      expect(result!.scopeId).toBe("bank-1");
-    });
-
-    it("clears cookie when assignment is invalid (wong user)", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-wrong" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(null);
-      await service.resolve("user-1");
-      expect(mockCookieStore.set).toHaveBeenCalled();
-    });
+  it("returns null when no cookie", async () => {
+    mockCookieStore.get.mockReturnValue(null);
+    const result = await resolver.resolve("user-1");
+    expect(result).toBeNull();
   });
 
-  describe("activate()", () => {
-    it("throws ForbiddenError for invalid assignment", async () => {
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(null);
-      await expect(service.activate("user-1", "invalid-id")).rejects.toThrow(ForbiddenError);
-    });
-
-    it("throws ForbiddenError for not-yet-active assignment", async () => {
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
-        ...mockAssignment,
-        activeFrom: new Date(Date.now() + 86400000 * 7),
-      } as never);
-      await expect(service.activate("user-1", "assign-1")).rejects.toThrow(ForbiddenError);
-    });
-
-    it("sets cookie and returns workspace on success", async () => {
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(mockAssignment as never);
-      vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
-        subject: { subjectName: "OS" },
-        batchSemester: { semesterNumber: 5, batch: { name: "BE" }, academicYear: { code: "2026-27" } },
-      } as never);
-
-      const result = await service.activate("user-1", "assign-1");
-      expect(result.assignmentId).toBe("assign-1");
-      expect(mockCookieStore.set).toHaveBeenCalledWith(
-        expect.any(String), "assign-1", expect.any(Object),
-      );
-    });
+  it("returns null for deleted assignment", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-1" });
+    vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
+      ...mockAssignment, deletedAt: new Date(),
+    } as never);
+    const result = await resolver.resolve("user-1");
+    expect(result).toBeNull();
   });
 
-  describe("resolveOrPickDefault()", () => {
-    it("returns existing active workspace if valid", async () => {
-      mockCookieStore.get.mockReturnValue({ value: "assign-1" });
-      vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(mockAssignment as never);
-      vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
-        subject: { subjectName: "OS" },
-        batchSemester: { semesterNumber: 5, batch: { name: "BE" }, academicYear: { code: "2026-27" } },
-      } as never);
+  it("returns null for expired assignment", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-1" });
+    vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
+      ...mockAssignment,
+      activeFrom: new Date(Date.now() - 86400000 * 30),
+      activeTo: new Date(Date.now() - 86400000),
+    } as never);
+    const result = await resolver.resolve("user-1");
+    expect(result).toBeNull();
+  });
 
-      const result = await service.resolveOrPickDefault("user-1");
-      expect(result).not.toBeNull();
-      expect(result!.assignmentId).toBe("assign-1");
-    });
+  it("returns null for wrong user assignment", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-1" });
+    vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue({
+      ...mockAssignment, userId: "other-user",
+    } as never);
+    const result = await resolver.resolve("user-1");
+    expect(result).toBeNull();
+  });
 
-    it("picks highest-priority assignment when no cookie", async () => {
-      mockCookieStore.get.mockReturnValue(null);
-      vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([
-        { ...mockAssignment, id: "assign-moderator", responsibility: "MODERATOR", scopeId: "bank-2" },
-        { ...mockAssignment, id: "assign-contributor", responsibility: "CONTRIBUTOR", scopeId: "bank-1" },
-      ] as never);
-      vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
-        subject: { subjectName: "DBMS" },
-        batchSemester: { semesterNumber: 3, batch: { name: "BE" }, academicYear: { code: "2026-27" } },
-      } as never);
+  it("returns ActiveWorkspace for valid assignment", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-1" });
+    vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(mockAssignment as never);
+    vi.mocked(prisma.questionBank.findUnique).mockResolvedValue({
+      subject: { subjectName: "Operating Systems" },
+      batchSemester: { semesterNumber: 5, batch: { name: "BE Computer" }, academicYear: { code: "2026-27" } },
+    } as never);
 
-      const result = await service.resolveOrPickDefault("user-1");
-      expect(result).not.toBeNull();
-      // MODERATOR has priority 2, CONTRIBUTOR has priority 1 → MODERATOR wins
-      expect(result!.responsibility).toBe("MODERATOR");
-    });
+    const result = await resolver.resolve("user-1");
+    expect(result).not.toBeNull();
+    expect(result!.assignmentId).toBe("assign-1");
+    expect(result!.responsibility).toBe("CONTRIBUTOR");
+    expect(result!.scopeId).toBe("bank-1");
+  });
 
-    it("returns null when no active assignments", async () => {
-      mockCookieStore.get.mockReturnValue(null);
-      vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([]);
-      const result = await service.resolveOrPickDefault("user-1");
-      expect(result).toBeNull();
-    });
+  it("does NOT clear cookie when assignment is invalid", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-wrong" });
+    vi.mocked(prisma.responsibilityAssignment.findUnique).mockResolvedValue(null);
+    await resolver.resolve("user-1");
+    expect(mockCookieStore.set).not.toHaveBeenCalled();
+  });
+});
+
+describe("WorkspaceSelector (pure decision)", () => {
+  const selector = new WorkspaceSelector();
+
+  it("returns null for empty list", () => {
+    expect(selector.pickDefault([])).toBeNull();
+  });
+
+  it("picks highest priority assignment", () => {
+    const result = selector.pickDefault([
+      { id: "a1", responsibility: "CONTRIBUTOR" as any, scopeId: "bank-1" },
+      { id: "a2", responsibility: "MODERATOR" as any, scopeId: "bank-2" },
+    ]);
+    expect(result).not.toBeNull();
+    expect(result!.assignmentId).toBe("a2");
+  });
+
+  it("returns deterministic result for same-priority items", () => {
+    const first = selector.pickDefault([
+      { id: "a1", responsibility: "CONTRIBUTOR" as any, scopeId: "bank-1" },
+      { id: "a2", responsibility: "CONTRIBUTOR" as any, scopeId: "bank-2" },
+    ]);
+    const second = selector.pickDefault([
+      { id: "a2", responsibility: "CONTRIBUTOR" as any, scopeId: "bank-2" },
+      { id: "a1", responsibility: "CONTRIBUTOR" as any, scopeId: "bank-1" },
+    ]);
+    expect(first!.assignmentId).toBe(second!.assignmentId);
+  });
+
+  it("pickDefaultForUser queries DB and returns result", async () => {
+    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([
+      { ...mockAssignment, id: "assign-mod", responsibility: "MODERATOR", scopeId: "bank-2" },
+    ] as never);
+
+    const result = await selector.pickDefaultForUser("user-1");
+    expect(result).not.toBeNull();
+    expect(result!.assignmentId).toBe("assign-mod");
+  });
+
+  it("pickDefaultForUser returns null when no active assignments", async () => {
+    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([]);
+    const result = await selector.pickDefaultForUser("user-1");
+    expect(result).toBeNull();
+  });
+});
+
+describe("WorkspaceCookieManager (HTTP writes only)", () => {
+  let cm: WorkspaceCookieManager;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cm = new WorkspaceCookieManager();
+    vi.mocked(cookies).mockResolvedValue(mockCookieStore as never);
+  });
+
+  it("get() reads cookie", async () => {
+    mockCookieStore.get.mockReturnValue({ value: "assign-1" });
+    const result = await cm.get();
+    expect(result).toBe("assign-1");
+  });
+
+  it("get() returns null when no cookie", async () => {
+    mockCookieStore.get.mockReturnValue(null);
+    const result = await cm.get();
+    expect(result).toBeNull();
+  });
+
+  it("set() writes cookie with 7-day expiry", async () => {
+    await cm.set("assign-1");
+    expect(mockCookieStore.set).toHaveBeenCalledWith(
+      expect.any(String), "assign-1", expect.objectContaining({ maxAge: expect.any(Number) }),
+    );
+  });
+
+  it("clear() writes cookie with maxAge 0", async () => {
+    await cm.clear();
+    expect(mockCookieStore.set).toHaveBeenCalledWith(
+      expect.any(String), "", expect.objectContaining({ maxAge: 0 }),
+    );
   });
 });
 
@@ -408,8 +421,8 @@ describe("WORKSPACE_PRIORITY", () => {
     const libDir = path.resolve(__dirname, "../../src/lib");
     const cfgPath = path.join(libDir, "workspace-priority.ts");
     expect(fs.existsSync(cfgPath)).toBe(true);
-    const activeWsSrc = fs.readFileSync(path.join(libDir, "auth/active-workspace.ts"), "utf-8");
-    expect(activeWsSrc).not.toContain("WORKSPACE_PRIORITY =");
+    const resolverSrc = fs.readFileSync(path.join(libDir, "auth/workspace-resolver.ts"), "utf-8");
+    expect(resolverSrc).not.toContain("WORKSPACE_PRIORITY =");
   });
 });
 

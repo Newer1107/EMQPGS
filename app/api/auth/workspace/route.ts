@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ActiveWorkspaceService } from "@/lib/auth/active-workspace";
+import { WorkspaceCookieManager } from "@/lib/auth/workspace-cookie-manager";
+import { WorkspaceDisplayResolver } from "@/lib/auth/workspace-display";
 import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
 import { z } from "zod";
 
@@ -8,18 +10,44 @@ const schema = z.object({
   assignmentId: z.string().min(1),
 });
 
-/**
- * GET — auto-activate (used by server-component redirect on login).
- * Sets the workspace cookie and redirects to the appropriate dashboard.
- */
+async function validateAndSetCookie(userId: string, assignmentId: string) {
+  const assignment = await prisma.responsibilityAssignment.findUnique({
+    where: { id: assignmentId },
+  });
+
+  if (!assignment || assignment.userId !== userId || assignment.deletedAt) {
+    throw new ForbiddenError("Invalid assignment.");
+  }
+
+  const now = new Date();
+  if (assignment.activeFrom > now) {
+    throw new ForbiddenError("This assignment is not yet active.");
+  }
+  if (assignment.activeTo && assignment.activeTo < now) {
+    throw new ForbiddenError("This assignment has expired.");
+  }
+
+  const displayResolver = new WorkspaceDisplayResolver();
+  const display = await displayResolver.resolve(assignment.responsibility, assignment.scopeType, assignment.scopeId);
+
+  await new WorkspaceCookieManager().set(assignmentId);
+
+  return {
+    assignmentId: assignment.id,
+    responsibility: assignment.responsibility,
+    scopeType: assignment.scopeType,
+    scopeId: assignment.scopeId,
+    display,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserFromCookies();
     const assignmentId = request.nextUrl.searchParams.get("assignmentId");
     if (!assignmentId) throw new ForbiddenError("assignmentId is required");
 
-    const service = new ActiveWorkspaceService();
-    const workspace = await service.activate(user.id, assignmentId);
+    const workspace = await validateAndSetCookie(user.id, assignmentId);
     const type = workspace.responsibility.toLowerCase();
 
     return NextResponse.redirect(new URL(`/dashboard/${type}`, request.url));
@@ -31,17 +59,12 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST — workspace switching (used by workspace picker and header switcher).
- * Sets the workspace cookie and returns JSON with the workspace details.
- */
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUserFromCookies();
     const payload = schema.parse(await request.json());
 
-    const service = new ActiveWorkspaceService();
-    const workspace = await service.activate(user.id, payload.assignmentId);
+    const workspace = await validateAndSetCookie(user.id, payload.assignmentId);
 
     return NextResponse.json({ success: true, data: workspace });
   } catch (error) {

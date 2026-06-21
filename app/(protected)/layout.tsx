@@ -1,7 +1,7 @@
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { AppShell } from "@/components/layout/app-shell";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
-import { ActiveWorkspaceService } from "@/lib/auth/active-workspace";
+import { ActiveWorkspaceResolver } from "@/lib/auth/workspace-resolver";
 import { WorkspaceDisplayResolver } from "@/lib/auth/workspace-display";
 import { redirect } from "next/navigation";
 
@@ -29,8 +29,8 @@ export default async function ProtectedLayout({ children }: { children: React.Re
     })),
   );
 
-  const aws = new ActiveWorkspaceService();
-  const activeWs = await aws.resolve(actor.id);
+  const wsResolver = new ActiveWorkspaceResolver();
+  const activeWs = await wsResolver.resolve(actor.id);
 
   return (
     <AppShell
