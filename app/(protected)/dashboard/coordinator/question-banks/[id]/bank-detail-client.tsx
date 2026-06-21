@@ -482,6 +482,68 @@ function QuestionListView({ slots, filters, onFilterChange }: {
   );
 }
 
+const AI_UNAVAILABLE_SUMMARY = "AI analysis unavailable. Showing deterministic analysis only.";
+
+function AiReportCard({ report, isActive }: { report: AiReportItem; isActive: boolean }) {
+  const isFallback = report.summary === AI_UNAVAILABLE_SUMMARY;
+  return (
+    <div className={`rounded-lg border p-4 ${isActive ? "bg-white" : "bg-[var(--surface-hover)]"}`}>
+      <div className="mb-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+        <div><p className="text-[var(--text-tertiary)]">Generated</p><p className="font-medium">{report.generatedAt ? new Date(report.generatedAt).toLocaleString() : "—"}</p></div>
+        <div><p className="text-[var(--text-tertiary)]">Model</p><p className="font-medium">{report.modelName}</p></div>
+        <div><p className="text-[var(--text-tertiary)]">Provider</p><p className="font-medium">Ollama</p></div>
+        <div>
+          <p className="text-[var(--text-tertiary)]">AI Available</p>
+          <p className={`font-medium ${isFallback ? "text-amber-600" : "text-green-600"}`}>{isFallback ? "No" : "Yes"}</p>
+        </div>
+      </div>
+      {isFallback && (
+        <div className="mb-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+          Deterministic analysis only — AI response was invalid and safely ignored.
+        </div>
+      )}
+      {report.summary && <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm whitespace-pre-wrap">{report.summary}</div>}
+    </div>
+  );
+}
+
+function AiReportSection({ reports }: { reports: AiReportItem[] }) {
+  const [activeReportId, setActiveReportId] = useState(reports[0]?.id ?? null);
+  const active = reports.find((r) => r.id === activeReportId) ?? reports[0];
+  const history = reports.filter((r) => r.id !== activeReportId);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3"><CardTitle className="text-base">AI Analysis</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        {active && <AiReportCard report={active} isActive />}
+
+        {history.length > 0 && (
+          <details className="group">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">
+              <span>Previous Reports ({history.length})</span>
+              <span className="group-open:hidden">▸</span>
+              <span className="hidden group-open:inline">▾</span>
+            </summary>
+            <div className="mt-2 space-y-2">
+              {history.map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setActiveReportId(r.id)}
+                  className="flex w-full items-center justify-between rounded border bg-white px-3 py-2 text-left text-xs hover:bg-[var(--surface-hover)] transition-colors"
+                >
+                  <span className="font-medium">{r.modelName}</span>
+                  <span className="text-[var(--text-tertiary)]">{r.generatedAt ? new Date(r.generatedAt).toLocaleString() : "—"}</span>
+                </button>
+              ))}
+            </div>
+          </details>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function CoverageStats({ slots, totalSlots }: { slots: SlotItem[]; totalSlots: number }) {
   const filled = slots.filter((s) => s.assignedQuestion).length;
   const fillPct = totalSlots > 0 ? Math.round((filled / totalSlots) * 100) : 0;
@@ -704,25 +766,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
             <QuestionListView slots={props.slots} filters={filters} onFilterChange={handleFilterChange} />
           )}
 
-          {props.phase === "APPROVAL" && props.aiReports.length > 0 && (
-            <Card>
-              <details className="group">
-                <summary className="flex cursor-pointer list-none items-center justify-between px-6 pt-4 pb-3">
-                  <CardTitle className="text-sm font-semibold">AI Report</CardTitle>
-                  <span className="text-xs text-[var(--text-tertiary)] group-open:hidden">Show</span>
-                  <span className="text-xs text-[var(--text-tertiary)] hidden group-open:inline">Hide</span>
-                </summary>
-                <CardContent className="space-y-3">
-                  <div className="grid grid-cols-3 gap-3 text-sm">
-                    <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Status</p><p className="font-medium">{props.aiReports[0].status}</p></div>
-                    <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Model</p><p className="font-medium">{props.aiReports[0].modelName}</p></div>
-                    {props.aiReports[0].generatedAt && <div className="rounded-lg border p-3"><p className="text-xs text-[var(--text-tertiary)]">Generated</p><p className="font-medium">{new Date(props.aiReports[0].generatedAt).toLocaleString()}</p></div>}
-                  </div>
-                  {props.aiReports[0].summary && <div className="rounded-lg bg-[var(--surface-hover)] p-3 text-sm whitespace-pre-wrap">{props.aiReports[0].summary}</div>}
-                </CardContent>
-              </details>
-            </Card>
-          )}
+          {props.aiReports.length > 0 && <AiReportSection reports={props.aiReports} />}
 
           {props.phase === "COMPLETE" && props.generatedPapers.length > 0 && (
             <Card>
@@ -761,7 +805,7 @@ export function BankDetailClient(props: BankDetailClientProps) {
         </div>
 
         <div className="space-y-6">
-          <BankActionsPanel questionBankId={props.bankId} phase={props.phase} recordStatus={props.recordStatus} />
+          <BankActionsPanel questionBankId={props.bankId} phase={props.phase} recordStatus={props.recordStatus} hasExistingReport={props.aiReports.length > 0} />
           
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Coverage</CardTitle></CardHeader>

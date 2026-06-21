@@ -102,7 +102,7 @@ export class QuestionBankWorkflowService {
             orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }, { slotNumber: "asc" }],
           },
           pattern: true,
-          aiReports: { orderBy: { createdAt: "desc" }, take: 1 },
+          aiReports: { orderBy: { createdAt: "desc" }, take: 10 },
           generatedPapers: {
             orderBy: { variant: "asc" },
             include: {

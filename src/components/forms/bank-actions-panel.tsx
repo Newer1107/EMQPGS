@@ -12,6 +12,7 @@ type BankActionsPanelProps = {
   questionBankId: string;
   phase: string;
   recordStatus: string;
+  hasExistingReport?: boolean;
 };
 
 const NEXT_PHASE: Record<string, { target: string; label: string } | null> = {
@@ -21,7 +22,7 @@ const NEXT_PHASE: Record<string, { target: string; label: string } | null> = {
   COMPLETE: null,
 };
 
-export function BankActionsPanel({ questionBankId, phase, recordStatus }: BankActionsPanelProps) {
+export function BankActionsPanel({ questionBankId, phase, recordStatus, hasExistingReport }: BankActionsPanelProps) {
   const router = useRouter();
   const isLocked = recordStatus === "LOCKED";
   const next = NEXT_PHASE[phase] ?? null;
@@ -55,7 +56,7 @@ export function BankActionsPanel({ questionBankId, phase, recordStatus }: BankAc
           <ActionButton
             endpoint={`/api/question-banks/${questionBankId}/reports`}
             method="POST"
-            label="Trigger AI Analysis"
+            label={hasExistingReport ? "Regenerate AI Report" : "Trigger AI Analysis"}
             onSuccess={() => router.refresh()}
           />
         )}
