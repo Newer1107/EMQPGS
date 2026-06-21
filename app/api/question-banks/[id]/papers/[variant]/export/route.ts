@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const segments = request.nextUrl.pathname.split("/");
   const variantIdx = segments.indexOf("papers") + 1;
   const variant = segments[variantIdx];
-  const questionBankId = segments[segments.length - 3];
+  const questionBankId = segments[variantIdx - 2];
   const format = request.nextUrl.searchParams.get("format") ?? "docx";
 
   try {
