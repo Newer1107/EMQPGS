@@ -3,7 +3,6 @@ import {
   ImageRun, AlignmentType, BorderStyle, WidthType, VerticalAlign,
 } from "docx";
 import type { IPropertiesOptions } from "docx";
-import { convertInchesToTwip } from "docx";
 import { TemplateConfig as C } from "@/modules/paper-generation/template-config";
 import { loadHeader } from "@/modules/paper-generation/header-utils";
 import type { PaperModel } from "@/modules/paper-generation/types";
@@ -90,10 +89,15 @@ export class TcetTemplateBuilder {
     const header = loadHeader();
     if (!header) { all.push(new Paragraph({ spacing: { after: C.spacing.afterSection }, children: [] })); return; }
     try {
-      const imgW = C.usableWidth - convertInchesToTwip(0.3);
+      const pageWInches = 210 / 25.4;
+      const marginInches = 0.8;
+      const usableInches = pageWInches - marginInches * 2;
+      const imgWInches = usableInches - 0.3;
+      const imgWPx = Math.round(imgWInches * 96);
+      const imgHPx = Math.round(imgWPx / C.header.aspectRatio);
       all.push(
         new Paragraph({
-          children: [new ImageRun({ type: header.docxType, data: header.buffer, transformation: { width: imgW, height: Math.round(imgW / C.header.aspectRatio) } })],
+          children: [new ImageRun({ type: header.docxType, data: header.buffer, transformation: { width: imgWPx, height: imgHPx } })],
           alignment: AlignmentType.CENTER,
           spacing: { after: C.spacing.afterSection },
         }),
