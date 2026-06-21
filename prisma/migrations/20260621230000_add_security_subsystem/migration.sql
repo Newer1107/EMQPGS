@@ -1,4 +1,4 @@
-﻿-- Add securityEventId and sessionId to AuditLog
+-- Add securityEventId and sessionId to AuditLog
 ALTER TABLE `AuditLog` ADD COLUMN `securityEventId` VARCHAR(191) NULL,
     ADD COLUMN `sessionId` VARCHAR(191) NULL;
 
