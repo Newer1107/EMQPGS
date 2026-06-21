@@ -12,6 +12,8 @@ type AuditParams = {
   metadata?: Record<string, unknown>;
   ipAddress?: string | null;
   userAgent?: string | null;
+  sessionId?: string | null;
+  securityEventId?: string;
 };
 
 async function createAuditEntryWithRetry(
@@ -34,6 +36,8 @@ async function createAuditEntryWithRetry(
           metadata: params.metadata ?? null,
           ipAddress: params.ipAddress ?? null,
           userAgent: params.userAgent ?? null,
+          sessionId: params.sessionId ?? null,
+          securityEventId: params.securityEventId ?? null,
           previousHash: previous?.integrityHash ?? null,
         });
 
@@ -51,6 +55,8 @@ async function createAuditEntryWithRetry(
             metadata: params.metadata as Prisma.InputJsonValue | undefined,
             ipAddress: params.ipAddress ?? null,
             userAgent: params.userAgent ?? null,
+            sessionId: params.sessionId ?? null,
+            securityEventId: params.securityEventId ?? null,
             previousHash: previous?.integrityHash ?? null,
             integrityHash,
           },

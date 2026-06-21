@@ -19,3 +19,10 @@ export type AuthContext = {
   user: Actor;
   responsibilities: ResponsibilityInfo[];
 };
+
+/** Step-Up action descriptor for the step-up guard. */
+export type StepUpDescriptor = {
+  action: string;
+  resourceId?: string;
+  purpose?: string;
+};

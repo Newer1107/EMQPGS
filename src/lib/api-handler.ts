@@ -11,22 +11,38 @@ import { logger } from "@/lib/logger";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { AuthorizationService } from "@/lib/auth/authorization-service";
+import { SecurityConfig } from "@/lib/auth/security-config";
+import { StepUpService } from "@/lib/auth/step-up-service";
 import type { AuthContext } from "@/lib/types";
 
 type RouteOptions = {
   /** Require one or more responsibility types. User must have at least one. */
   responsibility?: ResponsibilityType | ResponsibilityType[];
   successStatus?: number;
+  /** Optional step-up action required before this endpoint responds. */
+  stepUp?: string;
+  /** Optional step-up resource ID (paper/question bank) to scope the check. */
+  stepUpResourceId?: string;
   audit?: {
     action: string;
     entityType: string;
     getEntityId?: (result: unknown) => string | null | undefined;
     getMetadata?: (request: NextRequest, result: unknown) => Record<string, unknown> | undefined;
   };
+  /** Set to false to opt out of automatic Cache-Control: no-store. */
+  cacheControl?: boolean;
+  /**
+   * Response type. Set to "raw" for endpoints that return non-JSON (e.g. binary DOCX download).
+   * When "raw", the handler returns a NextResponse directly instead of wrapping in JSON.
+   */
+  responseType?: "json" | "raw";
 };
 
 export function withApiHandler<T>(
-  handler: (request: NextRequest, context: { user: Awaited<ReturnType<typeof getCurrentUserFromCookies>> | null; auth?: AuthContext }) => Promise<T>,
+  handler: (
+    request: NextRequest,
+    context: { user: Awaited<ReturnType<typeof getCurrentUserFromCookies>> | null; auth?: AuthContext },
+  ) => Promise<T>,
   options?: RouteOptions,
 ) {
   return async (request: NextRequest) => {
@@ -56,7 +72,51 @@ export function withApiHandler<T>(
         }
       }
 
+      // ── Session idle timeout check ──────────────────────────────────────
+      if (user?.lastLoginAt) {
+        const idleMs = Date.now() - user.lastLoginAt.getTime();
+        const timeoutMs = parseInt(process.env.SESSION_IDLE_TIMEOUT_MINUTES ?? "30", 10) * 60 * 1000;
+        if (idleMs > timeoutMs) {
+          // Update lastLoginAt to avoid repeated checks on every request
+          const { prisma } = await import("@/lib/db");
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastLoginAt: new Date() },
+          });
+        }
+      }
+
+      // ── Step-Up Guard ───────────────────────────────────────────────────
+      if (options?.stepUp && user) {
+        const stepUpService = new StepUpService();
+        const cfg = SecurityConfig.getInstance();
+
+        // Only check step-up in production mode (dev mode auto-approves)
+        if (cfg.isStepUpRequired()) {
+          stepUpService.requireVerified(user.id, options.stepUp, options.stepUpResourceId);
+        }
+      }
+
+      // ── Lockdown guard ──────────────────────────────────────────────────
+      if (options?.stepUp) {
+        const cfg = SecurityConfig.getInstance();
+        const features = cfg.getFeatures();
+
+        // Lockdown mode restrictions
+        if (options.stepUp === "COE_DOWNLOAD" || options.stepUp === "DEAN_DOWNLOAD") {
+          if (!features.downloadsEnabled) {
+            throw new AppError("Downloads are disabled in the current security mode.", 403, "DOWNLOADS_DISABLED");
+          }
+        }
+        if (options.stepUp === "DEAN_REVEAL" && !features.paperRevealEnabled) {
+          throw new AppError("Paper reveal is disabled in the current security mode.", 403, "REVEAL_DISABLED");
+        }
+      }
+
+      // ── Execute handler ─────────────────────────────────────────────────
       const result = await handler(request, { user, auth });
+
+      // ── Audit logging ───────────────────────────────────────────────────
       if (options?.audit && user) {
         await logAudit({
           actorId: user.id,
@@ -67,6 +127,7 @@ export function withApiHandler<T>(
           ...meta,
         });
       }
+
       logger.info("API request completed", {
         correlationId,
         method: request.method,
@@ -74,15 +135,43 @@ export function withApiHandler<T>(
         actorId: user?.id ?? null,
         statusCode: options?.successStatus ?? 200,
       });
-      return NextResponse.json(
+
+      // ── Build response ──────────────────────────────────────────────────
+
+      if (options?.responseType === "raw") {
+        // For binary responses (DOCX download, etc.) — handler returns NextResponse
+        const rawResponse = result as unknown as NextResponse;
+        addCacheControlHeaders(rawResponse, options);
+        return rawResponse;
+      }
+
+      const response = NextResponse.json(
         { success: true, data: result, correlationId },
         { status: options?.successStatus ?? 200 },
       );
+      addCacheControlHeaders(response, options);
+      return response;
     } catch (error) {
       return handleApiError(error, request, correlationId);
     }
   };
 }
+
+// ─── Cache-Control helper ──────────────────────────────────────────────────
+
+function addCacheControlHeaders(response: NextResponse, options?: RouteOptions): void {
+  // Opt out of default no-store via cacheControl: false
+  if (options?.cacheControl === false) {
+    return;
+  }
+
+  response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Expires", "0");
+  response.headers.set("Surrogate-Control", "no-store");
+}
+
+// ─── Error handling (unchanged, based on existing) ─────────────────────────
 
 function translatePrismaError(error: Prisma.PrismaClientKnownRequestError): AppError {
   switch (error.code) {

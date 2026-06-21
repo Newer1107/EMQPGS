@@ -250,6 +250,8 @@ model User {
   approvalDecisionsCreated ApprovalDecision[]
   exportArtifacts          ExportArtifact[]           @relation("exportArtifactGenerator")
   backupsTriggered         SystemBackup[]             @relation("backupTrigger")
+  emergencyApprovalsRequested EmergencyApproval[]      @relation("emergencyApprovalRequestedBy")
+  emergencyApprovalsApproved  EmergencyApproval[]      @relation("emergencyApprovalApprovedBy")
 
   @@index([homeDepartmentId])
 }
@@ -556,23 +558,103 @@ model Notification {
   @@index([recipientId, isRead, createdAt])
 }
 
+/// SHA-256 hash-chained immutable audit log.
+/// The previousHash → integrityHash chain forms a tamper-evident linked list.
+/// A UNIQUE constraint on previousHash prevents undetected chain forks.
 model AuditLog {
-  id            String   @id @default(cuid())
-  actorId       String?
-  action        String
-  entityType    String
-  entityId      String?
-  metadata      Json?
-  ipAddress     String?
-  userAgent     String?
-  previousHash  String?
-  integrityHash String?
-  createdAt     DateTime @default(now())
-  actor         User?    @relation(fields: [actorId], references: [id])
+  id              String   @id @default(cuid())
+  actorId         String?
+  action          String
+  entityType      String
+  entityId        String?
+  metadata        Json?
+  ipAddress       String?
+  userAgent       String?
+  sessionId       String?
+  securityEventId String?
+  previousHash    String?  @unique
+  integrityHash   String?
+  createdAt       DateTime @default(now())
+  actor           User?    @relation(fields: [actorId], references: [id])
 
   @@index([entityType, entityId, createdAt])
   @@index([actorId])
   @@index([actorId, action, createdAt])
+}
+
+/// One-time password for step-up authentication.
+/// Codes are bound to user + action + resource (paper/operation) + session.
+/// Hashed with bcrypt before storage. Single-use via atomic UPDATE.
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  purpose   String   // "DEAN_REVEAL" | "DEAN_APPROVE" | "COE_DOWNLOAD" | "COE_MARK_USED" | "COE_ARCHIVE" | "COE_EXPORT"
+  resourceId String? // Paper ID or QuestionBank ID this OTP authorizes
+  sessionId String?  // JTI of the session that requested the OTP
+  browserFingerprint String? // SHA-256 hash of UA + Accept-Language + platform
+  codeHash  String   // bcrypt hash of the 6-digit code
+  expiresAt DateTime
+  attemptCount Int   @default(0)
+  securityEventId String?
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, purpose, createdAt])
+  @@index([expiresAt])
+}
+
+/// Runtime security configuration overrides.
+/// Bootstrap via SECURITY_MODE env var, overridden at runtime via this table.
+/// Every change is audited via AuditLog where entityType = "SECURITY_CONFIG".
+model SecurityConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+/// Tracks paper downloads for forensic tracing.
+/// Each download receives a unique Download UUID embedded in the DOCX.
+model PaperDownload {
+  id              String   @id @default(cuid())
+  downloadId      String   @unique // UUIDv4 — embedded in DOCX watermark
+  paperId         String
+  variant         String
+  downloadedById  String
+  downloadedAt    DateTime @default(now())
+  ipAddress       String?
+  userAgent       String?
+  sessionId       String?
+  auditLogId      String?  // Link to the AuditLog entry
+  downloadReason  String?  // EXAM_PRINTING | QUALITY_REVIEW | ARCHIVE | OTHER
+  securityEventId String?  // Correlation ID linking OTP flow → download
+
+  @@index([paperId, downloadedAt])
+  @@index([downloadId])
+  @@index([securityEventId])
+}
+
+/// Two-person approval workflow for emergency security actions.
+/// Requires 2 distinct COE users to approve before execution.
+model EmergencyApproval {
+  id            String   @id @default(cuid())
+  action        String   // "DISABLE_LOCKDOWN" | "ENABLE_DOWNLOADS" | "EMERGENCY_OVERRIDE"
+  targetUserId  String?
+  reason        String
+  requestedById String
+  requestedAt   DateTime @default(now())
+  approvedById  String?
+  approvedAt    DateTime?
+  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED | EXPIRED
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  requestedBy User   @relation("emergencyApprovalRequestedBy", fields: [requestedById], references: [id])
+  approvedBy  User?  @relation("emergencyApprovalApprovedBy", fields: [approvedById], references: [id])
+
+  @@index([status, expiresAt])
 }
 
 model FileAsset {

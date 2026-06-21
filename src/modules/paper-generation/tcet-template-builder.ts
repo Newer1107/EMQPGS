@@ -1,6 +1,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   ImageRun, AlignmentType, BorderStyle, WidthType, VerticalAlign, ShadingType,
+  Header,
 } from "docx";
 import type { IPropertiesOptions } from "docx";
 import { TemplateConfig as C } from "@/modules/paper-generation/template-config";
@@ -45,7 +46,7 @@ const TABLE_BORDERS = {
 /* ─── Exported builder ───────────────────────────── */
 
 export class TcetTemplateBuilder {
-  build(model: PaperModel): Promise<Uint8Array> {
+  build(model: PaperModel, watermarkLines?: string[]): Promise<Uint8Array> {
     const all: (Paragraph | Table)[] = [];
 
     /* 1. Header image */
@@ -71,8 +72,11 @@ export class TcetTemplateBuilder {
     /* 5. Question table */
     all.push(this.buildQuestionTable(model));
 
+    const watermarkHeader = watermarkLines?.length ? this.createWatermarkHeader(watermarkLines) : undefined;
+
     const opts: IPropertiesOptions = {
       sections: [{
+        ...(watermarkHeader ? { headers: { default: watermarkHeader } } : {}),
         properties: { page: { margin: C.page.margins } },
         children: all,
       }],
@@ -82,6 +86,26 @@ export class TcetTemplateBuilder {
     };
 
     return Packer.toBuffer(new Document(opts)).then((b) => new Uint8Array(b));
+  }
+
+  private createWatermarkHeader(lines: string[]): Header {
+    return new Header({
+      children: lines.map(
+        (line) =>
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [
+              new TextRun({
+                text: line,
+                font: "Arial",
+                size: 260,
+                color: "C0C0C0",
+                bold: true,
+              }),
+            ],
+          }),
+      ),
+    });
   }
 
   /* ── Header image (page one only) ──────────────── */

@@ -16,7 +16,8 @@ export class WordExportService {
     questionBankId: string,
     variant: string,
     format: "docx" = "docx",
-  ): Promise<{ buffer: Buffer; filename: string; mime: string }> {
+    watermarkLines?: string[],
+  ): Promise<{ buffer: Buffer; filename: string; mime: string; paperId: string }> {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: {
@@ -117,12 +118,13 @@ export class WordExportService {
     };
 
     const builder = new TcetTemplateBuilder();
-    const buf = await builder.build(paperModel);
+    const buf = await builder.build(paperModel, watermarkLines);
 
     return {
       buffer: Buffer.from(buf),
       filename: `${bank.subject.subjectCode}-${variant}.docx`,
       mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      paperId: paper.id,
     };
   }
 }

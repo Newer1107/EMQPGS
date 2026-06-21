@@ -27,5 +27,5 @@ export const POST = withApiHandler(
     const payload = deanReviewSchema.parse(await request.json());
     return service.submitDeanReview(questionBankId, payload, context.auth!);
   },
-  { responsibility: ["DEAN" as ResponsibilityType], successStatus: 201 },
+  { responsibility: ["DEAN" as ResponsibilityType], stepUp: "DEAN_APPROVE", successStatus: 201 },
 );

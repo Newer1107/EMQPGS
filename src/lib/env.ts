@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  SECURITY_MODE: z.enum(["development", "production", "lockdown"]).default("development"),
+  OTP_EXPIRY_SECONDS: z.coerce.number().int().positive().default(300),
+  STEP_UP_TTL_SECONDS: z.coerce.number().int().positive().default(300),
+  OTP_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   DATABASE_URL: z.string().min(1),
   AUTH_SECRET: z.string().min(32),
   PORT: z.coerce.number().int().positive().default(3000),
@@ -49,6 +53,10 @@ function defaultAuthUrl(): string {
 
 export const env = envSchema.parse({
   NODE_ENV: process.env.NODE_ENV,
+  SECURITY_MODE: process.env.SECURITY_MODE ?? "development",
+  OTP_EXPIRY_SECONDS: process.env.OTP_EXPIRY_SECONDS,
+  STEP_UP_TTL_SECONDS: process.env.STEP_UP_TTL_SECONDS,
+  OTP_MAX_ATTEMPTS: process.env.OTP_MAX_ATTEMPTS,
   DATABASE_URL: process.env.DATABASE_URL,
   AUTH_SECRET: process.env.AUTH_SECRET,
   PORT: process.env.PORT,

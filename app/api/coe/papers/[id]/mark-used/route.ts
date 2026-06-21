@@ -7,6 +7,7 @@ import { z } from "zod";
 const markUsedSchema = z.object({
   examDate: z.string().optional(),
   examCycleId: z.string().optional(),
+  reason: z.string().optional(),
 });
 
 export const POST = withApiHandler(
@@ -41,7 +42,17 @@ export const POST = withApiHandler(
       skipDuplicates: true,
     });
 
-    return { paperId: paper.id, variant: paper.variant, questionsMarked: created.count };
+    return { paperId: paper.id, variant: paper.variant, questionsMarked: created.count, reason: body.reason ?? null };
   },
-  { responsibility: ["COE" as ResponsibilityType] },
+  {
+    responsibility: ["COE" as ResponsibilityType],
+    stepUp: "COE_MARK_USED",
+    audit: {
+      action: "PAPER_MARKED_USED",
+      entityType: "GENERATED_PAPER",
+      getMetadata: (_req, result) => ({
+        reason: (result as Record<string, unknown>)?.reason ?? null,
+      }),
+    },
+  },
 );
