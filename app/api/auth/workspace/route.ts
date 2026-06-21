@@ -41,6 +41,12 @@ async function validateAndSetCookie(userId: string, assignmentId: string) {
   };
 }
 
+function originUrl(request: NextRequest, path: string): URL {
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "localhost";
+  const proto = request.headers.get("x-forwarded-proto") ?? "http";
+  return new URL(path, `${proto}://${host}`);
+}
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUserFromCookies();
@@ -50,12 +56,12 @@ export async function GET(request: NextRequest) {
     const workspace = await validateAndSetCookie(user.id, assignmentId);
     const type = workspace.responsibility.toLowerCase();
 
-    return NextResponse.redirect(new URL(`/dashboard/${type}`, request.url));
+    return NextResponse.redirect(originUrl(request, `/dashboard/${type}`));
   } catch (error) {
     if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(originUrl(request, "/login"));
     }
-    return NextResponse.redirect(new URL("/workspace-select", request.url));
+    return NextResponse.redirect(originUrl(request, "/workspace-select"));
   }
 }
 
