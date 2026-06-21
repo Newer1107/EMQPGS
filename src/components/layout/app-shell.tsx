@@ -45,11 +45,13 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coordinator/coverage", label: "Coverage", workspaceTypes: ["COORDINATOR"] },
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", workspaceTypes: ["MODERATOR"] },
+  { href: "/dashboard/moderator/bank", label: "Slot Grid", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/questions", label: "Review Queue", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/approved", label: "Approved", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/rejected", label: "Rejected", workspaceTypes: ["MODERATOR"] },
   // Contributor
   { href: "/dashboard/contributor", label: "Contributor Dashboard", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/bank", label: "Slot Grid", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/submit-question", label: "Submit Question", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/questions", label: "My Submissions", workspaceTypes: ["CONTRIBUTOR"] },
   // Dean

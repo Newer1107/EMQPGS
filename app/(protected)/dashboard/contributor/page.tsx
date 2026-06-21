@@ -140,6 +140,9 @@ export default async function ContributorDashboardPage() {
         <Link href="/dashboard/contributor/questions">
           <Button variant="outline">View My Questions</Button>
         </Link>
+        <Link href="/dashboard/contributor/bank">
+          <Button variant="outline">Slot Grid</Button>
+        </Link>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getWorkspaceContext } from "@/lib/auth/get-workspace-context";
+import { Button } from "@/components/ui/button";
 import { ModeratorDashboardService } from "@/modules/moderation/dashboard.service";
 import type { Severity } from "@/components/dashboard/types";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -98,6 +99,11 @@ export default async function ModeratorDashboardPage() {
         ].map((s) => (
           <StatCard key={s.label} value={s.value} label={s.label} variant={s.variant} size="sm" />
         ))}
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Link href="/dashboard/moderator/bank">
+          <Button variant="outline">Slot Grid</Button>
+        </Link>
       </div>
     </div>
   );

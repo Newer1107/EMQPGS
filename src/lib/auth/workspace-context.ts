@@ -7,7 +7,14 @@ const questionBankInclude = {
   pattern: true,
   slots: {
     include: {
-      assignedQuestion: { select: { id: true, status: true, ownerId: true, moduleNumber: true, marks: true } },
+      assignedQuestion: {
+        select: {
+          id: true, status: true, ownerId: true, moduleNumber: true, marks: true,
+          questionText: true, coMapping: true, rbtLevel: true, difficultyLevel: true,
+          teachingIndex: true, createdAt: true, updatedAt: true, submittedAt: true, reviewedAt: true,
+          creator: { select: { id: true, name: true } },
+        },
+      },
     },
     orderBy: [{ moduleNumber: "asc" as const }, { marks: "asc" as const }, { slotNumber: "asc" as const }],
   },
