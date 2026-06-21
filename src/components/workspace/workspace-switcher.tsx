@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { responsibilityLabels } from "@/lib/constants";
 import { apiFetch } from "@/lib/client-fetch";
-import type { ResponsibilityType, ScopeType } from "@prisma/client";
+
+type WorkspaceDisplay = {
+  title: string;
+  subtitle?: string;
+  tertiary?: string;
+};
 
 type WorkspaceOption = {
   id: string;
-  type: ResponsibilityType;
-  scopeType: ScopeType;
-  scopeName?: string;
+  display: WorkspaceDisplay;
 };
 
 export function WorkspaceSwitcher({
@@ -47,9 +49,8 @@ export function WorkspaceSwitcher({
         onClick={() => setOpen(!open)}
       >
         <span className="text-[var(--text-primary)]">
-          {current
-            ? `${responsibilityLabels[current.type] ?? current.type}${current.scopeName ? ` · ${current.scopeName}` : ""}`
-            : "Workspace"}
+          {current ? current.display.title : "Workspace"}
+          {current?.display.subtitle && <span className="text-[var(--text-tertiary)]"> · {current.display.subtitle}</span>}
         </span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -69,10 +70,7 @@ export function WorkspaceSwitcher({
 
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-          />
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-white p-1 shadow-lg">
             <p className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
               Switch Workspace
@@ -88,9 +86,12 @@ export function WorkspaceSwitcher({
                 onClick={() => switchWorkspace(w.id)}
               >
                 <div className="flex-1">
-                  <p className="text-sm">{responsibilityLabels[w.type] ?? w.type}</p>
-                  {w.scopeName && (
-                    <p className="text-xs text-[var(--text-tertiary)]">{w.scopeName}</p>
+                  <p className="text-sm">{w.display.title}</p>
+                  {w.display.subtitle && (
+                    <p className="text-xs text-[var(--text-tertiary)]">{w.display.subtitle}</p>
+                  )}
+                  {w.display.tertiary && (
+                    <p className="text-[11px] text-[var(--text-tertiary)] opacity-70">{w.display.tertiary}</p>
                   )}
                 </div>
                 {w.id === currentAssignmentId && (

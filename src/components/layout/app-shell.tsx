@@ -4,11 +4,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { APP_NAME, responsibilityLabels } from "@/lib/constants";
+import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
-import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 interface NavItem {
   label: string;
@@ -18,9 +17,7 @@ interface NavItem {
 
 type ResponsibilityOption = {
   id: string;
-  type: ResponsibilityType;
-  scopeType: ScopeType;
-  scopeId: string | null;
+  display: { title: string; subtitle?: string; tertiary?: string };
 };
 
 const navItems: NavItem[] = [
@@ -91,7 +88,9 @@ export function AppShell({
   userName,
   userEmail,
   workspaceType,
-  workspaceScope,
+  workspaceTitle,
+  workspaceSubtitle,
+  workspaceTertiary,
   activeAssignmentId,
   badgeCounts = {},
   responsibilities = [],
@@ -100,7 +99,9 @@ export function AppShell({
   userName: string;
   userEmail: string;
   workspaceType: string;
-  workspaceScope?: string;
+  workspaceTitle?: string;
+  workspaceSubtitle?: string;
+  workspaceTertiary?: string;
   activeAssignmentId?: string;
   badgeCounts?: Record<string, number>;
   responsibilities?: ResponsibilityOption[];
@@ -172,9 +173,12 @@ export function AppShell({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{APP_NAME}</p>
-                <p className="truncate text-xs font-medium text-[var(--text-primary)]">{responsibilityLabels[workspaceType as keyof typeof responsibilityLabels] ?? workspaceType}</p>
-                {workspaceScope && (
-                  <p className="truncate text-[11px] text-[var(--text-tertiary)]">{workspaceScope}</p>
+                <p className="truncate text-xs font-medium text-[var(--text-primary)]">{workspaceTitle ?? workspaceType}</p>
+                {workspaceSubtitle && (
+                  <p className="truncate text-[11px] text-[var(--text-tertiary)]">{workspaceSubtitle}</p>
+                )}
+                {workspaceTertiary && (
+                  <p className="truncate text-[11px] text-[var(--text-tertiary)] opacity-70">{workspaceTertiary}</p>
                 )}
               </div>
             </div>
@@ -282,9 +286,7 @@ export function AppShell({
                   currentAssignmentId={activeAssignmentId}
                   workspaces={responsibilities.map((r) => ({
                     id: r.id,
-                    type: r.type,
-                    scopeType: r.scopeType,
-                    scopeName: r.scopeId ? `#${r.scopeId.slice(0, 8)}` : undefined,
+                    display: r.display,
                   }))}
                 />
               )}

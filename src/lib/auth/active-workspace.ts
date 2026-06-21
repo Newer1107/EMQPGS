@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { ForbiddenError } from "@/lib/errors";
 import { ACTIVE_WS_COOKIE } from "@/lib/constants";
+import { WorkspaceDisplayResolver, type WorkspaceDisplay } from "@/lib/auth/workspace-display";
 import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 export type ActiveWorkspace = {
@@ -9,7 +10,7 @@ export type ActiveWorkspace = {
   responsibility: ResponsibilityType;
   scopeType: ScopeType;
   scopeId: string | null;
-  displayName: string;
+  display: WorkspaceDisplay;
 };
 
 const SCOPES = ["INSTITUTION", "DEPARTMENT", "QUESTION_BANK"] as const;
@@ -24,6 +25,8 @@ export const WORKSPACE_PRIORITY: Record<string, number> = {
 };
 
 export class ActiveWorkspaceService {
+  constructor(private readonly displayResolver = new WorkspaceDisplayResolver()) {}
+
   async resolve(userId: string): Promise<ActiveWorkspace | null> {
     const assignmentId = await this.getCookie();
     if (!assignmentId) return null;
@@ -48,7 +51,7 @@ export class ActiveWorkspaceService {
       responsibility: assignment.responsibility,
       scopeType: assignment.scopeType,
       scopeId: assignment.scopeId,
-      displayName: await this.buildDisplayName(assignment),
+      display: await this.displayResolver.resolve(assignment.responsibility, assignment.scopeType, assignment.scopeId),
     };
   }
 
@@ -76,7 +79,7 @@ export class ActiveWorkspaceService {
       responsibility: assignment.responsibility,
       scopeType: assignment.scopeType,
       scopeId: assignment.scopeId,
-      displayName: await this.buildDisplayName(assignment),
+      display: await this.displayResolver.resolve(assignment.responsibility, assignment.scopeType, assignment.scopeId),
     };
   }
 
@@ -124,7 +127,7 @@ export class ActiveWorkspaceService {
       responsibility: picked.responsibility,
       scopeType: picked.scopeType,
       scopeId: picked.scopeId,
-      displayName: await this.buildDisplayName(picked),
+      display: await this.displayResolver.resolve(picked.responsibility, picked.scopeType, picked.scopeId),
     };
   }
 
@@ -144,44 +147,5 @@ export class ActiveWorkspaceService {
       path: "/",
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });
-  }
-
-  private async buildDisplayName(assignment: {
-    responsibility: string;
-    scopeType: string;
-    scopeId: string | null;
-  }): Promise<string> {
-    if (assignment.scopeType === "INSTITUTION" || !assignment.scopeId) {
-      return this.label(assignment.responsibility);
-    }
-    if (assignment.scopeType === "DEPARTMENT") {
-      const dept = await prisma.department.findUnique({
-        where: { id: assignment.scopeId },
-        select: { name: true },
-      });
-      return dept ? `${this.label(assignment.responsibility)} · ${dept.name}` : this.label(assignment.responsibility);
-    }
-    if (assignment.scopeType === "QUESTION_BANK") {
-      const bank = await prisma.questionBank.findUnique({
-        where: { id: assignment.scopeId },
-        select: { subject: { select: { subjectName: true } }, batchSemester: { select: { semesterNumber: true } } },
-      });
-      if (bank) {
-        return `${this.label(assignment.responsibility)} · ${bank.subject.subjectName} (Sem ${bank.batchSemester.semesterNumber})`;
-      }
-      return this.label(assignment.responsibility);
-    }
-    return this.label(assignment.responsibility);
-  }
-
-  private label(resp: string): string {
-    const labels: Record<string, string> = {
-      COE: "Controller of Examination",
-      DEAN: "Dean",
-      COORDINATOR: "Coordinator",
-      MODERATOR: "Moderator",
-      CONTRIBUTOR: "Contributor",
-    };
-    return labels[resp] ?? resp;
   }
 }

@@ -1,16 +1,18 @@
-"use client";
+﻿"use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { responsibilityLabels } from "@/lib/constants";
 import { apiFetch } from "@/lib/client-fetch";
-import type { ResponsibilityType, ScopeType } from "@prisma/client";
+
+type WorkspaceDisplay = {
+  title: string;
+  subtitle?: string;
+  tertiary?: string;
+};
 
 type ResponsibilityOption = {
   id: string;
-  type: ResponsibilityType;
-  scopeType: ScopeType;
-  scopeId: string | null;
+  display: WorkspaceDisplay;
 };
 
 export function WorkspacePicker({
@@ -33,11 +35,6 @@ export function WorkspacePicker({
     window.location.href = `/dashboard/${type}`;
   }
 
-  function getScopeLabel(r: ResponsibilityOption): string {
-    if (r.scopeType === "INSTITUTION" || !r.scopeId) return "Institution-wide";
-    return `${r.scopeType} #${r.scopeId.slice(0, 8)}`;
-  }
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50 p-4">
       <div className="w-full max-w-lg space-y-6">
@@ -56,12 +53,13 @@ export function WorkspacePicker({
               onClick={() => enterWorkspace(r.id)}
             >
               <CardHeader className="pb-2">
-                <CardTitle className="text-base">
-                  {responsibilityLabels[r.type] ?? r.type}
-                </CardTitle>
-                <CardDescription>
-                  {getScopeLabel(r)}
-                </CardDescription>
+                <CardTitle className="text-base">{r.display.title}</CardTitle>
+                {r.display.subtitle && (
+                  <CardDescription>
+                    {r.display.subtitle}
+                    {r.display.tertiary && <><br /><span className="text-[11px]">{r.display.tertiary}</span></>}
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent>
                 <Button variant="outline" size="sm" className="w-full">
