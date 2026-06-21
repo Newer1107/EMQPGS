@@ -433,9 +433,7 @@ export class DeanReviewService {
 const deanDashboardInclude = {
   subject: true,
   batchSemester: { include: { academicYear: true, batch: { select: { id: true, name: true } }, department: { select: { id: true, name: true } } } },
-  generatedPapers: {
-    orderBy: [{ generatedAt: "desc" as const }, { createdAt: "desc" as const }],
-  },
+  generatedPapers: true,
   deanReview: {
     include: {
       reviewedBy: true,
