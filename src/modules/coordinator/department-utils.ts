@@ -7,7 +7,7 @@ export type { AuthContext };
 export class DepartmentAccessUtils {
   async getAssignedDepartmentIds(authContext: AuthContext) {
     const authz = new AuthorizationService(authContext);
-    if (authz.has("COE" as const, "INSTITUTION" as const)) {
+    if (authz.has("COE" as const, "INSTITUTION" as const) || authz.has("DEAN" as const, "INSTITUTION" as const)) {
       const all = await prisma.department.findMany({ select: { id: true } });
       return all.map((d) => d.id);
     }
