@@ -4,7 +4,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 // ---- N3: Slot override IDOR ----
-import { Role } from "@prisma/client";
 import { ForbiddenError } from "@/lib/errors";
 
 describe("N4 — Dean notification targets bank department", () => {

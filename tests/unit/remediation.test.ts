@@ -39,7 +39,7 @@ describe("C1 — User creation strips password", () => {
   beforeEach(() => {
     mockRepo = {
       findByEmail: vi.fn().mockResolvedValue(null),
-      create: vi.fn().mockResolvedValue({ id: "u-1", name: "Test", email: "test@test.com", role: "CONTRIBUTOR" }),
+      create: vi.fn().mockResolvedValue({ id: "u-1", name: "Test", email: "test@test.com" }),
     };
     service = new UserService(mockRepo as any);
   });
@@ -48,7 +48,7 @@ describe("C1 — User creation strips password", () => {
     await service.create({
       name: "Test User",
       email: "test@example.com",
-      role: "CONTRIBUTOR",
+      homeDepartmentId: "dept-1",
       password: "secret123",
     });
     expect(mockRepo.create).toHaveBeenCalledOnce();
@@ -60,13 +60,13 @@ describe("C1 — User creation strips password", () => {
   it("rejects duplicate email", async () => {
     mockRepo.findByEmail.mockResolvedValue({ id: "existing" });
     await expect(
-      service.create({ name: "Dup", email: "dup@test.com", role: "CONTRIBUTOR", password: "secret123" }),
+      service.create({ name: "Dup", email: "dup@test.com", homeDepartmentId: "dept-1", password: "secret123" }),
     ).rejects.toThrow("Email already exists");
   });
 
   it("rejects missing password", async () => {
     await expect(
-      service.create({ name: "No Pass", email: "nopass@test.com", role: "CONTRIBUTOR" }),
+      service.create({ name: "No Pass", email: "nopass@test.com", homeDepartmentId: "dept-1" }),
     ).rejects.toThrow("Password is required");
   });
 });
@@ -128,7 +128,7 @@ describe("N1 — Audit log route excludes passwordHash", () => {
   });
 
   it("selects only safe public fields", () => {
-    expect(source).toMatch(/select:\s*\{ id: true, name: true, email: true, role: true \}/);
+    expect(source).toMatch(/select:\s*\{ id: true, name: true, email: true \}/);
     expect(source).not.toContain("passwordHash");
   });
 });

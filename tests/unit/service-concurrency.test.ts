@@ -14,11 +14,10 @@ vi.mock("@/lib/db", () => {
     questionLibraryItem: { findUnique: vi.fn(), update: vi.fn() },
     examCycle: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
     auditLog: { findFirst: vi.fn(), create: vi.fn() },
-    coordinatorDepartmentAssignment: { findMany: vi.fn() },
+    responsibilityAssignment: { findMany: vi.fn() },
     subject: { findUnique: vi.fn(), create: vi.fn() },
     subjectVersion: { create: vi.fn() },
     department: { findUnique: vi.fn() },
-    moderatorBankAssignment: { findMany: vi.fn(), findUnique: vi.fn() },
     notification: { create: vi.fn() },
     user: { findUnique: vi.fn() },
     questionSlot: { findMany: vi.fn() },
@@ -67,9 +66,9 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
 
     vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" } as any);
     vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" } as any);
-    vi.mocked(prisma.coordinatorDepartmentAssignment.findMany).mockResolvedValue([
-      { id: "cda-1", departmentId: "dept-1", coordinatorId: "coord-1", assignedAt: new Date() },
-    ]);
+    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([
+      { id: "ra-1", type: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: "dept-1", userId: "coord-1", assignedById: null, activeFrom: new Date(), activeTo: null, assignedAt: new Date(), deletedAt: null },
+    ] as any);
     vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
     vi.mocked(prisma.subject.create).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("n/a", {

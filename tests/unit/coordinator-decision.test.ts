@@ -1,8 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
-import { CoordinatorDecision, QuestionBankPhase, Role } from "@prisma/client";
+import { CoordinatorDecision, QuestionBankPhase } from "@prisma/client";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
+import type { AuthContext } from "@/lib/types";
 
-const mockActor = { id: "user-1", role: Role.COORDINATOR, email: "coord@test.com", name: "Coordinator" };
+const mockActor: AuthContext = {
+  user: { id: "user-1", email: "coord@test.com", name: "Coordinator" },
+  responsibilities: [
+    { id: "ra-1", type: "COORDINATOR" as const, scopeType: "DEPARTMENT" as const, scopeId: "dept-1", activeFrom: new Date(), activeTo: null },
+  ],
+};
+
+const nonCoordActor: AuthContext = {
+  user: { id: "user-2", email: "mod@test.com", name: "Moderator" },
+  responsibilities: [
+    { id: "ra-2", type: "MODERATOR" as const, scopeType: "QUESTION_BANK" as const, scopeId: "bank-1", activeFrom: new Date(), activeTo: null },
+  ],
+};
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -60,7 +73,6 @@ describe("coordinatorDecision", () => {
 
   it("throws ForbiddenError for non-coordinator actors", async () => {
     const service = new QuestionBankWorkflowService();
-    const nonCoordActor = { ...mockActor, role: Role.MODERATOR };
     await expect(
       service.coordinatorDecision("bank-1", CoordinatorDecision.APPROVED, "test", nonCoordActor),
     ).rejects.toThrow();

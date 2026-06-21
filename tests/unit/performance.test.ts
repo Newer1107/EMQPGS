@@ -4,7 +4,7 @@ vi.mock("@/lib/db", () => {
   const mockDb = {
     questionLibraryItem: { findMany: vi.fn(), groupBy: vi.fn() },
     questionBank: { findMany: vi.fn(), findUnique: vi.fn() },
-    moderatorBankAssignment: { findMany: vi.fn() },
+    responsibilityAssignment: { findMany: vi.fn() },
     moderationEvent: { findMany: vi.fn() },
     notification: { findMany: vi.fn(), count: vi.fn() },
     user: { findMany: vi.fn(), count: vi.fn() },
@@ -21,7 +21,7 @@ describe("M2 - Query optimization with select", () => {
     const { ModeratorDashboardService } = await import("@/modules/moderation/dashboard.service");
     const { prisma } = await import("@/lib/db");
 
-    vi.mocked(prisma.moderatorBankAssignment.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([]);
     vi.mocked(prisma.questionLibraryItem.groupBy).mockResolvedValue([
       { status: "PENDING", _count: { _all: 5 } } as any,
       { status: "APPROVED", _count: { _all: 10 } } as any,
@@ -39,12 +39,12 @@ describe("M2 - Query optimization with select", () => {
     expect(dashboard.summary.approved).toBe(10);
   });
 
-  it("User model has role and departmentId indexes", async () => {
+  it("User model has status and homeDepartmentId indexes", async () => {
     const { prisma } = await import("@/lib/db");
     const mockUser = vi.mocked(prisma.user.findMany);
     mockUser.mockResolvedValue([]);
-    await prisma.user.findMany({ where: { role: "CONTRIBUTOR" as never }, select: { id: true, name: true } });
-    await prisma.user.findMany({ where: { departmentId: "dept-1" }, select: { id: true } });
+    await prisma.user.findMany({ where: { status: "ACTIVE" as never }, select: { id: true, name: true } });
+    await prisma.user.findMany({ where: { homeDepartmentId: "dept-1" }, select: { id: true } });
     expect(mockUser).toHaveBeenCalledTimes(2);
   });
 

@@ -168,7 +168,7 @@ async function main() {
     where: { responsibility: "CONTRIBUTOR", scopeType: "QUESTION_BANK" },
     select: { scopeId: true },
   });
-  if (!assign) {
+  if (!assign || !assign.scopeId) {
     console.log("No contributor assignments found. Ensure seed data has contributors.");
     return;
   }

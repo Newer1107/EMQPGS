@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { SubjectManagementService } from "@/modules/coordinator/subject.service";
-import { Role } from "@prisma/client";
+import type { AuthContext } from "@/lib/types";
 
-const mockActor = { id: "user-1", role: Role.COORDINATOR, email: "coord@test.com", name: "Coordinator" };
+const mockActor: AuthContext = {
+  user: { id: "user-1", email: "coord@test.com", name: "Coordinator" },
+  responsibilities: [
+    { id: "ra-1", type: "COORDINATOR" as const, scopeType: "DEPARTMENT" as const, scopeId: "dept-1", activeFrom: new Date(), activeTo: null },
+  ],
+};
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -42,7 +47,6 @@ vi.mock("@/modules/coordinator/department-utils", () => ({
 
 vi.mock("@prisma/client", () => ({
   SubjectStatus: { ACTIVE: "ACTIVE", INACTIVE: "INACTIVE" },
-  Role: { COORDINATOR: "COORDINATOR", COE: "COE" },
 }));
 
 describe("SubjectManagementService.createSubject", () => {
