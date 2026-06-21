@@ -210,13 +210,15 @@ async function main() {
   // ──────────────────────────────────────────────
   // 6. RESPONSIBILITY ASSIGNMENTS
   // ──────────────────────────────────────────────
-  async function assignResponsibility(email: string, responsibility: ResponsibilityType, scopeType: ScopeType, scopeId: string | null = null) {
+  async function assignResponsibility(email: string, responsibility: ResponsibilityType, scopeType: ScopeType, scopeId?: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return;
-    await prisma.responsibilityAssignment.upsert({
-      where: { userId_responsibility_scopeType_scopeId: { userId: user.id, responsibility, scopeType, scopeId: scopeId as string } },
-      update: {},
-      create: { userId: user.id, responsibility, scopeType, scopeId },
+    const existing = await prisma.responsibilityAssignment.findFirst({
+      where: { userId: user.id, responsibility, scopeType, scopeId: scopeId ?? null },
+    });
+    if (existing) return;
+    await prisma.responsibilityAssignment.create({
+      data: { userId: user.id, responsibility, scopeType, scopeId: scopeId ?? null },
     });
   }
 

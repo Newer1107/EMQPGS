@@ -510,7 +510,7 @@ model ResponsibilityAssignment {
   userId         String
   responsibility ResponsibilityType
   scopeType      ScopeType
-  scopeId        String? // Department.id or QuestionBank.id (app-validated)
+  scopeId        String?            // Department.id, QuestionBank.id, or null for institution-wide
   activeFrom     DateTime           @default(now())
   activeTo       DateTime?
   assignedById   String?
