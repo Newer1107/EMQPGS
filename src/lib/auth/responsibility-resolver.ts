@@ -11,6 +11,7 @@ export class ResponsibilityResolver {
     const assignments = await prisma.responsibilityAssignment.findMany({
       where: {
         userId,
+        deletedAt: null,
         activeFrom: { lte: now },
         OR: [{ activeTo: null }, { activeTo: { gte: now } }],
       },

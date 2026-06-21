@@ -10,7 +10,7 @@ export class CoordinatorDepartmentAssignmentService {
     return this.repository.list();
   }
 
-  async create(data: CoordinatorDepartmentAssignmentInput) {
+  async create(data: CoordinatorDepartmentAssignmentInput & { assignedById: string }) {
     const coordinator = await prisma.user.findUnique({
       where: { id: data.coordinatorId },
       select: { id: true, name: true },
@@ -23,12 +23,12 @@ export class CoordinatorDepartmentAssignmentService {
     const existing = await this.repository.findByCoordinatorAndDepartment(data.coordinatorId, data.departmentId);
     if (existing) throw new AppError("This user is already assigned as Coordinator for this Department.", 409);
 
-    return this.repository.create(data);
+    return this.repository.create({ coordinatorId: data.coordinatorId, departmentId: data.departmentId, assignedById: data.assignedById });
   }
 
-  async delete(id: string) {
+  async delete(id: string, deletedById: string) {
     const assignment = await this.repository.findById(id);
     if (!assignment) throw new NotFoundError("Assignment not found");
-    return this.repository.delete(id);
+    return this.repository.delete(id, deletedById);
   }
 }

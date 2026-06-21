@@ -10,7 +10,7 @@ export class ContributorAssignmentService {
     private readonly notifications = new NotificationService(),
   ) {}
 
-  async assignContributor(questionBankId: string, payload: ContributorAssignmentInput) {
+  async assignContributor(questionBankId: string, payload: ContributorAssignmentInput, assignedById: string) {
     const contributor = await prisma.user.findUnique({
       where: { id: payload.contributorId },
       select: { id: true, name: true, email: true },
@@ -25,7 +25,7 @@ export class ContributorAssignmentService {
       throw new AppError("This user is already assigned as Contributor for this Question Bank.", 409);
     }
 
-    const assignment = await this.repository.create(payload.contributorId, questionBankId);
+    const assignment = await this.repository.create(payload.contributorId, questionBankId, assignedById);
 
     await this.notifications.create(
       contributor.id,
@@ -38,12 +38,12 @@ export class ContributorAssignmentService {
     return assignment;
   }
 
-  async unassignContributor(questionBankId: string, contributorId: string) {
+  async unassignContributor(questionBankId: string, contributorId: string, deletedById: string) {
     const existing = await this.repository.findDuplicate(contributorId, questionBankId);
     if (!existing) {
       throw new NotFoundError("Assignment not found");
     }
-    return this.repository.delete(contributorId, questionBankId);
+    return this.repository.delete(contributorId, questionBankId, deletedById);
   }
 
   listAssignments(questionBankId: string) {

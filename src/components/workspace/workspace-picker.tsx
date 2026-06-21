@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { responsibilityLabels } from "@/lib/constants";
+import { apiFetch } from "@/lib/client-fetch";
 import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 type ResponsibilityOption = {
@@ -22,9 +23,16 @@ export function WorkspacePicker({
 }) {
   const router = useRouter();
 
-  function enterWorkspace(assignmentId: string) {
-    localStorage.setItem("lastWorkspace", assignmentId);
-    router.push(`/api/auth/workspace?assignmentId=${assignmentId}&redirect=/dashboard`);
+  async function enterWorkspace(assignmentId: string) {
+    const res = await apiFetch("/api/auth/workspace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignmentId }),
+    });
+    const result = await res.json();
+    if (!result.success) return; // error handling omitted for brevity
+    const type = result.data.responsibility.toLowerCase();
+    router.push(`/dashboard/${type}`);
   }
 
   function getScopeLabel(r: ResponsibilityOption): string {

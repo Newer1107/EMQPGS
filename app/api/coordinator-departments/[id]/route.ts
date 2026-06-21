@@ -5,9 +5,9 @@ import { CoordinatorDepartmentAssignmentService } from "@/modules/coordinator-de
 const service = new CoordinatorDepartmentAssignmentService();
 
 export const DELETE = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const id = request.nextUrl.pathname.split("/").pop()!;
-    return service.delete(id);
+    return service.delete(id, context.user!.id);
   },
   {
     responsibility: ["COE" as ResponsibilityType],

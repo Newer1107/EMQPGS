@@ -510,20 +510,24 @@ model ResponsibilityAssignment {
   userId         String
   responsibility ResponsibilityType
   scopeType      ScopeType
-  scopeId        String?            // Department.id, QuestionBank.id, or null for institution-wide
+  scopeId        String?            // Department.id or QuestionBank.id (app-validated)
   activeFrom     DateTime           @default(now())
   activeTo       DateTime?
-  assignedById   String?
+  assignedById   String?            // User who created this assignment
   assignedAt     DateTime           @default(now())
+  deletedAt      DateTime?          // Soft-delete: set when revoked
+  deletedById    String?            // User who revoked this assignment
+  deletionReason String?            // Why it was revoked
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user           User               @relation(fields: [userId], references: [id])
 
   @@unique([userId, responsibility, scopeType, scopeId])
   @@index([userId])
   @@index([responsibility, scopeType, scopeId])
   @@index([activeTo])
+  @@index([deletedAt])
 }
 
 model SubjectExamCycleLink {

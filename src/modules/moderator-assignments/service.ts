@@ -10,7 +10,7 @@ export class ModeratorAssignmentService {
     private readonly notifications = new NotificationService(),
   ) {}
 
-  async assignModerator(questionBankId: string, payload: AssignmentInput) {
+  async assignModerator(questionBankId: string, payload: AssignmentInput, assignedById: string) {
     const moderator = await prisma.user.findUnique({
       where: { id: payload.moderatorId },
       select: { id: true, name: true, email: true },
@@ -25,7 +25,7 @@ export class ModeratorAssignmentService {
       throw new AppError("This user is already assigned as Moderator for this Question Bank.", 409);
     }
 
-    const assignment = await this.repository.create(payload.moderatorId, questionBankId);
+    const assignment = await this.repository.create(payload.moderatorId, questionBankId, assignedById);
 
     await this.notifications.create(
       moderator.id,
@@ -38,11 +38,11 @@ export class ModeratorAssignmentService {
     return assignment;
   }
 
-  async unassignModerator(questionBankId: string, moderatorId: string) {
+  async unassignModerator(questionBankId: string, moderatorId: string, deletedById: string) {
     const existing = await this.repository.findDuplicate(moderatorId, questionBankId);
     if (!existing) {
       throw new NotFoundError("Assignment not found");
     }
-    return this.repository.delete(moderatorId, questionBankId);
+    return this.repository.delete(moderatorId, questionBankId, deletedById);
   }
 }

@@ -8,10 +8,10 @@ import { assignmentSchema } from "@/modules/moderator-assignments/validation";
 const service = new ModeratorAssignmentService();
 
 export const POST = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const payload = assignmentSchema.parse(await request.json());
-    return service.assignModerator(questionBankId, payload);
+    return service.assignModerator(questionBankId, payload, context.user!.id);
   },
   {
     responsibility: ["COORDINATOR" as ResponsibilityType],
@@ -26,13 +26,13 @@ export const POST = withApiHandler(
 );
 
 export const DELETE = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const moderatorId = request.nextUrl.searchParams.get("moderatorId");
     if (!moderatorId) {
       throw new AppError("moderatorId query parameter is required", 400, "MISSING_PARAM");
     }
-    return service.unassignModerator(questionBankId, moderatorId);
+    return service.unassignModerator(questionBankId, moderatorId, context.user!.id);
   },
   {
     responsibility: ["COORDINATOR" as ResponsibilityType],

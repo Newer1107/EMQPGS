@@ -1,6 +1,6 @@
 # Architecture
 
-> System architecture, domain model, core concepts, roles, and invariants.
+> System architecture, domain model, core concepts, responsibilities, and invariants.
 
 ---
 
@@ -12,17 +12,21 @@ EMQPGS (Examination Management & Question Paper Generation System) manages the c
 
 ---
 
-## 2. Five User Roles
+## 2. Responsibility-Based Authorization
 
-| Role | Key Responsibilities |
-|---|---|
-| **COE** | System admin: departments, users, academic years, exam cycles, exports, backups, audit logs |
-| **COORDINATOR** | Academic management: subjects, question banks, slot assignments, moderator assignments, phase transitions, AI reports, paper generation, final approval |
-| **CONTRIBUTOR** | Question creation: create/edit questions, assign to slots, submit for moderation, revise on feedback |
-| **MODERATOR** | Quality assurance: review assigned questions, approve/reject/request revision |
-| **DEAN** | Final review: review generated paper variants, select for regular/supplementary/KT exams |
+EMQPGS uses a **responsibility-based** authorization model. Users are persons (identity only) — their access is determined by dynamic `ResponsibilityAssignment` records. A single user can hold multiple responsibilities simultaneously.
 
-### RBAC Matrix
+### Responsibility Types
+
+| Type | Typical Scope | Description |
+|---|---|---|
+| **COE** | Institution | System administration |
+| **COORDINATOR** | Department | Academic management |
+| **CONTRIBUTOR** | Question Bank | Question creation |
+| **MODERATOR** | Question Bank | Quality assurance |
+| **DEAN** | Institution | Final paper review |
+
+### Permission Matrix
 
 | Capability | COE | Coordinator | Moderator | Contributor | Dean |
 |---|---|---|---|---|---|
@@ -110,7 +114,7 @@ See `docs/workflow.md` for detailed walkthrough.
 | **ReadinessEngine is advisory** | Reports readiness with issues/warnings. Does not auto-advance. Coordinators always advance manually. |
 | **ApprovalDecision is write-once** | Created in same transaction as phase update. No update or delete path. |
 | **Snapshots** | `QuestionBankSnapshot` on lock (immutable). `PaperSnapshot` on paper generation (upsert per variant). |
-| **RBAC is two-layer** | `proxy.ts` middleware gates route access by role. `withApiHandler` gates operations. Object-level checks in services. |
+| **Authorization is centralized** | `withApiHandler` + `AuthorizationService` gate all API routes. Responsibility checks in services. |
 | **Append-only audit** | SHA-256 hash chain linking each `AuditLog` record to the previous record's integrity hash. |
 
 ---

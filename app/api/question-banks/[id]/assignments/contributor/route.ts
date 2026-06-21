@@ -8,10 +8,10 @@ import { contributorAssignmentSchema } from "@/modules/contributor-assignments/v
 const service = new ContributorAssignmentService();
 
 export const POST = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const payload = contributorAssignmentSchema.parse(await request.json());
-    return service.assignContributor(questionBankId, payload);
+    return service.assignContributor(questionBankId, payload, context.user!.id);
   },
   {
     responsibility: ["COORDINATOR" as ResponsibilityType],
@@ -26,13 +26,13 @@ export const POST = withApiHandler(
 );
 
 export const DELETE = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const questionBankId = request.nextUrl.pathname.split("/").slice(-3)[0]!;
     const contributorId = request.nextUrl.searchParams.get("contributorId");
     if (!contributorId) {
       throw new AppError("contributorId query parameter is required", 400, "MISSING_PARAM");
     }
-    return service.unassignContributor(questionBankId, contributorId);
+    return service.unassignContributor(questionBankId, contributorId, context.user!.id);
   },
   {
     responsibility: ["COORDINATOR" as ResponsibilityType],

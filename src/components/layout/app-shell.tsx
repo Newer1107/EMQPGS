@@ -7,12 +7,21 @@ import { cn } from "@/lib/utils";
 import { APP_NAME, responsibilityLabels } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
+import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
+import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 interface NavItem {
   label: string;
   href: string;
   workspaceTypes: string[];
 }
+
+type ResponsibilityOption = {
+  id: string;
+  type: ResponsibilityType;
+  scopeType: ScopeType;
+  scopeId: string | null;
+};
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Overview", workspaceTypes: ["COE", "COORDINATOR", "MODERATOR", "CONTRIBUTOR", "DEAN"] },
@@ -79,16 +88,22 @@ const sectionOrder = ["Overview", "Administration", "Academic", "Review", "Contr
 
 export function AppShell({
   children,
-  workspaceType,
   userName,
   userEmail,
+  workspaceType,
+  workspaceScope,
+  activeAssignmentId,
   badgeCounts = {},
+  responsibilities = [],
 }: {
   children: React.ReactNode;
-  workspaceType: string;
   userName: string;
   userEmail: string;
+  workspaceType: string;
+  workspaceScope?: string;
+  activeAssignmentId?: string;
   badgeCounts?: Record<string, number>;
+  responsibilities?: ResponsibilityOption[];
 }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
@@ -118,6 +133,8 @@ export function AppShell({
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+  const showSwitcher = responsibilities.length > 1;
 
   return (
     <div className="flex min-h-screen">
@@ -155,7 +172,10 @@ export function AppShell({
               </div>
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{APP_NAME}</p>
-                <p className="truncate text-xs text-[var(--text-tertiary)]">{responsibilityLabels[workspaceType as keyof typeof responsibilityLabels] ?? workspaceType}</p>
+                <p className="truncate text-xs font-medium text-[var(--text-primary)]">{responsibilityLabels[workspaceType as keyof typeof responsibilityLabels] ?? workspaceType}</p>
+                {workspaceScope && (
+                  <p className="truncate text-[11px] text-[var(--text-tertiary)]">{workspaceScope}</p>
+                )}
               </div>
             </div>
           )}
@@ -257,6 +277,17 @@ export function AppShell({
           <div className="flex items-center justify-between px-6 py-3">
             <Breadcrumbs />
             <div className="flex items-center gap-3">
+              {showSwitcher && (
+                <WorkspaceSwitcher
+                  currentAssignmentId={activeAssignmentId}
+                  workspaces={responsibilities.map((r) => ({
+                    id: r.id,
+                    type: r.type,
+                    scopeType: r.scopeType,
+                    scopeName: r.scopeId ? `#${r.scopeId.slice(0, 8)}` : undefined,
+                  }))}
+                />
+              )}
               <span className="text-sm text-[var(--text-tertiary)]">{userEmail}</span>
               <span className="block h-2 w-2 rounded-full bg-red-500" aria-label="Unread notifications" />
             </div>

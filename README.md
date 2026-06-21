@@ -131,26 +131,71 @@ erDiagram
 sequenceDiagram
     participant User
     participant Login
-    participant JWT
     participant DB
-    participant AuthZ
+    participant AWS as ActiveWorkspaceService
+    participant AuthZ as AuthorizationService
 
     User->>Login: Login (email + password)
     Login->>DB: Verify credentials (bcrypt)
     DB-->>Login: User
     Login->>DB: Load ResponsibilityAssignments
     DB-->>Login: []
-    Login->>JWT: Generate tokens (no role — identity only)
-    JWT-->>User: Set cookies
+    Login-->>User: tokens (identity only)
 
-    User->>AuthZ: API request (cookie)
-    AuthZ->>JWT: Verify + decode
-    JWT-->>AuthZ: User identity
-    AuthZ->>AuthZ: Resolve responsibilities (cached in JWT)
-    AuthZ->>AuthZ: Create AuthorizationService
+    Note over User,AuthZ: Dashboard resolution
+
+    User->>AWS: GET /dashboard
+    AWS->>DB: Read active workspace cookie
+    DB-->>AWS: assignmentId or null
+    alt No active workspace, 1 responsibility
+        AWS->>AWS: Auto-activate (set cookie)
+        AWS-->>User: Redirect to dashboard
+    else No active workspace, 2+ responsibilities
+        AWS-->>User: Workspace picker
+        User->>AWS: POST /api/auth/workspace
+        AWS->>DB: Validate assignment
+        AWS->>AWS: Set active workspace cookie
+        AWS-->>User: Redirect to dashboard
+    else Active workspace cookie exists
+        AWS->>DB: Validate still active
+        DB-->>AWS: assignment
+        AWS-->>User: Redirect to dashboard
+    end
+
+    Note over User,AuthZ: Subsequent requests
+
+    User->>AuthZ: API request
+    AuthZ->>AuthZ: Verify JWT
+    AuthZ->>AuthZ: Read active workspace cookie
     AuthZ->>AuthZ: Check responsibility + scope
     AuthZ-->>User: Authorized response
-    Note over AuthZ: Every check reduces to:<br/>"Does this user have this<br/>responsibility within this scope?"
+```
+
+### Workspace Flow
+
+```
+Login → POST /api/auth/login
+  ↓
+Load ResponsibilityAssignments
+  ↓
+0 → /no-access
+1 → auto-activate (set HttpOnly cookie) → /dashboard/{type}
+2+ → /workspace-select
+  ↓
+User picks → POST /api/auth/workspace { assignmentId }
+  ↓
+Server validates ownership + activity
+  ↓
+Sets emqpgs_active_ws cookie (HttpOnly, signed path)
+  ↓
+Redirects to /dashboard/{type}
+  ↓
+AppShell reads cookie server-side → renders correct nav
+```
+
+Workspace switching follows the same POST flow — no URL parameters, no localStorage, no JWT refresh required.
+
+The server is always authoritative. The active workspace is persisted in an HttpOnly cookie, validated on every request. Switching workspaces is a single POST call.
 ```
 
 ---

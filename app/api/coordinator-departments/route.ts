@@ -12,9 +12,9 @@ export const GET = withApiHandler(
 );
 
 export const POST = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const payload = coordinatorDepartmentAssignmentSchema.parse(await request.json());
-    return service.create(payload);
+    return service.create({ ...payload, assignedById: context.user!.id });
   },
   {
     responsibility: ["COE" as ResponsibilityType],

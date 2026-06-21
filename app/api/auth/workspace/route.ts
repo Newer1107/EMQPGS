@@ -1,38 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
-import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
-import { WorkspaceResolver } from "@/lib/auth/workspace-resolver";
-import { UnauthorizedError, ForbiddenError } from "@/lib/errors";
+import { ActiveWorkspaceService } from "@/lib/auth/active-workspace";
+import { UnauthorizedError } from "@/lib/errors";
+import { z } from "zod";
 
-export async function GET(request: NextRequest) {
+const schema = z.object({
+  assignmentId: z.string().min(1),
+});
+
+export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUserFromCookies();
-    const resolver = new ResponsibilityResolver();
-    const auth = await resolver.resolveAsContext(user.id, user);
-    const workspaceResolver = new WorkspaceResolver();
+    const payload = schema.parse(await request.json());
 
-    const assignmentId = request.nextUrl.searchParams.get("assignmentId");
-    if (!assignmentId) {
-      throw new ForbiddenError("assignmentId is required");
-    }
+    const service = new ActiveWorkspaceService();
+    const workspace = await service.activate(user.id, payload.assignmentId);
 
-    await workspaceResolver.resolve(auth, assignmentId);
-
-    const redirect = request.nextUrl.searchParams.get("redirect") ?? "/dashboard";
-    const redirectUrl = new URL(redirect, request.url);
-    redirectUrl.searchParams.set("ws", assignmentId);
-
-    return NextResponse.redirect(redirectUrl);
+    return NextResponse.json({ success: true, data: workspace });
   } catch (error) {
-    if (error instanceof UnauthorizedError || error instanceof ForbiddenError) {
+    if (error instanceof UnauthorizedError) {
       return NextResponse.json(
-        { success: false, error: { code: "AUTH_ERROR", message: (error as Error).message } },
-        { status: 403 },
+        { success: false, error: { code: "UNAUTHORIZED", message: "Not authenticated" } },
+        { status: 401 },
+      );
+    }
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: { code: "VALIDATION_ERROR", message: "assignmentId is required" } },
+        { status: 400 },
       );
     }
     return NextResponse.json(
-      { success: false, error: { code: "INTERNAL_ERROR", message: "Failed to set workspace" } },
-      { status: 500 },
+      { success: false, error: { code: "WORKSPACE_ERROR", message: (error as Error).message } },
+      { status: 403 },
     );
   }
 }

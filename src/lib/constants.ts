@@ -24,6 +24,7 @@ export const APP_NAME = "EMQPGS";
 export const ACCESS_COOKIE = "emqpgs_access_token";
 export const REFRESH_COOKIE = "emqpgs_refresh_token";
 export const CSRF_COOKIE = "emqpgs_csrf_token";
+export const ACTIVE_WS_COOKIE = "emqpgs_active_ws";
 
 export const responsibilityLabels: Record<ResponsibilityType, string> = {
   COE: "Controller of Examination",

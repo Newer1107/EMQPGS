@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { responsibilityLabels } from "@/lib/constants";
+import { apiFetch } from "@/lib/client-fetch";
 import type { ResponsibilityType, ScopeType } from "@prisma/client";
 
 type WorkspaceOption = {
@@ -24,12 +25,18 @@ export function WorkspaceSwitcher({
   const [open, setOpen] = useState(false);
 
   const current = workspaces.find((w) => w.id === currentAssignmentId);
-  const others = workspaces.filter((w) => w.id !== currentAssignmentId);
 
-  function switchWorkspace(assignmentId: string) {
-    localStorage.setItem("lastWorkspace", assignmentId);
+  async function switchWorkspace(assignmentId: string) {
     setOpen(false);
-    router.push(`/api/auth/workspace?assignmentId=${assignmentId}&redirect=/dashboard`);
+    const res = await apiFetch("/api/auth/workspace", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ assignmentId }),
+    });
+    const result = await res.json();
+    if (!result.success) return;
+    const type = result.data.responsibility.toLowerCase();
+    router.push(`/dashboard/${type}`);
   }
 
   return (
@@ -41,7 +48,9 @@ export function WorkspaceSwitcher({
         onClick={() => setOpen(!open)}
       >
         <span className="text-[var(--text-primary)]">
-          {current ? responsibilityLabels[current.type] ?? current.type : "Workspace"}
+          {current
+            ? `${responsibilityLabels[current.type] ?? current.type}${current.scopeName ? ` · ${current.scopeName}` : ""}`
+            : "Workspace"}
         </span>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -65,7 +74,7 @@ export function WorkspaceSwitcher({
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-full z-50 mt-1 w-64 rounded-lg border border-[var(--border)] bg-white p-1 shadow-lg">
+          <div className="absolute right-0 top-full z-50 mt-1 w-72 rounded-lg border border-[var(--border)] bg-white p-1 shadow-lg">
             <p className="px-3 py-2 text-xs font-medium uppercase tracking-wider text-[var(--text-tertiary)]">
               Switch Workspace
             </p>
