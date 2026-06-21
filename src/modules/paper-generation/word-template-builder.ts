@@ -134,8 +134,8 @@ export class WordTemplateBuilder {
 
   /* ── Header ─────────────────────────────────────── */
 
-  private pushHeader(all: (Paragraph | Table)[], _imagePath?: string) {
-    const header = loadHeader(process.cwd());
+  private pushHeader(all: (Paragraph | Table)[]) {
+    const header = loadHeader();
     if (!header) { all.push(new Paragraph({ spacing: { after: 200 }, children: [] })); return; }
     try {
       const imgW = USABLE_W - convertInchesToTwip(0.3);

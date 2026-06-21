@@ -45,7 +45,7 @@ export class PdfExporter {
     }
 
     /* Header image */
-    const header = loadHeader(process.cwd());
+    const header = loadHeader();
     if (header) {
       try {
         let img;

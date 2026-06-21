@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { AuthorizationService } from "@/lib/auth/authorization-service";

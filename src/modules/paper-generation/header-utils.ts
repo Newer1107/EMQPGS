@@ -1,37 +1,28 @@
 import fs from "node:fs";
-import path from "node:path";
 
-const CANDIDATES = ["tcet-header.png", "tcet-header.webp", "tcet-header.jpg", "tcet-header.jpeg"];
+const CANDIDATES = [
+  "templates/tcet-header.png",
+  "templates/tcet-header.webp",
+  "templates/tcet-header.jpg",
+  "templates/tcet-header.jpeg",
+];
 
 export type HeaderInfo = {
   buffer: Buffer;
   docxType: "jpg" | "png" | "gif" | "bmp";
 };
 
-export function loadHeader(templatesDir: string): HeaderInfo | null {
-  let filePath: string | null = null;
-  for (const name of CANDIDATES) {
-    const p = path.join(templatesDir, name);
+export function loadHeader(): HeaderInfo | null {
+  for (const rel of CANDIDATES) {
     try {
-      if (fs.statSync(p).isFile()) {
-        filePath = p;
-        break;
-      }
+      const buf = fs.readFileSync(rel);
+      const ext = rel.split(".").pop()?.toLowerCase() ?? "";
+      if (ext === "png") return { buffer: buf, docxType: "png" };
+      if (ext === "jpg" || ext === "jpeg") return { buffer: buf, docxType: "jpg" };
+      if (ext === "gif") return { buffer: buf, docxType: "gif" };
+      if (ext === "bmp") return { buffer: buf, docxType: "bmp" };
+      if (ext === "webp") return { buffer: buf, docxType: "png" };
     } catch { /* try next */ }
   }
-  if (!filePath) return null;
-
-  const buffer = fs.readFileSync(filePath);
-  const ext = path.extname(filePath).toLowerCase();
-
-  if (ext === ".png") return { buffer, docxType: "png" };
-  if (ext === ".jpg" || ext === ".jpeg") return { buffer, docxType: "jpg" };
-  if (ext === ".gif") return { buffer, docxType: "gif" };
-  if (ext === ".bmp") return { buffer, docxType: "bmp" };
-
-  if (ext === ".webp") {
-    return { buffer, docxType: "png" };
-  }
-
   return null;
 }
