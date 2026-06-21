@@ -324,9 +324,6 @@ export class DeanReviewService {
       where: {
         recordStatus: RecordStatus.LOCKED,
         subject: this.deanDepartmentFilter(authContext),
-        generatedPapers: {
-          some: { status: PaperGenerationStatus.COMPLETED },
-        },
       },
       orderBy: { updatedAt: "desc" },
       include: deanDashboardInclude,
@@ -345,17 +342,6 @@ export class DeanReviewService {
 
     if (!questionBank) {
       throw new ForbiddenError("You do not have access to this question bank.");
-    }
-
-    const hasCompletedPapers = questionBank.generatedPapers.some(
-      (p) => p.status === PaperGenerationStatus.COMPLETED,
-    );
-    if (!hasCompletedPapers) {
-      throw new AppError(
-        "This question bank has not been generated yet. No papers available for review.",
-        400,
-        "NO_GENERATED_PAPERS",
-      );
     }
 
     return questionBank;
