@@ -43,17 +43,16 @@ function slotStatusClass(status: string | null): string {
   }
 }
 
-function SlotCell({ slot, isSelected, onClick, onMouseEnter, onMouseLeave }: {
+function SlotCell({ slot, isSelected, onClick }: {
   slot: SlotItem; isSelected: boolean; onClick: () => void;
-  onMouseEnter: () => void; onMouseLeave: () => void;
 }) {
   const status = slot.assignedQuestion?.status ?? null;
+  const q = slot.assignedQuestion?.questionText?.slice(0, 60) ?? "Empty";
   const ariaLabel = `Slot ${slot.slotNumber}, Module ${slot.moduleNumber}, ${slot.marks} marks, ${status ?? "empty"}`;
   return (
     <div role="gridcell" tabIndex={0} aria-label={ariaLabel}
+      title={`Slot ${slot.slotNumber} · M${slot.moduleNumber} · ${slot.marks}mk · ${status ?? "empty"} · ${q}`}
       onClick={onClick}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       className={`relative flex h-9 w-9 items-center justify-center rounded border text-xs font-medium transition-colors ${slotStatusClass(status)} ${isSelected ? "ring-2 ring-[var(--foreground)]" : "hover:opacity-80"} ${slot.isLocked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
     >
@@ -96,8 +95,6 @@ export function SlotDetailPanel({ slot }: { slot: SlotItem }) {
 export function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotClick, title }: {
   slots: SlotItem[]; modules: number[]; marksOptions: number[]; selectedSlotId: string | null; onSlotClick: (slot: SlotItem) => void; title?: string;
 }) {
-  const [hoveredSlotKey, setHoveredSlotKey] = useState<string | null>(null);
-
   const grid = useMemo(() => {
     const map = new Map<string, SlotItem[]>();
     for (const slot of slots) {
@@ -146,18 +143,10 @@ export function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotC
     onSlotClick(gridRows[row][col]);
   }
 
-  const hoveredSlot = useMemo(() => {
-    if (!hoveredSlotKey) return null;
-    for (const s of slots) {
-      if (`${s.moduleNumber}-${s.marks}-${s.slotNumber}` === hoveredSlotKey) return s;
-    }
-    return null;
-  }, [hoveredSlotKey, slots]);
-
   return (
     <Card>
       <CardHeader className="pb-3"><CardTitle className="text-base">{title ?? "Slot Grid"}</CardTitle></CardHeader>
-      <CardContent className="relative space-y-6">
+      <CardContent>
         <div role="grid" aria-label="Question slot grid" onKeyDown={handleKeyDown} className="space-y-6 outline-none">
           {modules.map((moduleNumber) => (
             <div key={moduleNumber} role="row">
@@ -174,8 +163,6 @@ export function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotC
                           <SlotCell key={slot.slotNumber} slot={slot}
                             isSelected={selectedSlotId === `${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`}
                             onClick={() => onSlotClick(slot)}
-                            onMouseEnter={() => setHoveredSlotKey(`${slot.moduleNumber}-${slot.marks}-${slot.slotNumber}`)}
-                            onMouseLeave={() => setHoveredSlotKey(null)}
                           />
                         ))}
                       </div>
@@ -186,11 +173,6 @@ export function SlotGrid({ slots, modules, marksOptions, selectedSlotId, onSlotC
             </div>
           ))}
         </div>
-        {hoveredSlot && (
-          <div className="mt-2 rounded border bg-[var(--background)] px-3 py-1.5 text-xs text-[var(--text-primary)] shadow-sm">
-            Slot {hoveredSlot.slotNumber} · Module {hoveredSlot.moduleNumber} · {hoveredSlot.marks} marks · Q: {hoveredSlot.assignedQuestion?.questionText?.slice(0, 40) ?? "Empty"}
-          </div>
-        )}
       </CardContent>
     </Card>
   );
