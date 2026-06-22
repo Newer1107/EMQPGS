@@ -6,6 +6,6 @@ const orchestrator = new AiOrchestrator();
 
 export const GET = withApiHandler(async (request) => {
   const segments = request.nextUrl.pathname.split("/");
-  const bankId = segments[4]!;
+  const bankId = segments[3]!;
   return orchestrator.getStatus(bankId);
 }, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });

@@ -8,7 +8,7 @@ const orchestrator = new AiOrchestrator();
 
 export const POST = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");
-  const bankId = segments[4]!;
+  const bankId = segments[3]!;
   const userId = context.user!.id;
   const meta = await getRequestMeta();
   const result = await orchestrator.analyze(bankId, userId, { forceRegenerate: true });

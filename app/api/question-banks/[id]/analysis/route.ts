@@ -8,14 +8,14 @@ const orchestrator = new AiOrchestrator();
 
 export const GET = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");
-  const bankId = segments[4]!;
+  const bankId = segments[3]!;
   const analysis = await orchestrator.getStatus(bankId);
   return analysis ?? { notFound: true };
 }, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });
 
 export const POST = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");
-  const bankId = segments[4]!;
+  const bankId = segments[3]!;
   const userId = context.user!.id;
   const meta = await getRequestMeta();
   const result = await orchestrator.analyze(bankId, userId);

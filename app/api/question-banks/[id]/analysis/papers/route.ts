@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 
 export const GET = withApiHandler(async (request) => {
   const segments = request.nextUrl.pathname.split("/");
-  const bankId = segments[4]!;
+  const bankId = segments[3]!;
   const latestAnalysis = await prisma.questionBankAnalysis.findFirst({
     where: { questionBankId: bankId, status: "COMPLETE" },
     orderBy: { version: "desc" },
