@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coordinator/assignments", label: "Assignments", workspaceTypes: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/questions", label: "Questions", workspaceTypes: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/coverage", label: "Coverage", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/analysis", label: "UAF Analysis", workspaceTypes: ["COORDINATOR"] },
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/bank", label: "Slot Grid", workspaceTypes: ["MODERATOR"] },
@@ -60,6 +61,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/dean/review", label: "Review Papers", workspaceTypes: ["DEAN"] },
   { href: "/dashboard/dean/readiness-overview", label: "Readiness Overview", workspaceTypes: ["DEAN"] },
   { href: "/dashboard/dean/reports", label: "Reports", workspaceTypes: ["DEAN"] },
+  { href: "/dashboard/dean/analysis", label: "UAF Analysis", workspaceTypes: ["DEAN"] },
 ];
 
 function getSection(href: string): string {
