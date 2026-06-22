@@ -165,7 +165,7 @@ export class AiOrchestrator {
         // Stage 6: Validate responses (hallucination guards, schema checks)
         aiResponse = this.responseValidator.validate(
           rawAiResponse,
-          structuredPrompts,
+          structuredPrompts.modules,
         );
         await this.updateStatus(analysis.id, "AI_COMPLETE");
       }
