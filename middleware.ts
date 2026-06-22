@@ -36,10 +36,7 @@ const PUBLIC_ROUTES = [
 
 // ─── Confidential routes (must receive Cache-Control: no-store) ───────────
 
-const CONFIDENTIAL_PATH_PREFIXES = [
-  "/api/",
-  "/dashboard/",
-] as const;
+const CONFIDENTIAL_PATH_PREFIXES = ["/api/", "/dashboard"] as const;
 
 // ─── Middleware ───────────────────────────────────────────────────────────
 
@@ -69,7 +66,7 @@ export function middleware(request: NextRequest) {
   const response = NextResponse.next();
 
   // 4. Cache-Control: no-store on confidential routes
-  if (CONFIDENTIAL_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+  if (CONFIDENTIAL_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))) {
     response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     response.headers.set("Pragma", "no-cache");
     response.headers.set("Expires", "0");

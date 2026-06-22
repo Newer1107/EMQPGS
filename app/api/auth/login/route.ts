@@ -10,6 +10,8 @@ import { getRequestMeta } from "@/lib/api-context";
 import { env } from "@/lib/env";
 import { getOrCreateCsrfToken } from "@/lib/csrf";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
+import { WorkspaceCookieManager } from "@/lib/auth/workspace-cookie-manager";
+import { WorkspaceSelector } from "@/lib/auth/workspace-selector";
 
 const loginSchema = z.object({
   email: z.email(),
@@ -50,6 +52,12 @@ export const POST = withApiHandler(async (request) => {
 
   const resolver = new ResponsibilityResolver();
   const responsibilities = await resolver.resolve(user.id);
+  const selector = new WorkspaceSelector();
+  const picked = await selector.pickDefaultForUser(user.id);
+
+  if (picked) {
+    await new WorkspaceCookieManager().set(picked.assignmentId);
+  }
 
   return {
     user: {
@@ -64,5 +72,10 @@ export const POST = withApiHandler(async (request) => {
       scopeType: r.scopeType,
       scopeId: r.scopeId,
     })),
+    redirectTo: picked
+      ? `/dashboard/${picked.responsibility.toLowerCase()}`
+      : responsibilities.length > 0
+        ? "/workspace-select"
+        : "/no-access",
   };
 });

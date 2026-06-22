@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,7 +18,6 @@ const ROLES = [
 ];
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -43,8 +41,8 @@ export default function LoginPage() {
       setError(result.error?.message ?? "Sign in failed. Please check your email and password.");
       return;
     }
-    router.push("/dashboard");
-    router.refresh();
+    const redirectTo = result.data?.redirectTo ?? "/dashboard";
+    window.location.replace(redirectTo);
   }
 
   return (

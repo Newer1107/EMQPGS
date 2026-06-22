@@ -4,6 +4,8 @@ import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { ActiveWorkspaceResolver } from "@/lib/auth/workspace-resolver";
 import { WorkspaceSelector } from "@/lib/auth/workspace-selector";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardIndexPage() {
   const user = await getCurrentUserFromCookies();
   const resolver = new ActiveWorkspaceResolver();
