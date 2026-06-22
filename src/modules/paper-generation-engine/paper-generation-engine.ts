@@ -12,6 +12,7 @@ export class PaperGenerationEngine {
   constructor(
     private readonly config: {
       moduleRange: number[];
+      marksPattern?: readonly number[];
       enforceUsageHistory?: boolean;
       enforceConceptDiversity?: boolean;
     },
@@ -31,6 +32,7 @@ export class PaperGenerationEngine {
     const builder = new CandidateBuilder(
       {
         moduleRange: this.config.moduleRange,
+        marksPattern: this.config.marksPattern,
         excludeUsed: this.config.enforceUsageHistory ?? true,
         consumedInRun: new Set(),
       },
@@ -39,6 +41,7 @@ export class PaperGenerationEngine {
 
     const constraintEngine = new ConstraintEngine({
       moduleRange: this.config.moduleRange,
+      marksPattern: this.config.marksPattern,
       enforceUsageHistory: this.config.enforceUsageHistory ?? true,
       enforceConceptDiversity: this.config.enforceConceptDiversity ?? true,
     });

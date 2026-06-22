@@ -6,6 +6,8 @@ import { slotKey } from "./constraint-engine";
 export type CandidateBuilderConfig = {
   /** Module range for the exam (e.g. [1,2,3] for ISE-1). */
   moduleRange: number[];
+  /** Marks pattern per module. Default [2,5,10] for ENDSEM; ISE uses [2,2,5]. */
+  marksPattern?: readonly number[];
   /** If true, exclude questions already in usage history. */
   excludeUsed: boolean;
   /** Set of question IDs already used in this generation run. */
@@ -41,11 +43,12 @@ export class CandidateBuilder {
     });
   }
 
-  /** Build initial slot list for the config's module range. */
+  /** Build initial slot list for the config's module range and marks pattern. */
   buildSlots(): PaperSlot[] {
     const slots: PaperSlot[] = [];
+    const marksPattern = this.config.marksPattern ?? [2, 5, 10] as const;
     for (const moduleNumber of this.config.moduleRange) {
-      for (const marks of [2, 5, 10] as const) {
+      for (const marks of marksPattern) {
         slots.push({ moduleNumber, marks, slotNumber: 1 });
       }
     }

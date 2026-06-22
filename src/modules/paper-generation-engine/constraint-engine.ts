@@ -15,6 +15,8 @@ export type ConstraintResult = {
 
 export type ConstraintConfig = {
   moduleRange: number[];
+  /** Marks pattern per module. Default [2,5,10] for ENDSEM; ISE uses [2,2,5]. */
+  marksPattern?: readonly number[];
   /** If true, questions in QuestionUsageHistory are excluded. */
   enforceUsageHistory: boolean;
   /** If true, duplicate teachingIndex values are blocked. */
@@ -52,11 +54,13 @@ export class ConstraintEngine {
     }
 
     // -- Slot count --
-    const expected = this.config.moduleRange.length * MARKS_PATTERN.length;
+    const marksPattern = this.config.marksPattern ?? MARKS_PATTERN;
+    const expectedSlotsPerModule = marksPattern.length;
+    const expected = this.config.moduleRange.length * expectedSlotsPerModule;
     if (slots.length !== expected) {
       violations.push({
         rule: "SLOT_COUNT",
-        message: `Expected ${expected} slots for ${this.config.moduleRange.length} modules × ${MARKS_PATTERN.length} marks, got ${slots.length}.`,
+        message: `Expected ${expected} slots for ${this.config.moduleRange.length} modules × ${expectedSlotsPerModule} marks positions, got ${slots.length}.`,
       });
     }
 

@@ -74,8 +74,12 @@ export class PaperGenerationService {
         if (available.length > 0) variantInventory.set(key, available);
       }
 
+      // ISE: 6×2m + 3×5m per paper; ENDSEM: 6×2m + 6×5m + 6×10m
+      const isIse = examType === ExamType.ISE_1 || examType === ExamType.ISE_2;
+      const marksPattern = isIse ? ([2, 2, 5] as const) : undefined;
+
       const engine = new PaperGenerationEngine(
-        { moduleRange, enforceUsageHistory: true, enforceConceptDiversity: true },
+        { moduleRange, marksPattern, enforceUsageHistory: true, enforceConceptDiversity: true },
         new ConstraintAwareGreedyStrategy(),
       );
       const { solution, trace } = engine.generate(variantInventory, usageHistory, variant);
