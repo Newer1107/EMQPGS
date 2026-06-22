@@ -19,13 +19,10 @@ export class Persistence {
       await tx.analysisSnapshot.create({
         data: {
           analysisVersionId,
-          fullReport: {
-            result: analysisResult,
-            snapshot: snapshotData,
-          },
-          strengths: [],
-          weaknesses: [],
-          recommendationsJson: analysisResult.recommendations,
+          fullReport: JSON.parse(JSON.stringify({ result: analysisResult, snapshot: snapshotData })),
+          strengths: JSON.parse("[]"),
+          weaknesses: JSON.parse("[]"),
+          recommendationsJson: JSON.parse(JSON.stringify(analysisResult.recommendations)),
         },
       });
 
@@ -76,7 +73,7 @@ export class Persistence {
       await tx.questionBankAnalysis.update({
         where: { id: questionBankAnalysisId },
         data: {
-          status: analysisResult.status,
+          status: analysisResult.status as any,
           qpqi:
             analysisResult.metrics.find((m) => m.indexCode === "QPQI")
               ?.value ?? null,

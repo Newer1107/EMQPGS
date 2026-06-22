@@ -145,7 +145,7 @@ export interface MetricResult {
 
 // ── Zod Schema for evidence hash ──
 export const evidenceSchema = z.object({
-  snapshot: z.record(z.unknown()),
+  snapshot: z.record(z.string(), z.unknown()),
   engineVersion: z.string(),
   promptVersion: z.string(),
 });

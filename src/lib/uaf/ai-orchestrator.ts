@@ -99,7 +99,7 @@ export class AiOrchestrator {
             snapshotData.extractionCompletenessScore,
           extractionQualityIndex: snapshotData.extractionQualityIndex,
           evidenceHash,
-          sourceDataSnapshot: snapshotData as any,
+          sourceDataSnapshot: JSON.parse(JSON.stringify(snapshotData)),
         },
       });
 

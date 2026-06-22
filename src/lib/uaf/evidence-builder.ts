@@ -7,7 +7,7 @@ export class EvidenceBuilder {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: {
-        subject: { select: { name: true, code: true } },
+        subject: { select: { subjectName: true, subjectCode: true } },
         slots: {
           include: {
             assignedQuestion: {
@@ -48,8 +48,8 @@ export class EvidenceBuilder {
 
     return {
       questionBankId: bank.id,
-      subjectName: bank.subject.name,
-      subjectCode: bank.subject.code,
+      subjectName: bank.subject.subjectName,
+      subjectCode: bank.subject.subjectCode,
       totalSlots: bank.slots.length,
       filledSlots: questions.length,
       questions,
