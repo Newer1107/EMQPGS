@@ -39,4 +39,4 @@ export const GET = withApiHandler(async (request) => {
   });
 
   return { deltas };
-}, { responsibility: ["DEAN" as ResponsibilityType] });
+}, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });

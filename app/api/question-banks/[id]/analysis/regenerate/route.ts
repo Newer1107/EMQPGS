@@ -14,4 +14,4 @@ export const POST = withApiHandler(async (request, context) => {
   const result = await orchestrator.analyze(bankId, userId, { forceRegenerate: true });
   await logAudit({ actorId: userId, action: "ANALYSIS_REGENERATED", entityType: "QUESTION_BANK", entityId: bankId, ...meta });
   return { status: "regeneration_complete", result };
-}, { responsibility: ["DEAN" as ResponsibilityType] });
+}, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });

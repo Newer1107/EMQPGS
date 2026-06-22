@@ -51,7 +51,7 @@ function mockBank(overrides: Record<string, unknown> = {}) {
     lockedReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    subject: { name: "Advanced Algorithms", code: "CS501" },
+    subject: { subjectName: "Advanced Algorithms", subjectCode: "CS501" },
     slots: [
       { ...baseSlot, assignedQuestion: { ...baseQuestion } },
       {
@@ -87,7 +87,7 @@ function mockBankNoData(overrides: Record<string, unknown> = {}) {
     lockedReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    subject: { name: "Subject", code: "SUB" },
+    subject: { subjectName: "Subject", subjectCode: "SUB" },
     slots: [
       {
         ...baseSlot, id: "slot-1", assignedQuestion: {

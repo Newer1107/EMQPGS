@@ -12,4 +12,4 @@ export const GET = withApiHandler(async (request) => {
     },
   });
   return paper;
-}, { responsibility: ["DEAN" as ResponsibilityType] });
+}, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });

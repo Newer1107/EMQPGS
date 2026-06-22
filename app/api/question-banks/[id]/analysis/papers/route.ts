@@ -19,4 +19,4 @@ export const GET = withApiHandler(async (request) => {
     orderBy: { createdAt: "desc" },
   });
   return { papers };
-}, { responsibility: ["DEAN" as ResponsibilityType] });
+}, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });

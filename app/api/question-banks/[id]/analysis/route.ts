@@ -11,7 +11,7 @@ export const GET = withApiHandler(async (request, context) => {
   const bankId = segments[4]!;
   const analysis = await orchestrator.getStatus(bankId);
   return analysis ?? { notFound: true };
-}, { responsibility: ["DEAN" as ResponsibilityType] });
+}, { responsibility: ["DEAN" as ResponsibilityType, "COORDINATOR" as ResponsibilityType] });
 
 export const POST = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");

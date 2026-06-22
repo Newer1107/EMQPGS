@@ -209,6 +209,42 @@ export default async function CoordinatorDashboardPage() {
         emptyMessage="All banks are on track"
       />
 
+      {/* UAF Analysis Section */}
+      {data.bankStatuses.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">UAF Quality Analysis</CardTitle>
+              <span className="text-xs text-[var(--text-tertiary)]">Deterministic academic indices</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {data.bankStatuses.slice(0, 6).map((bank) => (
+                <Link
+                  key={bank.id}
+                  href={`/dashboard/coordinator/analysis?bank=${bank.id}`}
+                  className="rounded-lg border border-[var(--border)] p-4 transition-colors hover:bg-[var(--surface-hover)]"
+                >
+                  <p className="text-sm font-medium">{bank.subjectName}</p>
+                  <p className="text-xs text-[var(--text-tertiary)]">{bank.subjectCode}</p>
+                  <div className="mt-2">
+                    <span className="inline-flex items-center rounded-full bg-[var(--accent)]/10 px-2 py-0.5 text-xs font-medium text-[var(--accent)]">
+                      View Analysis →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            {data.bankStatuses.length > 6 && (
+              <p className="mt-3 text-xs text-[var(--text-tertiary)]">
+                +{data.bankStatuses.length - 6} more banks
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {data.activeExamCycles.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
