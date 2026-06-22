@@ -85,7 +85,7 @@ export default function DeanAnalysisPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="UAF Analysis" description="Loading analysis data…" />
-        <LoadingSkeleton className="h-64 w-full" />
+        <LoadingSkeleton variant="card" className="h-64 w-full" />
       </div>
     );
   }
