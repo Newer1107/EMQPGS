@@ -379,6 +379,28 @@ async function main() {
   }
 
   // ──────────────────────────────────────────────
+  // PROMPT VERSIONS (UAF AI Analysis)
+  // ──────────────────────────────────────────────
+  const promptModules = [
+    { moduleId: "SYSTEM_PREAMBLE" as const, version: 1, promptText: "You are an academic quality auditor operating within the Universal Academic Framework (UAF) v3.3. Your role is to interpret deterministic academic evidence and produce structured narrative analysis.\n\nYou NEVER compute, recalculate, modify, or estimate any numerical value.\nYou NEVER reference evidence not provided in the EVIDENCE DATA section.\nYou NEVER invent Course Outcomes, Modules, or metrics not present in the evidence.\nYou ALWAYS return valid JSON matching the OUTPUT SCHEMA.\nYou ALWAYS base findings solely on the evidence provided.\n\nWhen uncertain, state the uncertainty rather than fabricating a conclusion.", contextBudget: 400 },
+    { moduleId: "EXECUTIVE_SUMMARY" as const, version: 1, promptText: "Synthesise all evidence into a concise executive summary.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ keyFindings: string[], overallAssessment: string, majorRisks: string[], accreditationReadiness: \"READY\" | \"PARTIAL\" | \"NOT_READY\" }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 2500 },
+    { moduleId: "BLOOM_ANALYSIS" as const, version: 1, promptText: "Interpret the Bloom's Taxonomy distribution data.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ cognitiveBalance: string[], risks: string[], recommendations: string[] }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 1500 },
+    { moduleId: "DIFFICULTY_ANALYSIS" as const, version: 1, promptText: "Interpret the difficulty distribution and marks-to-complexity alignment data.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ difficultyAssessment: string, rigorLevel: string, marksAlignment: string[] }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 1500 },
+    { moduleId: "CO_COVERAGE" as const, version: 1, promptText: "Interpret the Course Outcome coverage data.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ coverageStatus: string, weakOutcomes: string[], attainmentRisk: string[] }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 2000 },
+    { moduleId: "MODULE_COVERAGE" as const, version: 1, promptText: "Interpret the per-module coverage data.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ moduleAssessment: Record<string, string>, weakModules: string[], strongModules: string[] }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 1500 },
+    { moduleId: "CONCEPT_DIVERSITY" as const, version: 1, promptText: "Assess the concept diversity across questions.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ diversityScore: \"HIGH\" | \"MEDIUM\" | \"LOW\", clusteringRisk: string | null, recommendation: string }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 1500 },
+    { moduleId: "RISK_ANALYSIS" as const, version: 1, promptText: "Synthesise all findings into a structured risk register.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ risks: Array<{ finding: string, educationalRisk: string, institutionalRisk: string | null, priority: \"CRITICAL\" | \"MAJOR\" | \"MODERATE\" | \"MINOR\", affectedModules: string[], affectedCOs: string[] }> }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 2500 },
+    { moduleId: "RECOMMENDATIONS" as const, version: 1, promptText: "Generate actionable recommendations tied to evidence findings.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ recommendations: Array<{ finding: string, recommendation: string, priority: \"CRITICAL\" | \"MAJOR\" | \"MODERATE\" | \"MINOR\", impact: string | null, suggestedActions: string[] }> }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 2500 },
+    { moduleId: "ACADEMIC_QUALITY" as const, version: 1, promptText: "Interpret the Question Construction Quality Index dimensions.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ qualityAssessment: string, strongDimensions: string[], weakDimensions: string[], revisionCandidates: string[] }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 1500 },
+    { moduleId: "FINAL_VERDICT" as const, version: 1, promptText: "Synthesise all evidence into a final moderation verdict.\n\nEVIDENCE DATA:\n{evidence}\n\nOUTPUT SCHEMA:\n{ verdict: \"APPROVED_WITHOUT_MODIFICATION\" | \"APPROVED_WITH_MINOR_IMPROVEMENTS\" | \"APPROVED_SUBJECT_TO_REVISION\" | \"MAJOR_REVISION_REQUIRED\" | \"NOT_APPROVED\", justification: string, keyEvidence: string[], confidence: string }\n\nReturn ONLY valid JSON matching the schema.", contextBudget: 2000 },
+  ];
+
+  for (const pm of promptModules) {
+    await prisma.promptVersion.create({ data: pm });
+  }
+  console.log(`   Prompt Versions:      ${promptModules.length} (UAF AI Analysis)`);
+
+  // ──────────────────────────────────────────────
   // SUMMARY
   // ──────────────────────────────────────────────
   console.log("\n═══════════════════════════════════════════");

@@ -167,6 +167,9 @@ export default async function DeanDashboardPage() {
                   <Link className="text-sm font-medium underline underline-offset-4" href={`/dashboard/dean/review?bank=${item.id}`}>
                     Review papers
                   </Link>
+                  <Link className="text-sm font-medium text-[var(--accent)] underline underline-offset-4" href={`/dashboard/dean/analysis?bank=${item.id}`}>
+                    UAF Analysis
+                  </Link>
                 </div>
               </div>
               {(item.qualityScore != null || item.coverageScore != null || item.aiSummary) ? (

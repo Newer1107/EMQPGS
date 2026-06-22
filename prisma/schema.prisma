@@ -174,6 +174,106 @@ enum BatchSemesterStatus {
   COMPLETED
 }
 
+enum AnalysisStatus {
+  INITIALIZED
+  EXTRACTING
+  COMPUTING
+  AI_PENDING
+  AI_COMPLETE
+  COMPLETE
+  FAILED
+}
+
+enum Classification {
+  EXEMPLARY
+  HIGHLY_EFFECTIVE
+  EFFECTIVE
+  ACCEPTABLE
+  NEEDS_IMPROVEMENT
+  MAJOR_REVISION_REQUIRED
+}
+
+enum ConfidenceClassification {
+  VERY_HIGH
+  HIGH
+  MEDIUM
+  LOW
+  VERY_LOW
+}
+
+enum EvidenceType {
+  DIRECT
+  METADATA
+  CALCULATED
+  PROFESSIONAL_JUDGEMENT
+  UNSUPPORTED
+}
+
+enum FinalVerdict {
+  APPROVED_WITHOUT_MODIFICATION
+  APPROVED_WITH_MINOR_IMPROVEMENTS
+  APPROVED_SUBJECT_TO_REVISION
+  MAJOR_REVISION_REQUIRED
+  NOT_APPROVED
+}
+
+enum IndexCode {
+  SCI
+  MII
+  BDI
+  CVI
+  MCAI
+  DBI
+  QCQI
+  CAI
+  AMI
+  FRI
+  QPQI
+  OCI
+  ECS
+  EQI
+  COA
+  POA
+  PIA
+  RBTA
+  DA
+  MAA
+  QTA
+  MC
+  MCS
+  LOTS
+  HOTS
+  CBR
+}
+
+enum PromptModuleId {
+  EXECUTIVE_SUMMARY
+  BLOOM_ANALYSIS
+  DIFFICULTY_ANALYSIS
+  CO_COVERAGE
+  MODULE_COVERAGE
+  CONCEPT_DIVERSITY
+  RISK_ANALYSIS
+  RECOMMENDATIONS
+  ACADEMIC_QUALITY
+  FINAL_VERDICT
+  SYSTEM_PREAMBLE
+}
+
+enum RiskPriority {
+  CRITICAL
+  MAJOR
+  MODERATE
+  MINOR
+}
+
+enum RiskType {
+  EDUCATIONAL
+  INSTITUTIONAL
+  ASSESSMENT
+  ACCREDITATION
+}
+
 model AcademicYear {
   id              String             @id @default(cuid())
   code            String             @unique
@@ -222,36 +322,37 @@ model Department {
 }
 
 model User {
-  id                       String                     @id @default(cuid())
-  name                     String
-  email                    String                     @unique
-  passwordHash             String
-  status                   UserStatus                 @default(ACTIVE)
-  lastLoginAt              DateTime?
-  homeDepartmentId         String?
-  resetTokenHash           String?
-  resetTokenExpiry         DateTime?
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime                   @updatedAt
-  homeDepartment           Department?                @relation("UserHomeDepartment", fields: [homeDepartmentId], references: [id])
-  responsibilities         ResponsibilityAssignment[]
-  notifications            Notification[]
-  auditLogs                AuditLog[]
-  questionBanks            QuestionBank[]             @relation("questionBankCreator")
-  createdQuestions         QuestionLibraryItem[]      @relation("questionCreator")
-  ownedQuestions           QuestionLibraryItem[]      @relation("questionOwner")
-  moderationEvents         ModerationEvent[]          @relation("moderationEventActor")
-  revisionChanges          QuestionRevision[]         @relation("revisionChangedBy")
-  ownershipToUser          QuestionOwnershipHistory[] @relation("ownershipToUser")
-  ownershipFromUser        QuestionOwnershipHistory[] @relation("ownershipFromUser")
-  ownershipTransferredBy   QuestionOwnershipHistory[] @relation("ownershipTransferredBy")
-  deanReviews              DeanReview[]               @relation("deanReviewSelector")
-  slotReservations         QuestionSlot[]
-  approvalDecisionsCreated ApprovalDecision[]
-  exportArtifacts          ExportArtifact[]           @relation("exportArtifactGenerator")
-  backupsTriggered         SystemBackup[]             @relation("backupTrigger")
-  emergencyApprovalsRequested EmergencyApproval[]      @relation("emergencyApprovalRequestedBy")
-  emergencyApprovalsApproved  EmergencyApproval[]      @relation("emergencyApprovalApprovedBy")
+  id                          String                     @id @default(cuid())
+  name                        String
+  email                       String                     @unique
+  passwordHash                String
+  status                      UserStatus                 @default(ACTIVE)
+  lastLoginAt                 DateTime?
+  homeDepartmentId            String?
+  resetTokenHash              String?
+  resetTokenExpiry            DateTime?
+  createdAt                   DateTime                   @default(now())
+  updatedAt                   DateTime                   @updatedAt
+  homeDepartment              Department?                @relation("UserHomeDepartment", fields: [homeDepartmentId], references: [id])
+  responsibilities            ResponsibilityAssignment[]
+  notifications               Notification[]
+  auditLogs                   AuditLog[]
+  questionBanks               QuestionBank[]             @relation("questionBankCreator")
+  createdQuestions            QuestionLibraryItem[]      @relation("questionCreator")
+  ownedQuestions              QuestionLibraryItem[]      @relation("questionOwner")
+  moderationEvents            ModerationEvent[]          @relation("moderationEventActor")
+  revisionChanges             QuestionRevision[]         @relation("revisionChangedBy")
+  ownershipToUser             QuestionOwnershipHistory[] @relation("ownershipToUser")
+  ownershipFromUser           QuestionOwnershipHistory[] @relation("ownershipFromUser")
+  ownershipTransferredBy      QuestionOwnershipHistory[] @relation("ownershipTransferredBy")
+  deanReviews                 DeanReview[]               @relation("deanReviewSelector")
+  slotReservations            QuestionSlot[]
+  approvalDecisionsCreated    ApprovalDecision[]
+  exportArtifacts             ExportArtifact[]           @relation("exportArtifactGenerator")
+  backupsTriggered            SystemBackup[]             @relation("backupTrigger")
+  emergencyApprovalsRequested EmergencyApproval[]        @relation("emergencyApprovalRequestedBy")
+  emergencyApprovalsApproved  EmergencyApproval[]        @relation("emergencyApprovalApprovedBy")
+  analysisTriggers            QuestionBankAnalysis[]     @relation("analysisTriggeredBy")
 
   @@index([homeDepartmentId])
 }
@@ -324,11 +425,12 @@ model QuestionBank {
   deanReview      DeanReview?
   exportArtifacts ExportArtifact[]
 
-  slots             QuestionSlot[]
-  pattern           PaperPattern?
-  snapshots         QuestionBankSnapshot[]
-  paperSnapshots    PaperSnapshot[]
-  approvalDecisions ApprovalDecision[]
+  slots                QuestionSlot[]
+  pattern              PaperPattern?
+  snapshots            QuestionBankSnapshot[]
+  paperSnapshots       PaperSnapshot[]
+  approvalDecisions    ApprovalDecision[]
+  questionBankAnalyses QuestionBankAnalysis[]
 
   @@unique([batchSemesterId, subjectId])
   @@index([subjectId])
@@ -512,18 +614,18 @@ model ResponsibilityAssignment {
   userId         String
   responsibility ResponsibilityType
   scopeType      ScopeType
-  scopeId        String?            // Department.id or QuestionBank.id (app-validated)
+  scopeId        String? // Department.id or QuestionBank.id (app-validated)
   activeFrom     DateTime           @default(now())
   activeTo       DateTime?
-  assignedById   String?            // User who created this assignment
+  assignedById   String? // User who created this assignment
   assignedAt     DateTime           @default(now())
-  deletedAt      DateTime?          // Soft-delete: set when revoked
-  deletedById    String?            // User who revoked this assignment
-  deletionReason String?            // Why it was revoked
+  deletedAt      DateTime? // Soft-delete: set when revoked
+  deletedById    String? // User who revoked this assignment
+  deletionReason String? // Why it was revoked
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
-  user           User               @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, responsibility, scopeType, scopeId])
   @@index([userId])
@@ -586,18 +688,18 @@ model AuditLog {
 /// Codes are bound to user + action + resource (paper/operation) + session.
 /// Hashed with bcrypt before storage. Single-use via atomic UPDATE.
 model OtpCode {
-  id        String   @id @default(cuid())
-  userId    String
-  purpose   String   // "DEAN_REVEAL" | "DEAN_APPROVE" | "COE_DOWNLOAD" | "COE_MARK_USED" | "COE_ARCHIVE" | "COE_EXPORT"
-  resourceId String? // Paper ID or QuestionBank ID this OTP authorizes
-  sessionId String?  // JTI of the session that requested the OTP
+  id                 String    @id @default(cuid())
+  userId             String
+  purpose            String // "DEAN_REVEAL" | "DEAN_APPROVE" | "COE_DOWNLOAD" | "COE_MARK_USED" | "COE_ARCHIVE" | "COE_EXPORT"
+  resourceId         String? // Paper ID or QuestionBank ID this OTP authorizes
+  sessionId          String? // JTI of the session that requested the OTP
   browserFingerprint String? // SHA-256 hash of UA + Accept-Language + platform
-  codeHash  String   // bcrypt hash of the 6-digit code
-  expiresAt DateTime
-  attemptCount Int   @default(0)
-  securityEventId String?
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
+  codeHash           String // bcrypt hash of the 6-digit code
+  expiresAt          DateTime
+  attemptCount       Int       @default(0)
+  securityEventId    String?
+  usedAt             DateTime?
+  createdAt          DateTime  @default(now())
 
   @@index([userId, purpose, createdAt])
   @@index([expiresAt])
@@ -626,9 +728,9 @@ model PaperDownload {
   ipAddress       String?
   userAgent       String?
   sessionId       String?
-  auditLogId      String?  // Link to the AuditLog entry
-  downloadReason  String?  // EXAM_PRINTING | QUALITY_REVIEW | ARCHIVE | OTHER
-  securityEventId String?  // Correlation ID linking OTP flow → download
+  auditLogId      String? // Link to the AuditLog entry
+  downloadReason  String? // EXAM_PRINTING | QUALITY_REVIEW | ARCHIVE | OTHER
+  securityEventId String? // Correlation ID linking OTP flow → download
 
   @@index([paperId, downloadedAt])
   @@index([downloadId])
@@ -638,21 +740,21 @@ model PaperDownload {
 /// Two-person approval workflow for emergency security actions.
 /// Requires 2 distinct COE users to approve before execution.
 model EmergencyApproval {
-  id            String   @id @default(cuid())
-  action        String   // "DISABLE_LOCKDOWN" | "ENABLE_DOWNLOADS" | "EMERGENCY_OVERRIDE"
+  id            String    @id @default(cuid())
+  action        String // "DISABLE_LOCKDOWN" | "ENABLE_DOWNLOADS" | "EMERGENCY_OVERRIDE"
   targetUserId  String?
   reason        String
   requestedById String
-  requestedAt   DateTime @default(now())
+  requestedAt   DateTime  @default(now())
   approvedById  String?
   approvedAt    DateTime?
-  status        String   @default("PENDING") // PENDING | APPROVED | REJECTED | EXPIRED
+  status        String    @default("PENDING") // PENDING | APPROVED | REJECTED | EXPIRED
   expiresAt     DateTime
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  requestedBy User   @relation("emergencyApprovalRequestedBy", fields: [requestedById], references: [id])
-  approvedBy  User?  @relation("emergencyApprovalApprovedBy", fields: [approvedById], references: [id])
+  requestedBy User  @relation("emergencyApprovalRequestedBy", fields: [requestedById], references: [id])
+  approvedBy  User? @relation("emergencyApprovalApprovedBy", fields: [approvedById], references: [id])
 
   @@index([status, expiresAt])
 }
@@ -693,7 +795,7 @@ model AiReport {
   questionBankId  String
   status          AiReportStatus @default(PENDING)
   modelName       String
-    summary         String?       @db.Text
+  summary         String?        @db.Text
   reportJson      Json?
   chartData       Json?
   failureReason   String?
@@ -701,11 +803,13 @@ model AiReport {
   generatedAt     DateTime?
   jsonFileAssetId String?
   pdfFileAssetId  String?
+  paperAnalysisId String?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   questionBank    QuestionBank   @relation(fields: [questionBankId], references: [id])
   jsonFileAsset   FileAsset?     @relation("aiReportJsonAsset", fields: [jsonFileAssetId], references: [id])
   pdfFileAsset    FileAsset?     @relation("aiReportPdfAsset", fields: [pdfFileAssetId], references: [id])
+  paperAnalysis   PaperAnalysis? @relation(fields: [paperAnalysisId], references: [id])
 
   @@index([questionBankId, status])
 }
@@ -730,6 +834,7 @@ model GeneratedPaper {
   questionBank     QuestionBank          @relation(fields: [questionBankId], references: [id])
   paperFileAsset   FileAsset?            @relation("generatedPaperFileAsset", fields: [paperFileAssetId], references: [id])
   items            GeneratedPaperItem[]
+  paperAnalyses    PaperAnalysis[]
 
   @@unique([questionBankId, variant])
 }
@@ -916,4 +1021,251 @@ model TeachingGroup {
   batch Batch @relation(fields: [batchId], references: [id])
 
   @@unique([batchId, groupNumber])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// UAF AI Analysis Models
+// ═══════════════════════════════════════════════════════════════
+
+/// Root aggregate for one complete UAF evaluation of a QuestionBank.
+model QuestionBankAnalysis {
+  id             String         @id @default(cuid())
+  questionBankId String
+  version        Int            @default(1)
+  status         AnalysisStatus @default(INITIALIZED)
+  triggeredById  String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+
+  // Version metadata (for reproducibility)
+  evaluationEngineVersion String?
+  analysisSchemaVersion   String?
+  ollamaModel             String?
+  ollamaContext           Int?
+  ollamaTemperature       Float?
+
+  // Results
+  qpqi                   Float?
+  qpqiClassification     Classification?
+  oci                    Float?
+  ociClassification      ConfidenceClassification?
+  finalVerdict           FinalVerdict?
+  executiveSummary       String?                   @db.Text
+  accreditationReadiness Json?
+
+  // Error tracking
+  failureReason String?
+  errorDetails  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  questionBank QuestionBank @relation(fields: [questionBankId], references: [id])
+  triggeredBy  User?        @relation("analysisTriggeredBy", fields: [triggeredById], references: [id])
+
+  // Child collections
+  versions        AnalysisVersion[]
+  metrics         UAFMetric[]
+  risks           Risk[]
+  recommendations Recommendation[]
+  evidenceItems   AnalysisEvidence[]
+  paperAnalyses   PaperAnalysis[]
+
+  @@unique([questionBankId, version])
+  @@index([questionBankId, status])
+  @@index([questionBankId, createdAt])
+}
+
+/// Immutable version record for a single analysis run.
+model AnalysisVersion {
+  id                      String   @id @default(cuid())
+  questionBankAnalysisId  String
+  versionNumber           Int
+  evaluationEngineVersion String
+  promptVersionString     String?
+  analysisSchemaVersion   String
+  ollamaModel             String?
+  ollamaContext           Int?
+  ollamaTemperature       Float?
+  evidenceHash            String?
+  promptVersionId         String?
+  createdAt               DateTime @default(now())
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+  promptVersion        PromptVersion?       @relation(fields: [promptVersionId], references: [id])
+  evidenceSnapshot     EvidenceSnapshot?
+  analysisSnapshot     AnalysisSnapshot?
+
+  @@unique([questionBankAnalysisId, versionNumber])
+  @@index([questionBankAnalysisId, versionNumber])
+  @@index([evidenceHash])
+}
+
+/// The exact deterministic evidence package sent to Ollama. Persisted for reproducibility.
+model EvidenceSnapshot {
+  id                          String   @id @default(cuid())
+  analysisVersionId           String   @unique
+  totalQuestions              Int
+  verifiedQuestions           Int
+  unableToVerifyQuestions     Int
+  missingDataQuestions        Int
+  extractionCompletenessScore Float?
+  extractionQualityIndex      Float?
+  evidenceSummary             Json?
+  sourceDataSnapshot          Json?
+  evidenceHash                String?
+  sizeBytes                   Int?
+  createdAt                   DateTime @default(now())
+
+  // Relations
+  analysisVersion AnalysisVersion @relation(fields: [analysisVersionId], references: [id], onDelete: Cascade)
+}
+
+/// Point-in-time snapshot of a completed analysis — the read model for the Dean's UI.
+model AnalysisSnapshot {
+  id                  String   @id @default(cuid())
+  analysisVersionId   String   @unique
+  fullReport          Json? // All 15 phases output
+  strengths           Json? // Top 5 institutional strengths
+  weaknesses          Json? // Top 5 institutional weaknesses
+  recommendationsJson Json? // Full recommendation register
+  createdAt           DateTime @default(now())
+
+  // Relations
+  analysisVersion AnalysisVersion @relation(fields: [analysisVersionId], references: [id], onDelete: Cascade)
+}
+
+/// UAF analysis scoped to a single GeneratedPaper (variant A/B/C).
+model PaperAnalysis {
+  id                     String   @id @default(cuid())
+  questionBankAnalysisId String
+  generatedPaperId       String
+  indexValues            Json? // Per-paper index values
+  aiNarrative            Json? // Per-paper AI narrative
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+  generatedPaper       GeneratedPaper       @relation(fields: [generatedPaperId], references: [id])
+  aiReports            AiReport[]
+
+  @@unique([questionBankAnalysisId, generatedPaperId])
+  @@index([questionBankAnalysisId])
+  @@index([generatedPaperId])
+}
+
+/// One computed index or sub-metric. Immutable after computation.
+model UAFMetric {
+  id                     String          @id @default(cuid())
+  questionBankAnalysisId String
+  indexCode              IndexCode
+  value                  Float? // 0.00-1.00 or null on failure
+  classification         Classification?
+  weight                 Float? // For QPQI composition
+  weightedScore          Float?
+  formulaUsed            String?
+  computationOrder       Int?
+  notes                  String?         @db.Text
+  createdAt              DateTime        @default(now())
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+  confidence           ConfidenceScore?
+
+  @@unique([questionBankAnalysisId, indexCode])
+  @@index([questionBankAnalysisId, indexCode])
+  @@index([indexCode, value])
+}
+
+/// Confidence associated with a UAFMetric.
+model ConfidenceScore {
+  id             String                   @id @default(cuid())
+  uafMetricId    String                   @unique
+  verifiedItems  Int
+  requiredItems  Int
+  score          Float
+  percentage     Float
+  classification ConfidenceClassification
+  justification  String?                  @db.Text
+  createdAt      DateTime                 @default(now())
+
+  // Relations
+  uafMetric UAFMetric @relation(fields: [uafMetricId], references: [id], onDelete: Cascade)
+}
+
+/// One risk entry from the risk register.
+model Risk {
+  id                     String       @id @default(cuid())
+  questionBankAnalysisId String
+  finding                String       @db.Text
+  educationalRisk        String?      @db.Text
+  institutionalRisk      String?      @db.Text
+  priority               RiskPriority
+  riskType               RiskType?
+  affectedModules        Json?
+  affectedCOs            Json?
+  evidenceReference      String?
+  createdAt              DateTime     @default(now())
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([questionBankAnalysisId, priority])
+  @@index([questionBankAnalysisId, riskType])
+}
+
+/// One recommendation from the recommendation register.
+model Recommendation {
+  id                     String       @id @default(cuid())
+  questionBankAnalysisId String
+  finding                String       @db.Text
+  recommendation         String       @db.Text
+  priority               RiskPriority
+  impact                 String?      @db.Text
+  suggestedActions       Json?
+  evidenceReference      String?
+  createdAt              DateTime     @default(now())
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([questionBankAnalysisId, priority])
+}
+
+/// One piece of evidence available during analysis.
+model AnalysisEvidence {
+  id                     String       @id @default(cuid())
+  questionBankAnalysisId String
+  evidenceType           EvidenceType
+  level                  Int
+  category               String?
+  description            String?      @db.Text
+  sourceReference        String?
+  createdAt              DateTime     @default(now())
+
+  // Relations
+  questionBankAnalysis QuestionBankAnalysis @relation(fields: [questionBankAnalysisId], references: [id], onDelete: Cascade)
+
+  @@index([questionBankAnalysisId, evidenceType])
+}
+
+/// Immutable record of a prompt version used for AI analysis.
+model PromptVersion {
+  id            String         @id @default(cuid())
+  moduleId      PromptModuleId
+  version       Int
+  promptText    String         @db.Text
+  outputSchema  Json?
+  contextBudget Int?
+  createdAt     DateTime       @default(now())
+  supersededAt  DateTime?
+
+  // Relations
+  analysisVersions AnalysisVersion[]
+
+  @@unique([moduleId, version])
+  @@index([moduleId, supersededAt])
 }
