@@ -20,8 +20,8 @@ export class Persistence {
         data: {
           analysisVersionId,
           fullReport: JSON.parse(JSON.stringify({ result: analysisResult, snapshot: snapshotData })),
-          strengths: JSON.parse("[]"),
-          weaknesses: JSON.parse("[]"),
+          strengths: JSON.parse(JSON.stringify(analysisResult.strengths)),
+          weaknesses: JSON.parse(JSON.stringify(analysisResult.weaknesses)),
           recommendationsJson: JSON.parse(JSON.stringify(analysisResult.recommendations)),
         },
       });

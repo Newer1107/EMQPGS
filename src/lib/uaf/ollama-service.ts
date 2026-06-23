@@ -52,20 +52,33 @@ export class OllamaService implements AiProvider {
 
   /**
    * Analyzes a single module with retry logic.
-   * Retry policy: attempt 1 (timeout/error) → attempt 2 (same) → attempt 3 (same) → fallback
+   * ponytail: maxRetries=1 — the caller (EvaluationOrchestrator) already handles
+   * fallback (deterministic commentary).  Retrying a 500 from Ollama for 360s
+   * just to fall back wastes time.  Fail fast, fall back fast.
    */
   async analyzeWithRetry(
     prompt: string,
     moduleId: string,
     options?: AiOptions,
   ): Promise<{ result: AiResult | null; retryCount: number }> {
-    const maxRetries = 3;
+    const maxRetries = 1;
+    const promptChars = prompt.length;
+    const estimatedTokens = Math.ceil(promptChars / 4);
+
+    logger.info("Ollama call starting", {
+      moduleId,
+      promptChars,
+      estimatedTokens,
+      model: options?.model ?? this.defaultModel,
+      context: options?.context ?? 8192,
+    });
+
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000); // 120s timeout
+        const timeout = setTimeout(() => controller.abort(), 120000);
 
         const result = await this.analyze(prompt, {
           ...options,
@@ -79,6 +92,7 @@ export class OllamaService implements AiProvider {
           attempt,
           model: result.model,
           durationMs: result.durationMs,
+          tokensUsed: result.tokensUsed,
         });
 
         return { result, retryCount: attempt - 1 };
@@ -88,18 +102,17 @@ export class OllamaService implements AiProvider {
           moduleId,
           attempt,
           error: lastError.message,
+          promptChars,
+          estimatedTokens,
         });
-
-        if (attempt < maxRetries) {
-          // Exponential backoff: 1s, 2s, 4s
-          await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt - 1)));
-        }
       }
     }
 
-    logger.error("Ollama module exhausted retries", {
+    logger.warn("Ollama call exhausted — returning null", {
       moduleId,
       error: lastError?.message,
+      promptChars,
+      estimatedTokens,
     });
 
     return { result: null, retryCount: maxRetries };

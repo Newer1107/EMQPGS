@@ -1,84 +1,79 @@
 // ── Evaluation AI Prompt Builder ──────────────────────────────────
 // Builds structured prompts for Ollama to generate pedagogical commentary.
 // The AI NEVER computes numbers — it only explains results.
+// ponytail: prompt is aggressively summarized — per-module data aggregated,
+// question findings capped at 15, system boilerplate minimal.
 
 import type { EvaluationEvidence } from "./types";
 
 // ── Prompt Version Tracking ──────────────────────────────────────
-export const EVALUATION_PROMPT_VERSION = "eval-prompt-1.0.0";
+export const EVALUATION_PROMPT_VERSION = "eval-prompt-1.1.0";
 
+/**
+ * Build a compact prompt for Ollama by aggregating per-module data and
+ * capping verbose sections (question findings).  The full evidence is
+ * still persisted — Ollama only gets a focused summary to stay within
+ * the default 8192-token context window.
+ */
 export function buildEvaluationPrompt(evidence: EvaluationEvidence): string {
-  return `You are an Academic Quality Auditor evaluating a question bank for a university course. Your role is to provide pedagogical analysis and recommendations.
+  const filledPct = evidence.totalQuestions > 0
+    ? Math.round(evidence.moduleSummaries.filter(m => m.filledSlots > 0).length / evidence.totalModules * 100)
+    : 0;
 
-You MUST follow these rules:
-1. NEVER compute numbers yourself — the evidence already contains all metrics.
-2. For EVERY remark, include: Observation → Pedagogical rationale → Recommendation.
-3. Reference educational frameworks where applicable (OBE, Constructive Alignment, Revised Bloom's Taxonomy, TED, 5W1H, PEACE, OSCAR, Funneling, Pyramid Strategy, Six Thinking Hats, Five Whys).
-4. Be specific — reference actual module numbers, question counts, and metrics.
-5. Keep commentary concise (2-4 paragraphs per section).
+  const weakCos = evidence.coCoverage.filter(c => c.coveragePct < 50).map(c => c.co);
+  const coverageNote = weakCos.length > 0
+    ? `Weak coverage: ${weakCos.join(", ")}`
+    : "All COs adequately covered";
 
-## Evidence Summary
+  const topFindings = evidence.questionFindings.slice(0, 15);
+  const extraFindings = evidence.questionFindings.length - 15;
 
-- **Total Questions**: ${evidence.totalQuestions}
-- **Total Modules**: ${evidence.totalModules}
-- **Total Marks**: ${evidence.totalMarks}
-- **Overall Score**: ${(evidence.overallAverage * 100).toFixed(0)}%
-- **Verdict**: ${evidence.verdict.verdict} (threshold: ≥${(evidence.verdict.thresholds.highlyEffective * 100).toFixed(0)}% = Highly Effective, ≥${(evidence.verdict.thresholds.moderatelyEffective * 100).toFixed(0)}% = Moderately Effective)
+  const rbtLines = evidence.moduleRbt.slice(0, 6).map(m =>
+    `M${m.moduleNumber}: R${m.distribution.remember} U${m.distribution.understand} Ap${m.distribution.apply} An${m.distribution.analyze} E${m.distribution.evaluate} C${m.distribution.create}`
+  );
+  const rbtSummary = rbtLines.length > 0 ? rbtLines.join(" | ") : "No RBT data";
+
+  return `You are an Academic Quality Auditor evaluating a question bank. Provide analysis for each section below as JSON. Be concise (1-2 paragraphs per section). Reference actual module/question counts.
+
+## Data Summary
+Questions: ${evidence.totalQuestions} | Modules: ${evidence.totalModules} | Marks: ${evidence.totalMarks}
+Fill rate: ${filledPct}% | Completeness: ${evidence.overallCompleteness}%
+Alignment: ${(evidence.alignmentScore * 100).toFixed(0)}% | Overall: ${(evidence.overallAverage * 100).toFixed(0)}%
+Verdict: ${evidence.verdict.verdict}
 
 ## Module Summaries
-${evidence.moduleSummaries.map((m) => `Module ${m.moduleNumber}: ${m.filledSlots}/${m.totalSlots} slots filled, ${m.totalMarks} marks. COs: ${m.articulation}. Category: ${m.category}.`).join("\n")}
+${evidence.moduleSummaries.slice(0, 6).map(m => `M${m.moduleNumber}: ${m.filledSlots}/${m.totalSlots} filled, ${m.totalMarks}m, COs=${m.articulation}, ${m.category}`).join("\n")}
 
-## Attribute Completeness
-${evidence.completenessPerModule.map((m) => `Module ${m.moduleNumber}: ${m.completenessPct}% complete (${m.metadataComplete}/${m.totalQuestions} questions fully specified)`).join("\n")}
-Overall completeness: ${evidence.overallCompleteness}%
+## RBT
+Overall: R${evidence.rbtDistribution.remember} U${evidence.rbtDistribution.understand} Ap${evidence.rbtDistribution.apply} An${evidence.rbtDistribution.analyze} E${evidence.rbtDistribution.evaluate} C${evidence.rbtDistribution.create}
+Per-module: ${rbtSummary}
 
-## RBT Distribution
-Overall: Remember ${evidence.rbtDistribution.remember}, Understand ${evidence.rbtDistribution.understand}, Apply ${evidence.rbtDistribution.apply}, Analyze ${evidence.rbtDistribution.analyze}, Evaluate ${evidence.rbtDistribution.evaluate}, Create ${evidence.rbtDistribution.create}
-${evidence.moduleRbt.map((m) => `Module ${m.moduleNumber}: R=(${m.distribution.remember}) U=(${m.distribution.understand}) Ap=(${m.distribution.apply}) An=(${m.distribution.analyze}) E=(${m.distribution.evaluate}) C=(${m.distribution.create})`).join("\n")}
+## Difficulty: E=${evidence.difficultyDistribution.easy} M=${evidence.difficultyDistribution.medium} H=${evidence.difficultyDistribution.hard}
+## CO Coverage: ${coverageNote}
+## Quality: ${evidence.qualityMetrics.slice(0, 6).map(m => `M${m.moduleNumber}: C${(m.clarity*100).toFixed(0)}% R${(m.relevance*100).toFixed(0)}% RBT${(m.rbtAccuracy*100).toFixed(0)}%`).join(" | ")}
+## Scores: ${evidence.consolidatedScores.slice(0, 6).map(m => `M${m.moduleNumber}: ${(m.average*100).toFixed(0)}%`).join(" | ")}
 
-## Difficulty Distribution
-Overall: Easy ${evidence.difficultyDistribution.easy}, Medium ${evidence.difficultyDistribution.medium}, Hard ${evidence.difficultyDistribution.hard}
-
-## Marks Distribution
-${Object.entries(evidence.marksDistribution).map(([marks, count]) => `${marks} marks: ${count} questions`).join("\n")}
-
-## CO Coverage
-${evidence.coCoverage.map((c) => `${c.co}: ${c.totalQuestions} questions across ${c.modules.join(", ")} modules (${c.coveragePct}% coverage)`).join("\n")}
-
-## Constructive Alignment Score: ${(evidence.alignmentScore * 100).toFixed(0)}%
-
-## Quality Metrics
-${evidence.qualityMetrics.map((m) => `Module ${m.moduleNumber}: Clarity=${(m.clarity * 100).toFixed(0)}%, Relevance=${(m.relevance * 100).toFixed(0)}%, RBT Accuracy=${(m.rbtAccuracy * 100).toFixed(0)}%, Remarks: ${m.remarks}`).join("\n")}
-
-## Consolidated Scores
-${evidence.consolidatedScores.map((m) => `Module ${m.moduleNumber}: Average=${(m.average * 100).toFixed(0)}%`).join("\n")}
-
-## Question-Level Findings
-${evidence.questionFindings.length > 0 ? evidence.questionFindings.map((f) => `Slot ${f.slotId} (Module ${f.moduleNumber}, ${f.marks} marks): ${f.problem} → ${f.recommendation}`).join("\n") : "No issues detected."}
+## Findings (${evidence.questionFindings.length} total)
+${topFindings.length > 0 ? topFindings.map(f => `M${f.moduleNumber} ${f.marks}m: ${f.problem} → ${f.recommendation}`).join("\n") : "No issues detected."}
+${extraFindings > 0 ? `...and ${extraFindings} more findings (see full report).` : ""}
 
 ---
 
-## Your Task
-
-Provide analysis for each section in exactly the following JSON structure. Respond with valid JSON only — no markdown, no prose outside the JSON.
-
-\`\`\`json
+Respond with this JSON structure only — no markdown, no prose:
 {
-  "moduleSummaryNarrative": "Analysis of module distribution and balance...",
-  "attributeNarrative": "Interpretation of metadata completeness...",
-  "rbtNarrative": "Bloom's taxonomy distribution analysis...",
-  "difficultyNarrative": "Difficulty progression assessment...",
-  "marksNarrative": "Marks distribution assessment...",
-  "coCoverageNarrative": "CO coverage analysis...",
-  "alignmentNarrative": "Constructive alignment assessment...",
-  "qualityNarrative": "Quality metrics interpretation...",
-  "finalAssessmentNarrative": "Overall module assessment...",
-  "verdictNarrative": "Final verdict explanation...",
-  "findingsNarrative": "Summary of question-level issues...",
-  "strengths": ["Strength 1", "Strength 2", "Strength 3"],
-  "weaknesses": ["Weakness 1", "Weakness 2", "Weakness 3"],
-  "improvementRoadmap": ["Step 1", "Step 2", "Step 3"]
-}
-\`\`\`
-`;
+  "moduleSummaryNarrative": "...",
+  "attributeNarrative": "...",
+  "rbtNarrative": "...",
+  "difficultyNarrative": "...",
+  "marksNarrative": "...",
+  "coCoverageNarrative": "...",
+  "alignmentNarrative": "...",
+  "qualityNarrative": "...",
+  "finalAssessmentNarrative": "...",
+  "verdictNarrative": "...",
+  "findingsNarrative": "...",
+  "strengths": ["...", "..."],
+  "weaknesses": ["...", "..."],
+  "improvementRoadmap": ["...", "...", "..."]
+}`;
 }

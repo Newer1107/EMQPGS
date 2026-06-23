@@ -170,7 +170,7 @@ export class AiOrchestrator {
         await this.updateStatus(analysis.id, "AI_COMPLETE");
       }
 
-      // Stage 7: Build final analysis snapshot
+      // Stage 7: Build final analysis snapshot (passing snapshotData for fallback generation)
       const result = await this.analysisBuilder.assemble(
         analysis.id,
         version.id,

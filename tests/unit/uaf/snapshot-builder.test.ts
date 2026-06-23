@@ -11,6 +11,7 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
     filledSlots: 10,
     totalMarks: 100,
     extractionTimestamp: "2026-06-22T00:00:00.000Z",
+    marksOptions: [2, 5, 10],
     questions: [
       {
         questionIndex: 1,
@@ -25,6 +26,8 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
         coStatus: "VERIFIED",
         rbtStatus: "VERIFIED",
         difficultyStatus: "VERIFIED",
+        questionStatus: null,
+        clarityScore: 0,
       },
       {
         questionIndex: 2,
@@ -39,6 +42,8 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
         coStatus: "VERIFIED",
         rbtStatus: "UNABLE_TO_VERIFY",
         difficultyStatus: "VERIFIED",
+        questionStatus: null,
+        clarityScore: 0,
       },
       {
         questionIndex: 3,
@@ -53,6 +58,8 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
         coStatus: "MISSING_DATA",
         rbtStatus: "MISSING_DATA",
         difficultyStatus: "MISSING_DATA",
+        questionStatus: null,
+        clarityScore: 0,
       },
       {
         questionIndex: 4,
@@ -67,6 +74,8 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
         coStatus: "UNABLE_TO_VERIFY",
         rbtStatus: "VERIFIED",
         difficultyStatus: "UNABLE_TO_VERIFY",
+        questionStatus: null,
+        clarityScore: 0,
       },
     ],
     modules: [
@@ -269,6 +278,10 @@ describe("SnapshotBuilder", () => {
         difficulty: { EASY: 1, MEDIUM: 1, HARD: 1 },
         coCoverage: { CO1: 1, CO2: 1, CO3: 1 },
         moduleCoverage: { "Module 1": 2, "Module 2": 2 },
+        marksDistribution: {},
+        questionTypeDistribution: {},
+        questionStatusDistribution: {},
+        moduleMarks: {},
       },
       detectedRisks: ["BDI: NEEDS_IMPROVEMENT (0.45)"],
       outlierLists: [],

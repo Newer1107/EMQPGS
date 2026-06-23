@@ -52,6 +52,8 @@ function baseQuestion(overrides: Partial<ExtractedQuestionData> = {}): Extracted
     coStatus: "VERIFIED",
     rbtStatus: "VERIFIED",
     difficultyStatus: "VERIFIED",
+    questionStatus: null,
+    clarityScore: 0,
     ...overrides,
   };
 }
@@ -67,6 +69,7 @@ function makeData(questions: ExtractedQuestionData[], overrides: Partial<RawBank
     modules: [],
     totalMarks: questions.reduce((s, q) => s + q.marks, 0),
     extractionTimestamp: "2026-06-22T00:00:00Z",
+    marksOptions: [2, 5, 10],
     ...overrides,
   };
 }
@@ -609,7 +612,7 @@ describe("computeDBI", () => {
 
 describe("computeQCQI", () => {
   it("returns null because it requires AI/human evaluation", () => {
-    const result = computeQCQI();
+    const result = computeQCQI(makeData([]));
     expect(result.value).toBeNull();
     expect(result.weight).toBe(0.15);
     expect(result.computationOrder).toBe(21);
@@ -637,7 +640,7 @@ describe("computeCAI", () => {
 
 describe("computeAMI", () => {
   it("returns null because moderation criteria are unavailable", () => {
-    const result = computeAMI();
+    const result = computeAMI(makeData([]));
     expect(result.value).toBeNull();
     expect(result.weight).toBe(0.05);
     expect(result.computationOrder).toBe(23);
@@ -646,7 +649,7 @@ describe("computeAMI", () => {
 
 describe("computeFRI", () => {
   it("returns null because future readiness criteria are unavailable", () => {
-    const result = computeFRI();
+    const result = computeFRI(makeData([]));
     expect(result.value).toBeNull();
     expect(result.weight).toBe(0.05);
     expect(result.computationOrder).toBe(24);

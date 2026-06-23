@@ -76,20 +76,27 @@ export default function CoordinatorEvaluationPage() {
     setRunningIds((prev) => new Set(prev).add(bankId));
     try {
       await apiFetch(`/api/question-banks/${bankId}/evaluation`, { method: "POST" });
-      // Refresh
-      const refreshRes = await apiFetch(`/api/question-banks/${bankId}/evaluation`);
-      const refreshBody = await refreshRes.json();
-      if (!refreshBody.notFound && refreshBody.versions?.[0]?.analysisSnapshot?.fullReport) {
-        const report = refreshBody.versions[0].analysisSnapshot.fullReport;
-        setBanks((prev) =>
-          prev.map((b) =>
-            b.id === bankId
-              ? { ...b, hasEvaluation: true, latestVerdict: report.verdict.verdict, latestScore: report.verdict.overallScore, latestDate: new Date().toISOString() }
-              : b
-          )
-        );
+      // Poll for results — server may be processing AI commentary
+      const pollStart = Date.now();
+      const POLL_TIMEOUT = 120_000;
+      const POLL_INTERVAL = 3_000;
+      while (Date.now() - pollStart < POLL_TIMEOUT) {
+        const refreshRes = await apiFetch(`/api/question-banks/${bankId}/evaluation`);
+        const refreshBody = await refreshRes.json();
+        if (refreshBody.versions?.[0]?.analysisSnapshot?.fullReport) {
+          const report = refreshBody.versions[0].analysisSnapshot.fullReport;
+          setBanks((prev) =>
+            prev.map((b) =>
+              b.id === bankId
+                ? { ...b, hasEvaluation: true, latestVerdict: report.verdict.verdict, latestScore: report.verdict.overallScore, latestDate: new Date().toISOString() }
+                : b
+            )
+          );
+          break;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
       }
-    } catch { /* ignore */ }
+    } catch { /* swallow fetch errors silently on list page */ }
     setRunningIds((prev) => { const next = new Set(prev); next.delete(bankId); return next; });
   }, []);
 

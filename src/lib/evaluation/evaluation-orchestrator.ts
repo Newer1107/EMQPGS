@@ -9,6 +9,7 @@
 
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { EvaluationEngine } from "./evaluation-engine";
 import { buildEvaluationPrompt, EVALUATION_PROMPT_VERSION } from "./evaluation-prompt";
 import {
@@ -34,6 +35,9 @@ export class EvaluationOrchestrator {
     triggeredById: string,
     options?: { forceRegenerate?: boolean },
   ): Promise<{ analysisId: string; versionId: string; report: EvaluationReport }> {
+    const startWall = Date.now();
+    logger.info("Evaluation started", { questionBankId, triggeredById, forceRegenerate: !!options?.forceRegenerate });
+
     // 1. Resolve next version
     const lastAnalysis = await prisma.questionBankAnalysis.findFirst({
       where: { questionBankId },
@@ -56,13 +60,17 @@ export class EvaluationOrchestrator {
 
     try {
       // 3. Collect evidence
+      const t0 = Date.now();
       await this.updateStatus(analysis.id, "EXTRACTING" as AnalysisStatus);
       const bankData = await this.collectEvidence(questionBankId);
       const questions = bankData.questions.filter((q) => q.questionText !== null);
+      logger.info("Evidence collected", { analysisId: analysis.id, durationMs: Date.now() - t0, questions: questions.length });
 
       // 4. Deterministic computation
+      const t1 = Date.now();
       await this.updateStatus(analysis.id, "COMPUTING" as AnalysisStatus);
       const deterministic = this.engine.evaluate(bankData);
+      logger.info("Deterministic computed", { analysisId: analysis.id, durationMs: Date.now() - t1, overallAverage: deterministic.overallAverage });
 
       // 5. Build evidence snapshot
       const evidence: EvaluationEvidence = {
@@ -87,6 +95,7 @@ export class EvaluationOrchestrator {
       const evidenceHash = this.computeHash(evidence, EVALUATION_ENGINE_VERSION);
 
       // 6. Create analysis version
+      const t2 = Date.now();
       await this.updateStatus(analysis.id, "AI_PENDING" as AnalysisStatus);
       const version = await prisma.analysisVersion.create({
         data: {
@@ -113,6 +122,7 @@ export class EvaluationOrchestrator {
           sourceDataSnapshot: JSON.parse(JSON.stringify(evidence)),
         },
       });
+      logger.info("Version+snapshot persisted", { analysisId: analysis.id, versionId: version.id, durationMs: Date.now() - t2, evidenceSizeBytes: JSON.stringify(evidence).length });
 
       // 8. Cache check — skip AI if same hash exists
       let aiCommentary: Awaited<ReturnType<typeof this.callAiForCommentary>> | null = null;
@@ -127,6 +137,7 @@ export class EvaluationOrchestrator {
           orderBy: { createdAt: "desc" },
         });
         if (priorVersion) {
+          logger.info("Cache hit — skipping AI", { analysisId: analysis.id, evidenceHash });
           aiCommentary = {
             moduleSummaryNarrative: "Analysis reused from prior evaluation.",
             attributeNarrative: "",
@@ -148,7 +159,9 @@ export class EvaluationOrchestrator {
 
       // 9. Call AI for commentary (if no cache hit)
       if (!aiCommentary) {
+        const t3 = Date.now();
         aiCommentary = await this.callAiForCommentary(evidence);
+        logger.info("AI commentary complete", { analysisId: analysis.id, durationMs: Date.now() - t3, isFallback: aiCommentary.moduleSummaryNarrative.startsWith("The question bank contains") });
       }
 
       await this.updateStatus(analysis.id, "AI_COMPLETE" as AnalysisStatus);
@@ -168,8 +181,10 @@ export class EvaluationOrchestrator {
         },
       });
 
+      logger.info("Evaluation complete", { analysisId: analysis.id, versionId: version.id, totalDurationMs: Date.now() - startWall, status: "COMPLETE" });
       return { analysisId: analysis.id, versionId: version.id, report };
     } catch (error) {
+      logger.error("Evaluation failed", { analysisId: analysis.id, error: (error as Error).message, durationMs: Date.now() - startWall });
       await prisma.questionBankAnalysis.update({
         where: { id: analysis.id },
         data: {
@@ -323,21 +338,48 @@ export class EvaluationOrchestrator {
   }
 
   private async callAiForCommentary(evidence: EvaluationEvidence): Promise<AiCommentaryResult> {
+    const prompt = buildEvaluationPrompt(evidence);
+    const promptChars = prompt.length;
+    const estimatedTokens = Math.ceil(promptChars / 4);
+    const findingsCount = evidence.questionFindings.length;
+
+    logger.info("AI prompt built", {
+      promptChars,
+      estimatedTokens,
+      findingsCount,
+      questionCount: evidence.totalQuestions,
+    });
+
     try {
-      const prompt = buildEvaluationPrompt(evidence);
       const { OllamaService } = await import("@/lib/uaf/ollama-service");
       const ollama = new OllamaService();
-      const { result } = await ollama.analyzeWithRetry(prompt, "evaluation", { format: "json" });
+      // ponytail: single attempt — retries waste 360s when prompt is too big; fail fast → fallback
+      const { result } = await ollama.analyzeWithRetry(prompt, "evaluation", {
+        format: "json",
+        context: 16384,
+      });
 
       if (result) {
+        logger.info("Ollama responded", {
+          model: result.model,
+          durationMs: result.durationMs,
+          responseChars: result.text.length,
+          tokensUsed: result.tokensUsed,
+        });
         const parsed = this.parseAiResponse(result.text);
         if (parsed) return parsed;
+        logger.warn("AI response parse failed — falling back to deterministic", {
+          responsePreview: result.text.slice(0, 200),
+        });
+      } else {
+        logger.warn("Ollama returned no result — falling back to deterministic");
       }
-    } catch {
-      // Fall through to default
+    } catch (error) {
+      logger.warn("Ollama call failed — falling back to deterministic", {
+        error: (error as Error).message,
+      });
     }
 
-    // Fallback: deterministic-only commentary
     return this.buildFallbackCommentary(evidence);
   }
 

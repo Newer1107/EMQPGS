@@ -53,6 +53,10 @@ export class SnapshotBuilder {
     const difficulty: Record<string, number> = {};
     const coCoverage: Record<string, number> = {};
     const moduleCoverage: Record<string, number> = {};
+    const marksDistribution: Record<string, number> = {};
+    const questionTypeDistribution: Record<string, number> = {};
+    const questionStatusDistribution: Record<string, number> = {};
+    const moduleMarks: Record<string, number> = {};
 
     for (const q of data.questions) {
       if (q.rbtLevel) bloom[q.rbtLevel] = (bloom[q.rbtLevel] ?? 0) + 1;
@@ -60,9 +64,14 @@ export class SnapshotBuilder {
       if (q.coMapping) coCoverage[q.coMapping] = (coCoverage[q.coMapping] ?? 0) + 1;
       const modKey = `Module ${q.moduleNumber}`;
       moduleCoverage[modKey] = (moduleCoverage[modKey] ?? 0) + 1;
+      const markKey = String(q.marks);
+      marksDistribution[markKey] = (marksDistribution[markKey] ?? 0) + 1;
+      if (q.questionType) questionTypeDistribution[q.questionType] = (questionTypeDistribution[q.questionType] ?? 0) + 1;
+      questionStatusDistribution[q.questionStatus ?? "unknown"] = (questionStatusDistribution[q.questionStatus ?? "unknown"] ?? 0) + 1;
+      moduleMarks[modKey] = (moduleMarks[modKey] ?? 0) + q.marks;
     }
 
-    return { bloom, difficulty, coCoverage, moduleCoverage };
+    return { bloom, difficulty, coCoverage, moduleCoverage, marksDistribution, questionTypeDistribution, questionStatusDistribution, moduleMarks };
   }
 
   private detectRisks(metrics: MetricResult[]): string[] {

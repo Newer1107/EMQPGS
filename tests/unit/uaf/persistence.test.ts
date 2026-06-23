@@ -94,6 +94,10 @@ function makeSnapshot(): EvidenceSnapshotData {
       difficulty: { EASY: 2, MEDIUM: 2, HARD: 1 },
       coCoverage: { CO1: 2, CO2: 2, CO3: 1 },
       moduleCoverage: { "Module 1": 3, "Module 2": 2 },
+      marksDistribution: {},
+      questionTypeDistribution: {},
+      questionStatusDistribution: {},
+      moduleMarks: {},
     },
     detectedRisks: ["Low HOTS: 0.30"],
     outlierLists: [],
@@ -142,6 +146,8 @@ function makeAnalysisResult(
     ],
     aiModules: [],
     evidenceHash: "abc123def456",
+    strengths: [],
+    weaknesses: [],
     ...overrides,
   };
 }

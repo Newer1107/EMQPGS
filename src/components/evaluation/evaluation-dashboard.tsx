@@ -87,10 +87,43 @@ export function EvaluationDashboard({ questionBankId }: { questionBankId: string
   // Trigger evaluation
   const handleRun = async () => {
     setRunning(true);
+    setError(null);
     try {
-      await apiFetch(`/api/question-banks/${questionBankId}/evaluation`, { method: "POST" });
-      await fetchLatest();
-    } catch { /* ignore */ }
+      // Send POST — this may take time if Ollama is slow
+      const postRes = await apiFetch(`/api/question-banks/${questionBankId}/evaluation`, { method: "POST" });
+      if (!postRes.ok) {
+        const body = await postRes.json().catch(() => ({}));
+        setError(body?.error ?? `Server error: ${postRes.status}`);
+        setRunning(false);
+        return;
+      }
+      // Poll GET until a report is available (server may still be processing AI)
+      const pollStart = Date.now();
+      const POLL_TIMEOUT = 120_000; // 2 minutes max
+      const POLL_INTERVAL = 3_000;  // every 3 seconds
+      let polled = false;
+      while (Date.now() - pollStart < POLL_TIMEOUT) {
+        const getRes = await apiFetch(`/api/question-banks/${questionBankId}/evaluation`);
+        const getBody = await getRes.json();
+        if (getBody.versions?.[0]?.analysisSnapshot?.fullReport) {
+          setReport(getBody.versions[0].analysisSnapshot.fullReport as EvaluationReport);
+          setSelectedVersionId(getBody.versions[0].id);
+          polled = true;
+          break;
+        }
+        if (getBody.status === "FAILED") {
+          setError(`Evaluation failed: ${getBody.failureReason ?? "Unknown error"}`);
+          setRunning(false);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL));
+      }
+      if (!polled) {
+        setError("Evaluation is still processing. The report will appear once complete — please refresh in a moment.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to trigger evaluation.");
+    }
     setRunning(false);
   };
 

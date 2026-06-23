@@ -27,6 +27,7 @@ export interface RawBankData {
   questions: ExtractedQuestionData[];
   modules: ModuleSummary[];
   totalMarks: number;
+  marksOptions: number[];
   extractionTimestamp: string;
 }
 
@@ -43,6 +44,8 @@ export interface ExtractedQuestionData {
   coStatus: "VERIFIED" | "PARTIALLY_VERIFIED" | "UNABLE_TO_VERIFY" | "MISSING_DATA";
   rbtStatus: "VERIFIED" | "PARTIALLY_VERIFIED" | "UNABLE_TO_VERIFY" | "MISSING_DATA";
   difficultyStatus: "VERIFIED" | "PARTIALLY_VERIFIED" | "UNABLE_TO_VERIFY" | "MISSING_DATA";
+  questionStatus: string | null;
+  clarityScore: number;
 }
 
 export interface ModuleSummary {
@@ -73,6 +76,10 @@ export interface DistributionData {
   difficulty: Record<string, number>;
   coCoverage: Record<string, number>;
   moduleCoverage: Record<string, number>;
+  marksDistribution: Record<string, number>;
+  questionTypeDistribution: Record<string, number>;
+  questionStatusDistribution: Record<string, number>;
+  moduleMarks: Record<string, number>;
 }
 
 // ── Structured AI Prompts ──
@@ -132,6 +139,8 @@ export interface AnalysisSnapshotResult {
     recommendation: string;
     priority: string;
   }>;
+  strengths: Array<{ id: string; strength: string }>;
+  weaknesses: Array<{ id: string; weakness: string }>;
   aiModules: ValidatedModuleOutput[];
   evidenceHash: string | null;
 }

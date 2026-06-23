@@ -88,6 +88,7 @@ function makeRawBankData(overrides?: Partial<RawBankData>): RawBankData {
     extractionTimestamp: "2026-06-22T00:00:00.000Z",
     questions: [],
     modules: [],
+    marksOptions: [2, 5, 10],
     ...overrides,
   };
 }
@@ -108,6 +109,10 @@ function makeSnapshotData(
       difficulty: { EASY: 2, MEDIUM: 2, HARD: 1 },
       coCoverage: { CO1: 2, CO2: 2, CO3: 1 },
       moduleCoverage: { "Module 1": 3, "Module 2": 2 },
+      marksDistribution: {},
+      questionTypeDistribution: {},
+      questionStatusDistribution: {},
+      moduleMarks: {},
     },
     detectedRisks: [],
     outlierLists: [],
