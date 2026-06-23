@@ -45,6 +45,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/coordinator/questions", label: "Questions", workspaceTypes: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/coverage", label: "Coverage", workspaceTypes: ["COORDINATOR"] },
   { href: "/dashboard/coordinator/analysis", label: "UAF Analysis", workspaceTypes: ["COORDINATOR"] },
+  { href: "/dashboard/coordinator/evaluation", label: "Evaluation", workspaceTypes: ["COORDINATOR"] },
   // Moderator
   { href: "/dashboard/moderator", label: "Moderator Dashboard", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/bank", label: "Slot Grid", workspaceTypes: ["MODERATOR"] },

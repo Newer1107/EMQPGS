@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { UafAnalysisOverview } from "@/components/dean/uaf-analysis-overview";
-import { UafVersionHistory } from "@/components/dean/uaf-version-history";
-import { UafVersionCompare } from "@/components/dean/uaf-version-compare";
+import { UafComplianceReport } from "@/components/uaf-report/uaf-compliance-report";
 import { apiFetch } from "@/lib/client-fetch";
 import { ArrowLeft, BarChart3, Play, RefreshCw } from "lucide-react";
 
@@ -170,27 +168,6 @@ function AnalysisDetailView({
   bankId: string;
   onBack: () => void;
 }) {
-  const [currentVersionId, setCurrentVersionId] = useState<string | null>(null);
-  const [compareVersionId, setCompareVersionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiFetch(`/api/question-banks/${bankId}/analysis/versions`);
-        const body = await res.json();
-        if (!cancelled && body.success && Array.isArray(body.data) && body.data.length > 0) {
-          setCurrentVersionId(body.data[0].id);
-        }
-      } catch { /* ignore */ }
-    })();
-    return () => { cancelled = true; };
-  }, [bankId]);
-
-  const handleCompare = useCallback((versionId: string) => {
-    setCompareVersionId((prev) => (prev === versionId ? null : versionId));
-  }, []);
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -198,29 +175,11 @@ function AnalysisDetailView({
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <PageHeader
-          title="UAF Analysis Details"
-          description="Deterministic academic quality indices for this question bank."
+          title="UAF Compliance Report"
+          description="Complete academic quality report following UAF v3.3 specification."
         />
       </div>
-
-      <UafAnalysisOverview questionBankId={bankId} />
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <UafVersionHistory
-          questionBankId={bankId}
-          currentVersionId={currentVersionId ?? undefined}
-          onCompare={handleCompare}
-          selectionMode={true}
-        />
-        {compareVersionId && currentVersionId && (
-          <UafVersionCompare
-            questionBankId={bankId}
-            versionA={{ id: currentVersionId, versionNumber: 0, createdAt: "" }}
-            versionB={{ id: compareVersionId, versionNumber: 0, createdAt: "" }}
-            onClose={() => setCompareVersionId(null)}
-          />
-        )}
-      </div>
+      <UafComplianceReport questionBankId={bankId} />
     </div>
   );
 }

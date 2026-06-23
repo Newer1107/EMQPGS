@@ -812,6 +812,16 @@ export function BankDetailClient(props: BankDetailClientProps) {
             <CardContent><CoverageStats slots={props.slots} totalSlots={props.totalSlots} /></CardContent>
           </Card>
 
+          <Link
+            href={`/dashboard/coordinator/question-banks/${props.bankId}/evaluation`}
+            className="flex items-center justify-between rounded-xl border border-[var(--border)] p-4 transition-colors hover:bg-[var(--surface-hover)]"
+          >
+            <div>
+              <p className="text-sm font-medium">Academic Evaluation</p>
+              <p className="text-xs text-[var(--text-tertiary)]">Quality audit with AI insights</p>
+            </div>
+            <span className="text-lg text-[var(--text-tertiary)]">→</span>
+          </Link>
           <AssignPanelWrapper bankId={props.bankId} role="CONTRIBUTOR" title="Contributors" currentAssignments={props.contributors} />
           <AssignPanelWrapper bankId={props.bankId} role="MODERATOR" title="Moderator" currentAssignments={props.moderators} />
 
