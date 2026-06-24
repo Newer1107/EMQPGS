@@ -7,6 +7,7 @@ import { OllamaService } from "./ollama-service";
 import { ResponseValidator } from "./response-validator";
 import { AnalysisBuilder } from "./analysis-builder";
 import { Persistence } from "./persistence";
+import { logger } from "@/lib/logger";
 import type { PipelineOptions, AnalysisSnapshotResult } from "./types";
 
 const EVALUATION_ENGINE_VERSION = "1.0.0";
@@ -120,6 +121,7 @@ export class AiOrchestrator {
 
         if (priorVersion) {
           // Cache hit — skip AI pipeline, mark as AI_COMPLETE
+          logger.info("UAF analysis cache hit — skipping AI", { questionBankId, evidenceHash: evidenceHash.slice(0, 12) });
           aiResponse = { modules: [], overallValid: true };
           await this.updateStatus(analysis.id, "AI_COMPLETE");
         }
