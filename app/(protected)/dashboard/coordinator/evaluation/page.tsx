@@ -50,7 +50,8 @@ export default function CoordinatorEvaluationPage() {
               try {
                 const evalRes = await apiFetch(`/api/question-banks/${bank.id}/evaluation`);
                 const evalBody = await evalRes.json();
-                const hasEval = !evalBody.notFound && evalBody.versions?.[0]?.analysisSnapshot?.fullReport;
+                const ed = evalBody.success ? evalBody.data : evalBody;
+                const hasEval = !ed.notFound && ed.versions?.[0]?.analysisSnapshot?.fullReport;
                 const report = hasEval ? evalBody.versions[0].analysisSnapshot.fullReport : null;
                 return {
                   ...bank,
@@ -83,8 +84,9 @@ export default function CoordinatorEvaluationPage() {
       while (Date.now() - pollStart < POLL_TIMEOUT) {
         const refreshRes = await apiFetch(`/api/question-banks/${bankId}/evaluation`);
         const refreshBody = await refreshRes.json();
-        if (refreshBody.versions?.[0]?.analysisSnapshot?.fullReport) {
-          const report = refreshBody.versions[0].analysisSnapshot.fullReport;
+        const rd = refreshBody.success ? refreshBody.data : refreshBody;
+        if (rd.versions?.[0]?.analysisSnapshot?.fullReport) {
+          const report = rd.versions[0].analysisSnapshot.fullReport;
           setBanks((prev) =>
             prev.map((b) =>
               b.id === bankId

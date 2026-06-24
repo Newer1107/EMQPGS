@@ -62,17 +62,21 @@ export function EvaluationDashboard({ questionBankId }: { questionBankId: string
       const evalBody = await evalRes.json();
       const versionsBody = await versionsRes.json();
 
-      if (evalBody.success === false || evalBody.notFound) {
+      // Unwrap standard API response { success, data, … }
+      const ed = evalBody.success ? evalBody.data : evalBody;
+      const vd = versionsBody.success ? versionsBody.data : versionsBody;
+
+      if (ed.notFound) {
         setReport(null);
-      } else if (evalBody.versions?.[0]?.analysisSnapshot?.fullReport) {
-        setReport(evalBody.versions[0].analysisSnapshot.fullReport as EvaluationReport);
-        setSelectedVersionId(evalBody.versions[0].id);
+      } else if (ed.versions?.[0]?.analysisSnapshot?.fullReport) {
+        setReport(ed.versions[0].analysisSnapshot.fullReport as EvaluationReport);
+        setSelectedVersionId(ed.versions[0].id);
       } else {
         setReport(null);
       }
 
-      if (Array.isArray(versionsBody)) {
-        setVersions(versionsBody.flatMap((a: { versions: Array<{ id: string; versionNumber: number; createdAt: string }> }) =>
+      if (Array.isArray(vd)) {
+        setVersions(vd.flatMap((a: { versions: Array<{ id: string; versionNumber: number; createdAt: string }> }) =>
           a.versions.map((v) => ({ id: v.id, version: v.versionNumber, createdAt: v.createdAt }))
         ));
       }
@@ -105,14 +109,15 @@ export function EvaluationDashboard({ questionBankId }: { questionBankId: string
       while (Date.now() - pollStart < POLL_TIMEOUT) {
         const getRes = await apiFetch(`/api/question-banks/${questionBankId}/evaluation`);
         const getBody = await getRes.json();
-        if (getBody.versions?.[0]?.analysisSnapshot?.fullReport) {
-          setReport(getBody.versions[0].analysisSnapshot.fullReport as EvaluationReport);
-          setSelectedVersionId(getBody.versions[0].id);
+        const gd = getBody.success ? getBody.data : getBody;
+        if (gd.versions?.[0]?.analysisSnapshot?.fullReport) {
+          setReport(gd.versions[0].analysisSnapshot.fullReport as EvaluationReport);
+          setSelectedVersionId(gd.versions[0].id);
           polled = true;
           break;
         }
-        if (getBody.status === "FAILED") {
-          setError(`Evaluation failed: ${getBody.failureReason ?? "Unknown error"}`);
+        if (gd.status === "FAILED") {
+          setError(`Evaluation failed: ${gd.failureReason ?? "Unknown error"}`);
           setRunning(false);
           return;
         }
