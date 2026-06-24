@@ -49,9 +49,9 @@ export class OllamaService implements AiProvider {
 
     return {
       text,
-      model: data.model ?? model,
+      model: raw.model ?? model,
       durationMs,
-      tokensUsed: data.eval_count,
+      tokensUsed: raw.eval_count,
     };
   }
 
