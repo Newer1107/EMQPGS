@@ -7,7 +7,6 @@ import { OllamaService } from "./ollama-service";
 import { ResponseValidator } from "./response-validator";
 import { AnalysisBuilder } from "./analysis-builder";
 import { Persistence } from "./persistence";
-import { logger } from "@/lib/logger";
 import type { PipelineOptions, AnalysisSnapshotResult } from "./types";
 
 const EVALUATION_ENGINE_VERSION = "1.0.0";
@@ -104,31 +103,9 @@ export class AiOrchestrator {
         },
       });
 
-      // Cache check: skip Ollama if same evidence hash exists for this bank
-      let aiResponse: Awaited<
-        ReturnType<typeof this.responseValidator.validate>
-      > | null = null;
-
-      if (!options.forceRegenerate) {
-        const priorVersion = await prisma.analysisVersion.findFirst({
-          where: {
-            questionBankAnalysis: { questionBankId },
-            evidenceHash,
-            id: { not: version.id },
-          },
-          orderBy: { createdAt: "desc" },
-        });
-
-        if (priorVersion) {
-          // Cache hit — skip AI pipeline, mark as AI_COMPLETE
-          logger.info("UAF analysis cache hit — skipping AI", { questionBankId, evidenceHash: evidenceHash.slice(0, 12) });
-          aiResponse = { modules: [], overallValid: true };
-          await this.updateStatus(analysis.id, "AI_COMPLETE");
-        }
-      }
-
-      // Stages 4-6: AI Pipeline (only if no cache hit)
-      if (!aiResponse || options.forceRegenerate) {
+      // Stages 4-6: AI Pipeline (always runs AI — no cache)
+      let aiResponse: Awaited<ReturnType<typeof this.responseValidator.validate>>;
+      {
         await this.updateStatus(analysis.id, "AI_PENDING");
 
         // Stage 4: Build structured prompts from snapshot
