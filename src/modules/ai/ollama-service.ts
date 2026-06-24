@@ -3,7 +3,7 @@ import type { AiProvider, AiProviderResult } from "@/modules/ai/ai-provider";
 import { logger } from "@/lib/logger";
 
 const AI_TIMEOUT_MS = 120_000;
-const AI_CONTEXT_WINDOW = 8192;
+const AI_CONTEXT_WINDOW = 16384;
 
 const isDev = () => env.NODE_ENV === "development";
 

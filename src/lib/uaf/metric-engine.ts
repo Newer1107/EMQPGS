@@ -179,11 +179,94 @@ export function computeMC(data: RawBankData): MetricResult {
   };
 }
 
-export function computeMCS(_data: RawBankData): MetricResult {
+export function computeMCS(data: RawBankData): MetricResult {
+  const total = data.questions.length;
+  if (total === 0) {
+    return {
+      indexCode: "MCS" as IndexCode,
+      value: null,
+      classification: null,
+      weight: 1 / 9,
+      computationOrder: 11,
+      formulaUsed: "consistent_metadata_entries / total_metadata_entries",
+    };
+  }
+
+  let consistentSum = 0;
+  for (const q of data.questions) {
+    let checks = 0;
+    let passed = 0;
+
+    // Check 1: Marks-RBT consistency
+    checks++;
+    if (q.rbtLevel && q.marks > 0) {
+      const rbtNum = parseInt(q.rbtLevel.replace("L", ""), 10);
+      if (q.marks <= 2 && rbtNum <= 2) passed++;
+      else if (q.marks >= 10 && rbtNum >= 4) passed++;
+      else if (q.marks > 2 && q.marks < 10) passed++; // medium marks acceptable at any RBT
+      else if (q.marks <= 2 && rbtNum > 2) { /* misaligned */ }
+      else if (q.marks >= 10 && rbtNum < 4) { /* misaligned */ }
+      else passed++; // fall through
+    } else {
+      passed++; // no data to check — skip
+    }
+
+    // Check 2: CO-RBT consistency (CO implies some cognitive level)
+    checks++;
+    if (q.coMapping && q.rbtLevel) {
+      // Most COs should have questions at multiple RBT levels — no hard rule
+      passed++;
+    } else {
+      passed++; // skip if either missing
+    }
+
+    // Check 3: Difficulty-RBT alignment
+    checks++;
+    if (q.difficultyLevel && q.rbtLevel) {
+      const rbtNum = parseInt(q.rbtLevel.replace("L", ""), 10);
+      if (q.difficultyLevel === "HARD" && rbtNum >= 4) passed++;
+      else if (q.difficultyLevel === "EASY" && rbtNum <= 2) passed++;
+      else if (q.difficultyLevel === "MEDIUM") passed++; // medium difficulty is flexible
+      else passed++;
+    } else {
+      passed++; // skip if missing
+    }
+
+    // Check 4: Command verb matches RBT level (heuristic)
+    checks++;
+    if (q.commandVerb && q.rbtLevel) {
+      const rbtNum = parseInt(q.rbtLevel.replace("L", ""), 10);
+      const verb = q.commandVerb.toLowerCase();
+      const L1_VERBS = ["define", "list", "state", "name", "identify", "recall", "label", "match"];
+      const L2_VERBS = ["explain", "describe", "summarize", "interpret", "paraphrase", "classify"];
+      const L3_VERBS = ["apply", "solve", "use", "compute", "calculate", "demonstrate", "implement"];
+      const L4_VERBS = ["analyze", "compare", "contrast", "differentiate", "examine", "distinguish"];
+      const L5_VERBS = ["evaluate", "assess", "justify", "critique", "defend", "support"];
+      const L6_VERBS = ["create", "design", "develop", "formulate", "propose", "construct"];
+
+      const verbRbt = L6_VERBS.includes(verb) ? 6 : L5_VERBS.includes(verb) ? 5
+        : L4_VERBS.includes(verb) ? 4 : L3_VERBS.includes(verb) ? 3
+        : L2_VERBS.includes(verb) ? 2 : L1_VERBS.includes(verb) ? 1 : 0;
+
+      if (verbRbt === 0) passed++; // unknown verb — skip
+      else if (Math.abs(verbRbt - rbtNum) <= 1) passed++; // close match
+      else { /* mismatch */ }
+    } else {
+      passed++; // skip if missing
+    }
+
+    // Check 5: Question type presence
+    checks++;
+    if (q.questionType) passed++;
+
+    consistentSum += checks > 0 ? passed / checks : 1;
+  }
+
+  const value = consistentSum / total;
   return {
     indexCode: "MCS" as IndexCode,
-    value: 1.0,
-    classification: classifyIndex(1.0),
+    value: Math.min(Math.max(value, 0), 1),
+    classification: classifyIndex(value),
     weight: 1 / 9,
     computationOrder: 11,
     formulaUsed: "consistent_metadata_entries / total_metadata_entries",

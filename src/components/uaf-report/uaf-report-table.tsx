@@ -204,9 +204,10 @@ export function UafReportTable<T extends Record<string, unknown>>({
 
 // ── Status / value renderers used across tables ──
 
-export function MetricValue({ value, decimals = 2 }: { value: number | null | undefined; decimals?: number }) {
+export function MetricValue({ value, decimals, format }: { value: number | null | undefined; decimals?: number; format?: "percent" | "number" }) {
   if (value === null || value === undefined) return <span className="text-[var(--text-tertiary)] italic">Unable to Verify</span>;
-  return <span className="font-mono tabular-nums">{(value * 100).toFixed(decimals)}%</span>;
+  if (format === "number") return <span className="font-mono tabular-nums">{value.toLocaleString()}</span>;
+  return <span className="font-mono tabular-nums">{(value * 100).toFixed(decimals ?? 2)}%</span>;
 }
 
 export function ClassificationBadge({ classification }: { classification: string | null | undefined }) {

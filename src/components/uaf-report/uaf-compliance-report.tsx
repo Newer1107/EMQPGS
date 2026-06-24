@@ -231,16 +231,16 @@ function ExtractionSection({ metrics, snapshot }: { metrics: MetricItem[]; snaps
         exportable
         columns={[
           { key: "metric", header: "Metric", render: (r: any) => <span className="font-medium">{r.metric}</span>, searchable: true },
-          { key: "value", header: "Value", render: (r: any) => <MetricValue value={r.value} /> },
+          { key: "value", header: "Value", render: (r: any) => <MetricValue value={r.value} format={r._number ? "number" : undefined} /> },
           { key: "classification", header: "Classification", render: (r: any) => <ClassificationBadge classification={r.classification} /> },
         ]}
         data={[
-          { metric: "Total Questions", value: total || null, classification: null },
-          { metric: "Total Marks", value: totalMarks, classification: null },
-          { metric: "Verified Questions", value: verified || null, classification: null },
-          { metric: "Partially Verified Questions", value: partiallyVerified > 0 ? partiallyVerified : null, classification: null },
-          { metric: "Unable to Verify Questions", value: unableToVerify || null, classification: null },
-          { metric: "Missing Data Questions", value: missing || null, classification: null },
+          { metric: "Total Questions", value: total, classification: null, _number: true },
+          { metric: "Total Marks", value: totalMarks ?? null, classification: null, _number: true },
+          { metric: "Verified Questions", value: verified, classification: null, _number: true },
+          { metric: "Partially Verified Questions", value: partiallyVerified, classification: null, _number: true },
+          { metric: "Unable to Verify Questions", value: unableToVerify, classification: null, _number: true },
+          { metric: "Missing Data Questions", value: missing, classification: null, _number: true },
           { metric: "Extraction Completeness Score (ECS)", value: ecs?.value ?? null, classification: ecs?.classification ?? null },
           { metric: "Extraction Quality Index (EQI)", value: eqi?.value ?? null, classification: eqi?.classification ?? null },
         ]}
@@ -329,11 +329,7 @@ function CoverageSection({ metrics, snapshot }: { metrics: MetricItem[]; snapsho
           pct: totalQuestions > 0 ? qCount / totalQuestions : 0,
         };
       })
-    : Array.from({ length: 6 }, (_, i) => {
-        const co = `CO${i + 1}`;
-        const qCount = Math.floor(Math.random() * 8) + 1;
-        return { co, questions: qCount, marks: qCount * 5, status: "Covered", pct: Math.min(1, qCount / 6) };
-      });
+    : [];
 
   // Build marks distribution from actual data
   const markKeys = Object.keys(markDistEntries).length > 0 ? Object.keys(markDistEntries).sort((a, b) => Number(a) - Number(b)) : [];
@@ -344,7 +340,7 @@ function CoverageSection({ metrics, snapshot }: { metrics: MetricItem[]; snapsho
         marks: markDistEntries[k] ?? 0,
         pct: totalMarksFromDist > 0 ? (markDistEntries[k] ?? 0) / totalMarksFromDist : 0,
       }))
-    : [{ co: "CO1", marks: 20, pct: 0.17 }, { co: "CO2", marks: 25, pct: 0.21 }, { co: "CO3", marks: 20, pct: 0.17 }, { co: "CO4", marks: 20, pct: 0.17 }, { co: "CO5", marks: 15, pct: 0.13 }, { co: "CO6", marks: 20, pct: 0.17 }];
+    : [];
 
   // Coverage gaps from CVI value
   const cviValue = cvi?.value;
@@ -361,7 +357,7 @@ function CoverageSection({ metrics, snapshot }: { metrics: MetricItem[]; snapsho
         const attainment = cov >= 0.7 ? "High" : cov >= 0.4 ? "Moderate" : "Low";
         return { co, coverage: cov, evidence, attainment };
       })
-    : [{ co: "CO1", coverage: 0.85, evidence: "Direct", attainment: "High" }, { co: "CO2", coverage: 0.90, evidence: "Direct", attainment: "High" }, { co: "CO3", coverage: 0.70, evidence: "Calculated", attainment: "Moderate" }, { co: "CO4", coverage: 0.45, evidence: "Metadata", attainment: "Low" }, { co: "CO5", coverage: 0.60, evidence: "Calculated", attainment: "Moderate" }, { co: "CO6", coverage: 0.80, evidence: "Direct", attainment: "High" }];
+    : [];
 
   // Coverage moderation commentary from actual data
   const commentaryRows: Array<{ observation: string; evidence: string; significance: string; recommendation: string }> = [];
@@ -458,7 +454,10 @@ function CoverageSection({ metrics, snapshot }: { metrics: MetricItem[]; snapsho
         title="Coverage Validation Index Report"
         columns={[
           { key: "metric", header: "Metric", render: (r: any) => <span className="font-medium">{r.metric}</span> },
-          { key: "value", header: "Value", render: (r: any) => <MetricValue value={r.value} /> },
+          { key: "value", header: "Value", render: (r: any) =>
+            typeof r.value === "string"
+              ? <span className="font-mono tabular-nums">{r.value}</span>
+              : <MetricValue value={r.value} /> },
         ]}
         data={[
           { metric: "CO Coverage", value: cvi?.value ?? null },
@@ -509,7 +508,7 @@ function BloomSection({ metrics, snapshot }: { metrics: MetricItem[]; snapshot?:
         const avgMarks = totalQ > 0 ? (sourceData?.distributions?.moduleMarks ? Object.values(sourceData.distributions.moduleMarks).reduce((s: number, v: number) => s + v, 0) / totalQ : 5) : 5;
         return { level: BLOOM_NAMES[lvl] ?? lvl, questions: qCount, marks: Math.round(qCount * avgMarks), pct };
       })
-    : [{ level: "Remember", questions: 8, marks: 16, pct: 0.10 }, { level: "Understand", questions: 16, marks: 40, pct: 0.20 }, { level: "Apply", questions: 20, marks: 50, pct: 0.25 }, { level: "Analyze", questions: 16, marks: 48, pct: 0.20 }, { level: "Evaluate", questions: 12, marks: 36, pct: 0.15 }, { level: "Create", questions: 8, marks: 32, pct: 0.10 }];
+    : [];
 
   const expectedBloomRows = BLOOM_LEVELS.map((lvl) => {
     const expected = EXPECTED_BLOOM_PCT[lvl] ?? 0;

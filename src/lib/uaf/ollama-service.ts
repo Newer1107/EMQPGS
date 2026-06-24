@@ -24,7 +24,7 @@ export class OllamaService implements AiProvider {
         stream: false,
         format: options?.format ?? "json",
         options: {
-          num_ctx: options?.context ?? 8192,
+          num_ctx: options?.context ?? 16384,
           temperature: options?.temperature ?? 0.7,
         },
       }),
@@ -75,7 +75,7 @@ export class OllamaService implements AiProvider {
       promptChars,
       estimatedTokens,
       model: options?.model ?? this.defaultModel,
-      context: options?.context ?? 8192,
+      context: options?.context ?? 16384,
     });
 
     let lastError: Error | null = null;
