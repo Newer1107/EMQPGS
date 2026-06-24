@@ -156,17 +156,17 @@ export class AnalysisBuilder {
 
     // Deterministic recommendations
     const recommendations: Array<{ finding: string; recommendation: string; priority: string }> = [];
-    if (sci != null && sci < 0.8) recommendations.push({ finding: "Low structural compliance", recommendation: "Ensure all required structural elements are present", priority: "HIGH" });
-    if (bdi != null && bdi < 0.7) recommendations.push({ finding: "Suboptimal Bloom distribution", recommendation: "Review question distribution across cognitive levels", priority: "HIGH" });
-    if (cvi != null && cvi < 0.6) recommendations.push({ finding: "Inadequate CO coverage", recommendation: "Distribute questions across more Course Outcomes", priority: "HIGH" });
-    if (mcai != null && mcai < 0.7) recommendations.push({ finding: "Marks-RBT misalignment detected", recommendation: "Review marks allocation against Bloom levels", priority: "MEDIUM" });
-    if (dbi != null && dbi < 0.7) recommendations.push({ finding: "Unbalanced difficulty distribution", recommendation: "Adjust Easy/Medium/Hard question ratio", priority: "MEDIUM" });
-    if (qcqi != null && qcqi < 0.7) recommendations.push({ finding: "Question quality concerns", recommendation: "Improve question clarity, precision, and alignment", priority: "HIGH" });
-    if (cai != null && cai < 0.7) recommendations.push({ finding: "Weak constructive alignment", recommendation: "Strengthen CO-to-assessment linkages", priority: "HIGH" });
-    if (ami != null && ami < 0.7) recommendations.push({ finding: "Moderation readiness below threshold", recommendation: "Complete missing metadata before moderation", priority: "HIGH" });
-    if (mii != null && mii < 0.7) recommendations.push({ finding: "Metadata gaps detected", recommendation: "Fill missing CO, RBT, and difficulty mappings", priority: "HIGH" });
+    if (sci != null && sci < 0.8) recommendations.push({ finding: "Low structural compliance", recommendation: "Ensure all required structural elements are present", priority: "MAJOR" });
+    if (bdi != null && bdi < 0.7) recommendations.push({ finding: "Suboptimal Bloom distribution", recommendation: "Review question distribution across cognitive levels", priority: "MAJOR" });
+    if (cvi != null && cvi < 0.6) recommendations.push({ finding: "Inadequate CO coverage", recommendation: "Distribute questions across more Course Outcomes", priority: "MAJOR" });
+    if (mcai != null && mcai < 0.7) recommendations.push({ finding: "Marks-RBT misalignment detected", recommendation: "Review marks allocation against Bloom levels", priority: "MODERATE" });
+    if (dbi != null && dbi < 0.7) recommendations.push({ finding: "Unbalanced difficulty distribution", recommendation: "Adjust Easy/Medium/Hard question ratio", priority: "MODERATE" });
+    if (qcqi != null && qcqi < 0.7) recommendations.push({ finding: "Question quality concerns", recommendation: "Improve question clarity, precision, and alignment", priority: "MAJOR" });
+    if (cai != null && cai < 0.7) recommendations.push({ finding: "Weak constructive alignment", recommendation: "Strengthen CO-to-assessment linkages", priority: "MAJOR" });
+    if (ami != null && ami < 0.7) recommendations.push({ finding: "Moderation readiness below threshold", recommendation: "Complete missing metadata before moderation", priority: "MAJOR" });
+    if (mii != null && mii < 0.7) recommendations.push({ finding: "Metadata gaps detected", recommendation: "Fill missing CO, RBT, and difficulty mappings", priority: "MAJOR" });
     if (!recommendations.length && qpqi != null && qpqi >= 0.8) {
-      recommendations.push({ finding: "Overall quality is satisfactory", recommendation: "Maintain current standards", priority: "LOW" });
+      recommendations.push({ finding: "Overall quality is satisfactory", recommendation: "Maintain current standards", priority: "MINOR" });
     }
 
     // Deterministic strengths/weaknesses from metric values

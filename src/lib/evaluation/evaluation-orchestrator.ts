@@ -189,7 +189,8 @@ export class EvaluationOrchestrator {
         where: { id: analysis.id },
         data: {
           status: "FAILED" as AnalysisStatus,
-          failureReason: (error as Error).message,
+          // ponytail: truncate to 191 chars to avoid Prisma P2000 on varchar(191)
+          failureReason: (error as Error).message.slice(0, 190),
           errorDetails: { stack: (error as Error).stack },
         },
       });
