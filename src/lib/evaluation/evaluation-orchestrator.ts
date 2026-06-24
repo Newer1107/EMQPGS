@@ -124,45 +124,13 @@ export class EvaluationOrchestrator {
       });
       logger.info("Version+snapshot persisted", { analysisId: analysis.id, versionId: version.id, durationMs: Date.now() - t2, evidenceSizeBytes: JSON.stringify(evidence).length });
 
-      // 8. Cache check — skip AI if same hash exists
+      // 8. Always call AI for commentary (no cache)
       let aiCommentary: Awaited<ReturnType<typeof this.callAiForCommentary>> | null = null;
 
-      if (!options?.forceRegenerate) {
-        const priorVersion = await prisma.analysisVersion.findFirst({
-          where: {
-            questionBankAnalysis: { questionBankId },
-            evidenceHash,
-            id: { not: version.id },
-          },
-          orderBy: { createdAt: "desc" },
-        });
-        if (priorVersion) {
-          logger.info("Cache hit — skipping AI", { analysisId: analysis.id, evidenceHash });
-          aiCommentary = {
-            moduleSummaryNarrative: "Analysis reused from prior evaluation.",
-            attributeNarrative: "",
-            rbtNarrative: "",
-            difficultyNarrative: "",
-            marksNarrative: "",
-            coCoverageNarrative: "",
-            alignmentNarrative: "",
-            qualityNarrative: "",
-            finalAssessmentNarrative: "",
-            verdictNarrative: "",
-            findingsNarrative: "",
-            strengths: [],
-            weaknesses: [],
-            improvementRoadmap: [],
-          };
-        }
-      }
-
-      // 9. Call AI for commentary (if no cache hit)
-      if (!aiCommentary) {
-        const t3 = Date.now();
-        aiCommentary = await this.callAiForCommentary(evidence);
-        logger.info("AI commentary complete", { analysisId: analysis.id, durationMs: Date.now() - t3, isFallback: aiCommentary.moduleSummaryNarrative.startsWith("The question bank contains") });
-      }
+      // 9. Call AI for commentary
+      const t3 = Date.now();
+      aiCommentary = await this.callAiForCommentary(evidence);
+      logger.info("AI commentary complete", { analysisId: analysis.id, durationMs: Date.now() - t3, isFallback: aiCommentary.moduleSummaryNarrative.startsWith("The question bank contains") });
 
       await this.updateStatus(analysis.id, "AI_COMPLETE" as AnalysisStatus);
 
