@@ -1438,7 +1438,10 @@ export function UafComplianceReport({ questionBankId }: UafComplianceReportProps
           setLoading(false);
           return;
         }
-        const latestId = versionsBody.data[0].id;
+        // ponytail: filter to UAF pipeline versions only (engine v1.0.0, not eval-1.0.0)
+        const uafVersions = versionsBody.data.filter((v: any) => v.evaluationEngineVersion && !v.evaluationEngineVersion.startsWith("eval-"));
+        const target = uafVersions[0] ?? versionsBody.data[0];
+        const latestId = target.id;
         const detailRes = await apiFetch(`/api/question-banks/${questionBankId}/analysis/versions/${latestId}`);
         const detailBody = await detailRes.json();
         if (!active) return;
