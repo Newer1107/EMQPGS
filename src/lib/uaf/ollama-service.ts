@@ -35,15 +35,20 @@ export class OllamaService implements AiProvider {
       throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = (await response.json()) as {
+    const raw = (await response.json()) as {
       response?: string;
+      thinking?: string;
       model?: string;
       eval_count?: number;
     };
     const durationMs = Date.now() - startTime;
 
+    // ponytail: Qwen3 puts output in "thinking", not "response".
+    // Fall back to thinking when response is empty.
+    const text = raw.response || raw.thinking || "";
+
     return {
-      text: data.response ?? "",
+      text,
       model: data.model ?? model,
       durationMs,
       tokensUsed: data.eval_count,

@@ -9,6 +9,7 @@ const isDev = () => env.NODE_ENV === "development";
 
 type OllamaGenerateResponse = {
   response?: string;
+  thinking?: string;
 };
 
 export class OllamaService implements AiProvider {
@@ -45,13 +46,15 @@ export class OllamaService implements AiProvider {
       }
 
       const data = (await response.json()) as OllamaGenerateResponse;
-      if (!data.response) {
+      // ponytail: Qwen3 puts output in "thinking", not "response".
+      const text = data.response || data.thinking || "";
+      if (!text) {
         if (isDev()) logger.warn("Ollama empty response", { durationMs: duration });
         return { success: false, error: "Ollama returned empty response" };
       }
 
-      if (isDev()) logger.info("Ollama success", { durationMs: duration, responseLength: data.response.length });
-      return { success: true, data: data.response };
+      if (isDev()) logger.info("Ollama success", { durationMs: duration, responseLength: text.length });
+      return { success: true, data: text };
     } catch (err) {
       const duration = Math.round(performance.now() - start);
       const message = err instanceof Error ? err.message : "Unknown error";
