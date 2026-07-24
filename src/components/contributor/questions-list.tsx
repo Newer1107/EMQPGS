@@ -95,14 +95,26 @@ export function QuestionsList({ questions, latestQuestionId }: { questions: Ques
                         <Button variant="outline" size="sm">Edit</Button>
                       </Link>
                       {question.status === "DRAFT" && (
-                        <ActionButton
-                          label="Submit"
-                          endpoint={`/api/question-library/${question.id}?action=submit`}
-                          method="POST"
-                          confirmMessage="Submit this question for moderation?"
-                          successMessage="Question submitted"
-                          size="sm"
-                        />
+                        <>
+                          <ActionButton
+                            label="Submit"
+                            endpoint={`/api/question-library/${question.id}?action=submit`}
+                            method="POST"
+                            confirmMessage="Submit this question for moderation?"
+                            successMessage="Question submitted"
+                            size="sm"
+                          />
+                          <ActionButton
+                            label="Delete"
+                            endpoint={`/api/question-library/${question.id}`}
+                            method="DELETE"
+                            confirmMessage="Delete this draft permanently?"
+                            successMessage="Question deleted"
+                            onSuccess={() => window.location.reload()}
+                            variant="danger"
+                            size="sm"
+                          />
+                        </>
                       )}
                     </div>
                   </TD>

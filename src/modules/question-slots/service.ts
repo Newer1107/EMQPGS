@@ -1,6 +1,6 @@
-import { Prisma, RecordStatus } from "@prisma/client";
+import { Prisma, QuestionStatus, RecordStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { AppError, ConflictError, NotFoundError } from "@/lib/errors";
+import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { QuestionSlotRepository } from "@/modules/question-slots/repository";
 
@@ -13,7 +13,7 @@ export class QuestionSlotService {
     return this.repository.findByQuestionBank(questionBankId);
   }
 
-  async assignToSlot(slotId: string, questionId: string) {
+  async assignToSlot(slotId: string, questionId: string, ctx?: { userId: string }) {
     const slot = await this.repository.findById(slotId);
     if (!slot) throw new NotFoundError("Slot not found");
 
@@ -27,6 +27,19 @@ export class QuestionSlotService {
 
     const question = await prisma.questionLibraryItem.findUnique({ where: { id: questionId } });
     if (!question) throw new NotFoundError("Question not found");
+
+    if (ctx?.userId) {
+      const caller = await prisma.responsibilityAssignment.findFirst({
+        where: { userId: ctx.userId, responsibility: "COORDINATOR" },
+      });
+      const isCoordinator = !!caller;
+      if (!isCoordinator && question.ownerId !== ctx.userId) {
+        throw new ForbiddenError("You can only assign your own questions to slots.");
+      }
+      if (!isCoordinator && question.status !== QuestionStatus.DRAFT && question.status !== QuestionStatus.REVISION_REQUESTED) {
+        throw new AppError("Only draft or revision-requested questions can be assigned to slots.", 409);
+      }
+    }
 
     const duplicateInBank = await prisma.questionSlot.findFirst({
       where: {

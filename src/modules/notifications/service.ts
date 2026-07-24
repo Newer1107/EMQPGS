@@ -14,16 +14,36 @@ export class NotificationService {
     });
   }
 
+  async listAfter(recipientId: string, cursor: string, take = 25) {
+    const pivot = await prisma.notification.findUnique({ where: { id: cursor }, select: { createdAt: true } });
+    if (!pivot) return { notifications: [], unreadCount: await this.unreadCount(recipientId) };
+    const notifications = await prisma.notification.findMany({
+      where: { recipientId, createdAt: { lt: pivot.createdAt } },
+      orderBy: { createdAt: "desc" },
+      take,
+    });
+    return { notifications, unreadCount: await this.unreadCount(recipientId) };
+  }
+
   unreadCount(recipientId: string) {
     return prisma.notification.count({
       where: { recipientId, isRead: false },
     });
   }
 
-  create(recipientId: string, title: string, message: string, actionUrl?: string, type: NotificationType = NotificationType.INFO) {
-    return prisma.notification.create({
+  async create(recipientId: string, title: string, message: string, actionUrl?: string, type: NotificationType = NotificationType.INFO) {
+    const notification = await prisma.notification.create({
       data: { recipientId, title, message, actionUrl, type },
     });
+    try {
+      const user = await prisma.user.findUnique({ where: { id: recipientId }, select: { email: true, name: true } });
+      if (user?.email) {
+        await this.emailService.sendNotificationEmail(user.email, title, `${user.name}, ${message}`);
+      }
+    } catch (err) {
+      logger.error("Failed to send notification email", { recipientId, title, error: err instanceof Error ? err.message : String(err) });
+    }
+    return notification;
   }
 
   async markAsRead(recipientId: string, notificationIds: string[]) {

@@ -29,3 +29,11 @@ export const POST = withApiHandler(
   },
   { responsibility: ["CONTRIBUTOR" as ResponsibilityType], audit: { action: "QUESTION_SUBMITTED", entityType: "QUESTION_LIBRARY_ITEM" } },
 );
+
+export const DELETE = withApiHandler(
+  async (request, context) => {
+    const id = request.nextUrl.pathname.split("/").pop()!;
+    return service.delete(id, { userId: context.auth!.user.id });
+  },
+  { responsibility: ["CONTRIBUTOR" as ResponsibilityType], audit: { action: "QUESTION_DELETED", entityType: "QUESTION_LIBRARY_ITEM" } },
+);

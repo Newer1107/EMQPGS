@@ -6,28 +6,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { questionStatusLabels, difficultyLabels } from "@/lib/constants";
 import { ModeratorActions } from "@/components/forms/moderator-actions";
+import { RevisionDiff } from "@/components/moderator/revision-diff";
 
 export default async function ModeratorQuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { context: ctx } = await getWorkspaceContext("MODERATOR");
 
-  const question = await prisma.questionLibraryItem.findUnique({
-    where: { id },
-    include: {
-      subjectVersion: {
-        include: { subject: { include: { department: true } }, effectiveFromAcademicYear: true },
+  const [question, revisions] = await Promise.all([
+    prisma.questionLibraryItem.findUnique({
+      where: { id },
+      include: {
+        subjectVersion: {
+          include: { subject: { include: { department: true } }, effectiveFromAcademicYear: true },
+        },
+        creator: { select: { id: true, name: true, email: true } },
+        owner: { select: { id: true, name: true, email: true } },
+        slotAssignments: {
+          include: { questionBank: { include: { batchSemester: { select: { semesterNumber: true, academicYear: { select: { code: true } } } }, pattern: { select: { examType: true } } } } },
+        },
+        moderationEvents: {
+          orderBy: { createdAt: "asc" },
+          include: { moderator: { select: { id: true, name: true } } },
+        },
       },
-      creator: { select: { id: true, name: true, email: true } },
-      owner: { select: { id: true, name: true, email: true } },
-      slotAssignments: {
-        include: { questionBank: { include: { batchSemester: { select: { semesterNumber: true, academicYear: { select: { code: true } } } }, pattern: { select: { examType: true } } } } },
-      },
-      moderationEvents: {
-        orderBy: { createdAt: "asc" },
-        include: { moderator: { select: { id: true, name: true } } },
-      },
-    },
-  });
+    }),
+    prisma.questionRevision.findMany({
+      where: { questionId: id },
+      orderBy: { revisionNumber: "asc" },
+      include: { changedBy: { select: { name: true } } },
+    }),
+  ]);
   if (!question) notFound();
 
   const service = new ModeratorService();
@@ -83,6 +91,10 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
                 </ul>
               </CardContent>
             </Card>
+          )}
+
+          {revisions.length >= 2 && (
+            <RevisionDiff revisions={revisions as any} />
           )}
 
           {question.moderationEvents.length > 0 && (

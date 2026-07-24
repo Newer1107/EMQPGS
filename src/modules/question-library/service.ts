@@ -1,9 +1,10 @@
-import { Prisma, QuestionStatus, RecordStatus } from "@prisma/client";
+import { NotificationType, Prisma, QuestionStatus, RecordStatus } from "@prisma/client";
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
 import { withOptimisticLock } from "@/lib/optimistic-lock";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
+import { NotificationService } from "@/modules/notifications/service";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
 
 export async function recordUsage(questionId: string, sourceType: string, sourceId: string, examCycleId?: string | null) {
@@ -224,7 +225,42 @@ export class QuestionLibraryService {
     }
 
     const nextStatus = question.status === QuestionStatus.REVISION_REQUESTED ? QuestionStatus.REVISION_SUBMITTED : QuestionStatus.PENDING;
-    return this.repository.updateStatus(id, nextStatus, new Date());
+    const result = await this.repository.updateStatus(id, nextStatus, new Date());
+
+    const bankIds = [...new Set(question.slotAssignments.map((s) => s.questionBankId))];
+    if (bankIds.length > 0) {
+      const moderators = await prisma.responsibilityAssignment.findMany({
+        where: { scopeId: { in: bankIds }, scopeType: "QUESTION_BANK", responsibility: "MODERATOR" },
+        include: { user: { select: { id: true, email: true, name: true } } },
+      });
+      const title = "New question submitted for moderation";
+      const msg = `A question in your assigned bank requires review.`;
+      const url = "/dashboard/moderator/questions";
+      const notif = new NotificationService();
+      for (const m of moderators) {
+        await notif.create(m.user.id, title, msg, url, NotificationType.INFO);
+      }
+    }
+
+    return result;
+  }
+
+  async delete(id: string, ctx: { userId: string }) {
+    const question = await this.repository.findById(id);
+    if (!question) throw new NotFoundError("Question not found");
+    if (question.ownerId !== ctx.userId) throw new ForbiddenError("Only the owner can delete this question");
+    if (question.status !== QuestionStatus.DRAFT) {
+      throw new AppError("Only draft questions can be deleted.", 409);
+    }
+
+    return prisma.$transaction(async (tx) => {
+      await tx.questionSlot.updateMany({
+        where: { assignedQuestionId: id },
+        data: { assignedQuestionId: null },
+      });
+      await tx.questionLibraryItem.delete({ where: { id } });
+      return { deleted: true };
+    });
   }
 
   async transferOwnership(questionId: string, toUserId: string, reason: string | undefined, ctx: { userId: string }) {

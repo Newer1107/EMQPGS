@@ -14,8 +14,14 @@ const markReadSchema = z.union([
   }),
 ]);
 
-export const GET = withApiHandler(async (_request, context) => {
-  return service.listForUser(context.user!.id, 25);
+export const GET = withApiHandler(async (request, context) => {
+  const { searchParams } = request.nextUrl;
+  const cursor = searchParams.get("cursor");
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "25", 10), 50);
+  if (cursor) {
+    return service.listAfter(context.user!.id, cursor, limit);
+  }
+  return { notifications: await service.listForUser(context.user!.id, limit), unreadCount: await service.unreadCount(context.user!.id) };
 }, { responsibility: ["COE" as ResponsibilityType, "COORDINATOR" as ResponsibilityType, "MODERATOR" as ResponsibilityType, "CONTRIBUTOR" as ResponsibilityType, "DEAN" as ResponsibilityType] });
 
 export const PATCH = withApiHandler(async (request, context) => {

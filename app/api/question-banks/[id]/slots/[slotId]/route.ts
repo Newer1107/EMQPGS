@@ -7,11 +7,11 @@ import { assignToSlotSchema } from "@/modules/question-slots/validation";
 const service = new QuestionSlotService();
 
 export const PATCH = withApiHandler(
-  async (request) => {
+  async (request, context) => {
     const segments = request.nextUrl.pathname.split("/");
     const slotId = segments[segments.length - 1]!;
     const payload = assignToSlotSchema.parse(await request.json());
-    return service.assignToSlot(slotId, payload.questionId);
+    return service.assignToSlot(slotId, payload.questionId, { userId: context.auth!.user.id });
   },
   {
     responsibility: ["CONTRIBUTOR" as ResponsibilityType, "COORDINATOR" as ResponsibilityType],

@@ -205,13 +205,13 @@ export function UafReportTable<T extends Record<string, unknown>>({
 // ── Status / value renderers used across tables ──
 
 export function MetricValue({ value, decimals, format }: { value: number | null | undefined; decimals?: number; format?: "percent" | "number" }) {
-  if (value === null || value === undefined) return <span className="text-[var(--text-tertiary)] italic">Unable to Verify</span>;
+  if (value === null || value === undefined) return <span className="text-[var(--text-tertiary)]">—</span>;
   if (format === "number") return <span className="font-mono tabular-nums">{value.toLocaleString()}</span>;
   return <span className="font-mono tabular-nums">{(value * 100).toFixed(decimals ?? 2)}%</span>;
 }
 
 export function ClassificationBadge({ classification }: { classification: string | null | undefined }) {
-  if (!classification) return <span className="text-[var(--text-tertiary)] italic">N/A</span>;
+  if (!classification) return <span className="text-[var(--text-tertiary)] text-xs">—</span>;
   const colors: Record<string, string> = {
     EXEMPLARY: "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300",
     HIGHLY_EFFECTIVE: "bg-lime-100 text-lime-800 dark:bg-lime-900/40 dark:text-lime-300",

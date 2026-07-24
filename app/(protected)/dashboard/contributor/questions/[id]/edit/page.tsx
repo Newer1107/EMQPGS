@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { QuestionForm } from "@/components/forms/question-form";
+import { ModerationTimeline } from "@/components/contributor/moderation-timeline";
 
 export default async function EditQuestionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,6 +22,14 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
     take: 100,
   });
 
+  const [moderationEvents] = await Promise.all([
+    prisma.moderationEvent.findMany({
+      where: { questionId: id },
+      orderBy: { createdAt: "asc" },
+      include: { moderator: { select: { name: true } } },
+    }),
+  ]);
+
   const isRevisionRequested = question.status === "REVISION_REQUESTED";
 
   return (
@@ -31,6 +40,9 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           {isRevisionRequested ? "A moderator has requested changes. After editing, use 'Save & Submit' to resubmit." : "Update your question in the library."}
         </p>
       </div>
+      {moderationEvents.length > 0 && (
+        <ModerationTimeline events={moderationEvents as any} />
+      )}
       <QuestionForm
         initialValues={{
           subjectVersionId: question.subjectVersionId,

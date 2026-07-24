@@ -8,6 +8,7 @@ import { APP_NAME } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 
 interface NavItem {
   label: string;
@@ -53,10 +54,12 @@ const navItems: NavItem[] = [
   { href: "/dashboard/moderator/approved", label: "Approved", workspaceTypes: ["MODERATOR"] },
   { href: "/dashboard/moderator/rejected", label: "Rejected", workspaceTypes: ["MODERATOR"] },
   // Contributor
-  { href: "/dashboard/contributor", label: "Contributor Dashboard", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor", label: "Dashboard", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/my-subjects", label: "My Subjects", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/bank", label: "Slot Grid", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/submit-question", label: "Submit Question", workspaceTypes: ["CONTRIBUTOR"] },
   { href: "/dashboard/contributor/questions", label: "My Submissions", workspaceTypes: ["CONTRIBUTOR"] },
+  { href: "/dashboard/contributor/coverage", label: "My Contribution", workspaceTypes: ["CONTRIBUTOR"] },
   // Dean
   { href: "/dashboard/dean", label: "Dean Dashboard", workspaceTypes: ["DEAN"] },
   { href: "/dashboard/dean/review", label: "Review Papers", workspaceTypes: ["DEAN"] },
@@ -296,7 +299,7 @@ export function AppShell({
                 />
               )}
               <span className="text-sm text-[var(--text-tertiary)]">{userEmail}</span>
-              <span className="block h-2 w-2 rounded-full bg-red-500" aria-label="Unread notifications" />
+              <NotificationBell />
             </div>
           </div>
         </header>

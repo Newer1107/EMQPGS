@@ -168,8 +168,7 @@ function MetricCard({ code, metric }: { code: string; metric: MetricItem | undef
       <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">{code}</p>
       <p className="mt-0.5 text-xs text-[var(--text-tertiary)]">{INDEX_LABELS[code] ?? code}</p>
       <p className="mt-2 font-mono text-2xl font-bold tabular-nums text-[var(--text-primary)]">
-        {value != null ? (value * 100).toFixed(0) : "—"}
-        <span className="ml-0.5 text-sm font-normal text-[var(--text-tertiary)]">%</span>
+        {value != null ? `${(value * 100).toFixed(0)}%` : <span className="text-sm font-normal text-[var(--text-tertiary)]">—</span>}
       </p>
       {classification && (
         <ClassificationBadge classification={classification} />
@@ -1519,7 +1518,7 @@ export function UafComplianceReport({ questionBankId }: UafComplianceReportProps
       <div className="flex gap-6">
         {/* Left Navigation */}
         {showNav && (
-          <nav className="fixed left-0 top-20 z-40 hidden h-[calc(100vh-5rem)] w-56 overflow-y-auto border-r border-[var(--border)] bg-[var(--card)] p-4 lg:block">
+          <nav className="hidden w-56 shrink-0 overflow-y-auto border-r border-[var(--border)] bg-[var(--card)] p-4 lg:block">
             <div className="mb-4">
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">UAF Report</p>
               {qpqi?.value != null && (
@@ -1549,7 +1548,7 @@ export function UafComplianceReport({ questionBankId }: UafComplianceReportProps
         )}
 
         {/* Main Content */}
-        <div className={cn("min-w-0 flex-1 space-y-8", showNav && "lg:ml-60")}>
+        <div className="min-w-0 flex-1 space-y-8">
           {/* Metric Cards Dashboard */}
           <section className="space-y-4">
             <div className="border-b border-[var(--border)] pb-3">
