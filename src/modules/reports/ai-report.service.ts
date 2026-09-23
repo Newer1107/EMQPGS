@@ -64,7 +64,7 @@ export class AiReportService {
         data: {
           questionBankId,
           status: AiReportStatus.COMPLETED,
-          modelName: process.env.OLLAMA_MODEL ?? "llama3.1",
+          modelName: process.env.AI_MODEL ?? "qwen3.6",
           generatedById: actor.id,
           summary: executiveSummary,
           reportJson: report as Prisma.InputJsonValue,

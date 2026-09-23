@@ -2,63 +2,63 @@ import { AiProvider, AiOptions, AiResult } from "./ai-provider";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 
+type ChatCompletionResponse = {
+  choices?: Array<{ message?: { content?: string } }>;
+  model?: string;
+  usage?: { total_tokens?: number };
+};
+
 export class OllamaService implements AiProvider {
   private baseUrl: string;
+  private apiKey: string;
   private defaultModel: string;
 
   constructor() {
-    this.baseUrl = env.OLLAMA_BASE_URL;
-    this.defaultModel = env.OLLAMA_MODEL;
+    this.baseUrl = env.AI_BASE_URL;
+    this.apiKey = env.AI_API_KEY;
+    this.defaultModel = env.AI_MODEL;
   }
 
   async analyze(prompt: string, options?: AiOptions): Promise<AiResult> {
     const model = options?.model ?? this.defaultModel;
     const startTime = Date.now();
 
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
+    const response = await fetch(`${this.baseUrl}/chat/completions`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
       body: JSON.stringify({
         model,
-        prompt,
+        messages: [{ role: "user", content: prompt }],
         stream: false,
-        format: options?.format ?? "json",
-        options: {
-          num_ctx: options?.context ?? 16384,
-          temperature: options?.temperature ?? 0.7,
-        },
+        temperature: options?.temperature ?? 0.7,
       }),
       signal: options?.signal,
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      throw new Error(`AI Gateway error: ${response.status} ${response.statusText}`);
     }
 
-    const raw = (await response.json()) as {
-      response?: string;
-      thinking?: string;
-      model?: string;
-      eval_count?: number;
-    };
+    const raw = (await response.json()) as ChatCompletionResponse;
     const durationMs = Date.now() - startTime;
 
-    // ponytail: Qwen3 puts output in "thinking", not "response".
-    // Fall back to thinking when response is empty.
-    const text = raw.response || raw.thinking || "";
+    const text = raw.choices?.[0]?.message?.content || "";
 
     return {
       text,
       model: raw.model ?? model,
       durationMs,
-      tokensUsed: raw.eval_count,
+      tokensUsed: raw.usage?.total_tokens,
     };
   }
 
   /**
    * Analyzes a single module with retry logic.
    * ponytail: maxRetries=1 — the caller (EvaluationOrchestrator) already handles
-   * fallback (deterministic commentary).  Retrying a 500 from Ollama for 360s
+   * fallback (deterministic commentary).  Retrying a 500 from the AI gateway for 360s
    * just to fall back wastes time.  Fail fast, fall back fast.
    */
   async analyzeWithRetry(
@@ -70,12 +70,11 @@ export class OllamaService implements AiProvider {
     const promptChars = prompt.length;
     const estimatedTokens = Math.ceil(promptChars / 4);
 
-    logger.info("Ollama call starting", {
+    logger.info("AI Gateway call starting", {
       moduleId,
       promptChars,
       estimatedTokens,
       model: options?.model ?? this.defaultModel,
-      context: options?.context ?? 16384,
     });
 
     let lastError: Error | null = null;
@@ -92,7 +91,7 @@ export class OllamaService implements AiProvider {
 
         clearTimeout(timeout);
 
-        logger.info("Ollama module complete", {
+        logger.info("AI Gateway module complete", {
           moduleId,
           attempt,
           model: result.model,
@@ -103,7 +102,7 @@ export class OllamaService implements AiProvider {
         return { result, retryCount: attempt - 1 };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        logger.warn("Ollama module attempt failed", {
+        logger.warn("AI Gateway module attempt failed", {
           moduleId,
           attempt,
           error: lastError.message,
@@ -113,7 +112,7 @@ export class OllamaService implements AiProvider {
       }
     }
 
-    logger.warn("Ollama call exhausted — returning null", {
+    logger.warn("AI Gateway call exhausted — returning null", {
       moduleId,
       error: lastError?.message,
       promptChars,

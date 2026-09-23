@@ -3,36 +3,36 @@ import type { AiProvider, AiProviderResult } from "@/modules/ai/ai-provider";
 import { logger } from "@/lib/logger";
 
 const AI_TIMEOUT_MS = 120_000;
-const AI_CONTEXT_WINDOW = 16384;
 
 const isDev = () => env.NODE_ENV === "development";
 
-type OllamaGenerateResponse = {
-  response?: string;
-  thinking?: string;
+type ChatCompletionResponse = {
+  choices?: Array<{ message?: { content?: string } }>;
+  usage?: { total_tokens?: number };
 };
 
 export class OllamaService implements AiProvider {
   async analyze(prompt: string): Promise<AiProviderResult<string>> {
     const start = performance.now();
-    if (isDev()) logger.info("Ollama request", { promptLength: prompt.length });
+    if (isDev()) logger.info("AI Gateway request", { promptLength: prompt.length });
 
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => {
-        if (isDev()) logger.warn("Ollama timeout", { timeoutMs: AI_TIMEOUT_MS });
+        if (isDev()) logger.warn("AI Gateway timeout", { timeoutMs: AI_TIMEOUT_MS });
         controller.abort();
       }, AI_TIMEOUT_MS);
 
-      const response = await fetch(`${env.OLLAMA_BASE_URL}/api/generate`, {
+      const response = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${env.AI_API_KEY}`,
+        },
         body: JSON.stringify({
-          model: env.OLLAMA_MODEL,
-          prompt,
+          model: env.AI_MODEL,
+          messages: [{ role: "user", content: prompt }],
           stream: false,
-          format: "json",
-          options: { num_ctx: AI_CONTEXT_WINDOW },
         }),
         signal: controller.signal,
       });
@@ -41,24 +41,23 @@ export class OllamaService implements AiProvider {
       const duration = Math.round(performance.now() - start);
 
       if (!response.ok) {
-        if (isDev()) logger.warn("Ollama non-ok response", { status: response.status, durationMs: duration });
-        return { success: false, error: `Ollama returned status ${response.status}` };
+        if (isDev()) logger.warn("AI Gateway non-ok response", { status: response.status, durationMs: duration });
+        return { success: false, error: `AI Gateway returned status ${response.status}` };
       }
 
-      const data = (await response.json()) as OllamaGenerateResponse;
-      // ponytail: Qwen3 puts output in "thinking", not "response".
-      const text = data.response || data.thinking || "";
+      const data = (await response.json()) as ChatCompletionResponse;
+      const text = data.choices?.[0]?.message?.content || "";
       if (!text) {
-        if (isDev()) logger.warn("Ollama empty response", { durationMs: duration });
-        return { success: false, error: "Ollama returned empty response" };
+        if (isDev()) logger.warn("AI Gateway empty response", { durationMs: duration });
+        return { success: false, error: "AI Gateway returned empty response" };
       }
 
-      if (isDev()) logger.info("Ollama success", { durationMs: duration, responseLength: text.length });
+      if (isDev()) logger.info("AI Gateway success", { durationMs: duration, responseLength: text.length });
       return { success: true, data: text };
     } catch (err) {
       const duration = Math.round(performance.now() - start);
       const message = err instanceof Error ? err.message : "Unknown error";
-      if (isDev()) logger.warn("Ollama error", { error: message, durationMs: duration });
+      if (isDev()) logger.warn("AI Gateway error", { error: message, durationMs: duration });
       return { success: false, error: message };
     }
   }
