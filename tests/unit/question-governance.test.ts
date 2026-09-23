@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QuestionStatus, type QuestionLibraryItem } from "@prisma/client";
 import { QuestionLibraryService, recordUsage } from "@/modules/question-library/service";
-import { NotFoundError, AppError } from "@/lib/errors";
+import { NotFoundError } from "@/lib/errors";
 
 vi.mock("@/lib/db", () => {
   const mockQuestion = { id: "q-1", subjectVersionId: "sv-1", moduleNumber: 3, marks: 5, questionText: "What is the capital of France?", coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "MEDIUM", teachingIndex: "3.1", status: "DRAFT", createdById: "user-1", ownerId: "user-1", moderatorRemark: null, submittedAt: null, reviewedAt: null, createdAt: new Date(), updatedAt: new Date() };
@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => {
     questionOwnershipHistory: { create: vi.fn(), findMany: vi.fn() },
     questionUsageHistory: { create: vi.fn(), findMany: vi.fn() },
     moderationEvent: { findMany: vi.fn() },
+    responsibilityAssignment: { findMany: vi.fn() },
     questionSlot: { findFirst: vi.fn(), update: vi.fn() },
     examCycle: { findUnique: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -27,6 +28,11 @@ vi.mock("@/lib/db", () => {
 });
 
 import { prisma } from "@/lib/db";
+import { NotificationService } from "@/modules/notifications/service";
+
+vi.mock("@/modules/notifications/service", () => ({
+  NotificationService: vi.fn(function () { return { create: vi.fn() }; }),
+}));
 
 const actorCtx = { userId: "user-1" };
 const coordinatorCtx = { userId: "coord-1", isCoordinator: true };
@@ -35,10 +41,11 @@ const mockQuestion: QuestionLibraryItem & { slotAssignments?: Array<unknown> } =
   questionText: "What is the capital of France?",
   coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "MEDIUM",
   teachingIndex: "3.1", status: QuestionStatus.DRAFT,
+  questionType: "THEORY", poMapping: null, piMapping: null,
   createdById: "user-1", ownerId: "user-1",
   moderatorRemark: null, submittedAt: null, reviewedAt: null,
   createdAt: new Date(), updatedAt: new Date(),
-  slotAssignments: [{ questionBank: { batchSemester: { semesterNumber: 1 } } }],
+  slotAssignments: [{ questionBankId: "bank-1", questionBank: { batchSemester: { semesterNumber: 1 } } }],
 };
 
 function mockRepoFindById(overrides: Partial<QuestionLibraryItem> = {}) {
@@ -48,6 +55,7 @@ function mockRepoFindById(overrides: Partial<QuestionLibraryItem> = {}) {
 describe("Question Governance Hardening", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([]);
     (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockImplementation((args: { data: { ownerId: string } }) => Promise.resolve({ ...mockQuestion, ownerId: args.data.ownerId ?? mockQuestion.ownerId }));
     (prisma.subjectVersion.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "sv-1" });
     (prisma.questionLibraryItem.create as ReturnType<typeof vi.fn>).mockResolvedValue(mockQuestion);
@@ -58,6 +66,17 @@ describe("Question Governance Hardening", () => {
   });
 
   describe("1. Revision coverage — every tracked field change creates a revision", () => {
+    it.each([
+      [{ questionType: "NUMERICAL" as const }, { snapshotQuestionType: "NUMERICAL" }],
+      [{ poMapping: ["PO1"] }, { snapshotPoMapping: ["PO1"] }],
+      [{ piMapping: ["PI1.1"] }, { snapshotPiMapping: ["PI1.1"] }],
+    ])("snapshots academic metadata changes %j", async (change, snapshot) => {
+      mockRepoFindById();
+      vi.mocked(prisma.questionLibraryItem.update).mockResolvedValue({ ...mockQuestion, ...change });
+      await new QuestionLibraryService().update("q-1", change, actorCtx);
+      expect(prisma.questionRevision.create).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ data: expect.objectContaining(snapshot) }));
+    });
+
     it("creates revision when questionText changes", async () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
@@ -114,6 +133,23 @@ describe("Question Governance Hardening", () => {
       expect(prisma.questionRevision.create).not.toHaveBeenCalled();
     });
 
+    it("notifies only moderators selected for the question's banks", async () => {
+      mockRepoFindById({ status: QuestionStatus.DRAFT });
+      vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([
+        { user: { id: "moderator-1", name: "Moderator", email: "mod@example.com" } },
+      ] as never);
+      await new QuestionLibraryService().submit("q-1", actorCtx);
+      expect(prisma.responsibilityAssignment.findMany).toHaveBeenCalledExactlyOnceWith({
+        where: { scopeId: { in: ["bank-1"] }, scopeType: "QUESTION_BANK", responsibility: "MODERATOR" },
+        include: { user: { select: { id: true, email: true, name: true } } },
+      });
+      const notification = vi.mocked(NotificationService).mock.results[0].value;
+      expect(notification.create).toHaveBeenCalledExactlyOnceWith(
+        "moderator-1", "New question submitted for moderation", expect.any(String), "/dashboard/moderator/questions", "INFO",
+      );
+      expect(prisma.questionRevision.create).not.toHaveBeenCalled();
+    });
+
     it("snapshots all tracked fields in the revision", async () => {
       mockRepoFindById();
       (prisma.questionLibraryItem.update as ReturnType<typeof vi.fn>).mockResolvedValue({ ...mockQuestion, questionText: "Updated?" });
@@ -153,7 +189,7 @@ describe("Question Governance Hardening", () => {
       mockRepoFindById();
       const service = new QuestionLibraryService();
       const result = await service.transferOwnership("q-1", "new-owner", undefined, coordinatorCtx);
-      expect((result as any).ownerId).toBe("new-owner");
+      expect(result.ownerId).toBe("new-owner");
     });
 
     it("records transferredById from context", async () => {

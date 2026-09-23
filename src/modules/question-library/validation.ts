@@ -14,6 +14,9 @@ export const questionLibraryItemSchema = z.object({
   rbtLevel: z.nativeEnum(RbtLevel),
   difficultyLevel: emptyStrToNull(z.nativeEnum(DifficultyLevel).nullable()).optional(),
   teachingIndex: emptyStrToNull(z.string().max(50).nullable()).optional(),
+  questionType: emptyStrToNull(z.enum(["THEORY", "NUMERICAL"]).nullable()).optional(),
+  poMapping: z.array(z.string().trim().min(1).max(50)).max(50).refine(values => new Set(values).size === values.length, "Duplicate PO mappings").optional(),
+  piMapping: z.array(z.string().trim().min(1).max(50)).max(100).refine(values => new Set(values).size === values.length, "Duplicate PI mappings").optional(),
   status: z.nativeEnum(QuestionStatus).optional(),
 });
 

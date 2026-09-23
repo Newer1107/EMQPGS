@@ -2,7 +2,6 @@ import { NotificationType, Prisma, QuestionStatus, RecordStatus } from "@prisma/
 import { AppError, ConflictError, ForbiddenError, NotFoundError } from "@/lib/errors";
 import { QuestionLibraryRepository } from "@/modules/question-library/repository";
 import { prisma } from "@/lib/db";
-import { withOptimisticLock } from "@/lib/optimistic-lock";
 import { ensureQuestionBankMutable } from "@/modules/question-banks/mutable-guard";
 import { NotificationService } from "@/modules/notifications/service";
 import type { QuestionLibraryItemInput } from "@/modules/question-library/validation";
@@ -82,6 +81,9 @@ export class QuestionLibraryService {
           snapshotRbt: question.rbtLevel,
           snapshotDifficulty: question.difficultyLevel,
           snapshotTeachingIndex: question.teachingIndex,
+          snapshotQuestionType: question.questionType,
+          snapshotPoMapping: question.poMapping ?? Prisma.JsonNull,
+          snapshotPiMapping: question.piMapping ?? Prisma.JsonNull,
           changedById: ctx.userId,
           changeReason: "Initial creation",
         },
@@ -113,6 +115,9 @@ export class QuestionLibraryService {
           snapshotRbt: question.rbtLevel,
           snapshotDifficulty: question.difficultyLevel,
           snapshotTeachingIndex: question.teachingIndex,
+          snapshotQuestionType: question.questionType,
+          snapshotPoMapping: question.poMapping ?? Prisma.JsonNull,
+          snapshotPiMapping: question.piMapping ?? Prisma.JsonNull,
           changedById: ctx.userId,
           changeReason: "Initial creation",
         },
@@ -168,7 +173,7 @@ export class QuestionLibraryService {
       }
     }
 
-    const contentChanged = input.questionText !== undefined || input.moduleNumber !== undefined || input.marks !== undefined || input.coMapping !== undefined || input.rbtLevel !== undefined || input.difficultyLevel !== undefined || input.teachingIndex !== undefined;
+    const contentChanged = input.questionText !== undefined || input.moduleNumber !== undefined || input.marks !== undefined || input.coMapping !== undefined || input.rbtLevel !== undefined || input.difficultyLevel !== undefined || input.teachingIndex !== undefined || input.questionType !== undefined || input.poMapping !== undefined || input.piMapping !== undefined;
 
     const updated = await prisma.$transaction(async (tx) => {
       const u = await tx.questionLibraryItem.update({
@@ -189,6 +194,9 @@ export class QuestionLibraryService {
             snapshotRbt: u.rbtLevel,
             snapshotDifficulty: u.difficultyLevel,
             snapshotTeachingIndex: u.teachingIndex,
+            snapshotQuestionType: u.questionType,
+            snapshotPoMapping: u.poMapping ?? Prisma.JsonNull,
+            snapshotPiMapping: u.piMapping ?? Prisma.JsonNull,
             changedById: ctx.userId,
           },
         });

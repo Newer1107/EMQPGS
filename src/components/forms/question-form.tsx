@@ -33,6 +33,9 @@ type QuestionFormProps = {
     rbtLevel?: string;
     difficultyLevel?: string;
     teachingIndex?: string;
+    questionType?: string;
+    poMapping?: string[];
+    piMapping?: string[];
   };
   subjectVersions: Array<{ id: string; title: string; subject: { subjectCode: string; subjectName: string } }>;
   endpoint: string;
@@ -62,6 +65,9 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
     rbtLevel: initialValues?.rbtLevel ?? "",
     difficultyLevel: initialValues?.difficultyLevel ?? "",
     teachingIndex: initialValues?.teachingIndex ?? "",
+    questionType: initialValues?.questionType ?? "",
+    poMapping: initialValues?.poMapping?.join(", ") ?? "",
+    piMapping: initialValues?.piMapping?.join(", ") ?? "",
   });
 
   function setField(name: string, value: string) {
@@ -69,6 +75,9 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
   }
 
   async function save(body: Record<string, unknown>, submitAfter: boolean) {
+    body.questionType = values.questionType || null;
+    body.poMapping = (values.poMapping ?? "").split(",").map(value => value.trim()).filter(Boolean);
+    body.piMapping = (values.piMapping ?? "").split(",").map(value => value.trim()).filter(Boolean);
     const resolvedBankId = bankId ?? (bankIdBySubjectVersionId ? bankIdBySubjectVersionId[values.subjectVersionId] : undefined);
     const url = resolvedBankId ? `${endpoint}?bankId=${resolvedBankId}` : endpoint;
     const response = await apiFetch(url, {
@@ -269,6 +278,11 @@ export function QuestionForm({ initialValues, subjectVersions, endpoint, title, 
           <div className="space-y-2">
             <Label htmlFor="teachingIndex">Teaching Index (optional)</Label>
             <Input id="teachingIndex" value={values.teachingIndex} onChange={(e) => setField("teachingIndex", e.target.value)} maxLength={50} placeholder="e.g. L1T1" />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2"><Label htmlFor="questionType">Question type</Label><Select id="questionType" value={values.questionType ?? ""} onChange={event => setField("questionType", event.target.value)}><option value="">Not specified</option><option value="THEORY">Theory</option><option value="NUMERICAL">Numerical</option></Select></div>
+            <div className="space-y-2"><Label htmlFor="poMapping">Program outcomes</Label><Input id="poMapping" value={values.poMapping ?? ""} onChange={event => setField("poMapping", event.target.value)} placeholder="PO1, PO2 (from approved course plan)" /></div>
+            <div className="space-y-2"><Label htmlFor="piMapping">Program indicators</Label><Input id="piMapping" value={values.piMapping ?? ""} onChange={event => setField("piMapping", event.target.value)} placeholder="PI1.1, PI2.1 (from approved course plan)" /></div>
           </div>
           <div className="flex gap-3">
             <Button type="submit" disabled={loading || saving} className="flex-1">

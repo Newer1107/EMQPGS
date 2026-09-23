@@ -17,11 +17,14 @@ describe("moderator revision and downstream context", () => {
     const base = { snapshotModule: 1, snapshotMarks: 5, snapshotCo: "CO1", snapshotRbt: "REMEMBER", snapshotDifficulty: null, snapshotTeachingIndex: null, changedBy: { name: "Author" }, createdAt: "2026-01-01T00:00:00Z" };
     const html = renderToStaticMarkup(createElement(RevisionDiff, { revisions: [
       { ...base, id: "r1", revisionNumber: 1, snapshotQuestionText: "Before" },
-      { ...base, id: "r2", revisionNumber: 2, snapshotQuestionText: "After", snapshotMarks: 10 },
+      { ...base, id: "r2", revisionNumber: 2, snapshotQuestionText: "After", snapshotMarks: 10, snapshotQuestionType: "NUMERICAL", snapshotPoMapping: ["PO1"], snapshotPiMapping: ["PI1.1"] },
     ] }));
     expect(html).toContain("Before");
     expect(html).toContain("After");
     expect(html).toContain("Author");
+    expect(html).toContain("NUMERICAL");
+    expect(html).toContain("PO1");
+    expect(html).toContain("PI1.1");
     expect(html.match(/disabled=""/g)).toHaveLength(2);
   });
   it("rejects a question outside the active bank", async () => {

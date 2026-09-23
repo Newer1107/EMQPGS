@@ -41,7 +41,7 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
         </p>
       </div>
       {moderationEvents.length > 0 && (
-        <ModerationTimeline events={moderationEvents as any} />
+        <ModerationTimeline events={moderationEvents} />
       )}
       <QuestionForm
         initialValues={{
@@ -53,6 +53,9 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
           rbtLevel: question.rbtLevel,
           difficultyLevel: question.difficultyLevel ?? undefined,
           teachingIndex: question.teachingIndex ?? undefined,
+          questionType: question.questionType ?? undefined,
+          poMapping: Array.isArray(question.poMapping) ? question.poMapping.filter((value): value is string => typeof value === "string") : [],
+          piMapping: Array.isArray(question.piMapping) ? question.piMapping.filter((value): value is string => typeof value === "string") : [],
         }}
         subjectVersions={subjectVersions}
         endpoint={`/api/question-library/${id}`}

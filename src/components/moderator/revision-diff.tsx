@@ -14,6 +14,9 @@ type RevisionSnapshot = {
   snapshotRbt: string;
   snapshotDifficulty: string | null;
   snapshotTeachingIndex: string | null;
+  snapshotQuestionType?: string | null;
+  snapshotPoMapping?: unknown;
+  snapshotPiMapping?: unknown;
   snapshotQuestionText: string;
   changedBy: { name: string } | null;
   createdAt: string;
@@ -73,6 +76,9 @@ export function RevisionDiff({ revisions }: { revisions: RevisionSnapshot[] }) {
         <DiffRow label="RBT Level" oldVal={oldRev.snapshotRbt} newVal={newRev.snapshotRbt} />
         <DiffRow label="Difficulty" oldVal={oldRev.snapshotDifficulty} newVal={newRev.snapshotDifficulty} />
         <DiffRow label="Teaching Index" oldVal={oldRev.snapshotTeachingIndex} newVal={newRev.snapshotTeachingIndex} />
+        <DiffRow label="Question Type" oldVal={oldRev.snapshotQuestionType ?? null} newVal={newRev.snapshotQuestionType ?? null} />
+        <DiffRow label="PO mappings" oldVal={Array.isArray(oldRev.snapshotPoMapping) ? oldRev.snapshotPoMapping.join(", ") : null} newVal={Array.isArray(newRev.snapshotPoMapping) ? newRev.snapshotPoMapping.join(", ") : null} />
+        <DiffRow label="PI mappings" oldVal={Array.isArray(oldRev.snapshotPiMapping) ? oldRev.snapshotPiMapping.join(", ") : null} newVal={Array.isArray(newRev.snapshotPiMapping) ? newRev.snapshotPiMapping.join(", ") : null} />
 
         <div className="mt-4">
           <p className="mb-2 text-sm font-medium text-[var(--text-tertiary)]">Question Text</p>
