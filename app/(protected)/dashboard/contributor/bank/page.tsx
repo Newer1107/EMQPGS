@@ -31,6 +31,7 @@ export default async function ContributorBankPage() {
 
   return (
     <BankSlotsView
+      contributionHref={ctx.questionBank.phase === "DRAFTING" && ctx.questionBank.recordStatus !== "LOCKED" ? "/dashboard/contributor/submit-question" : undefined}
       subjectName={ctx.subject.subjectName}
       subjectCode={ctx.subject.subjectCode}
       batchName={ctx.batchSemester.batch.name}

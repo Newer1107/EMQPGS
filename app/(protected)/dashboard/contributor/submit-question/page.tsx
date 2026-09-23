@@ -17,6 +17,7 @@ export default async function ContributorSubmitQuestionPage({
     marks: s.marks,
     slotNumber: s.slotNumber,
     filled: s.assignedQuestion !== null,
+    isLocked: s.isLocked,
   }));
 
   const initialValues =
