@@ -86,7 +86,7 @@ function makeMockData(overrides?: Partial<RawBankData>): RawBankData {
   };
 }
 
-function makeMockMetrics(overrides?: Partial<MetricResult[]>): MetricResult[] {
+function makeMockMetrics(): MetricResult[] {
   return [
     { indexCode: "ECS", value: 0.75, classification: "EFFECTIVE" },
     { indexCode: "EQI", value: 0.82, classification: "HIGHLY_EFFECTIVE" },
@@ -95,13 +95,29 @@ function makeMockMetrics(overrides?: Partial<MetricResult[]>): MetricResult[] {
     { indexCode: "HOTS", value: 0.4, classification: "NEEDS_IMPROVEMENT" },
     { indexCode: "CBR", value: 0.5, classification: "EFFECTIVE" },
     { indexCode: "DBI", value: null, classification: null },
-  ] ?? overrides;
+  ];
 }
 
 describe("SnapshotBuilder", () => {
   const builder = new SnapshotBuilder();
 
   describe("build()", () => {
+    it("retains a detached question-level extraction with source IDs and structural evidence", () => {
+      const data=makeMockData();
+      data.questions[0].sourceQuestionId="q-source";
+      data.questions[0].sourceSlotId="slot-source";
+      data.structuralChecks={marksAllocation:true,assessmentInstructions:null};
+      const snapshot=builder.build(data,makeMockMetrics());
+      expect(snapshot.questions?.[0]).toMatchObject({
+        sourceQuestionId:"q-source",sourceSlotId:"slot-source",questionText:"Define array?",
+      });
+      expect(snapshot.totalMarks).toBe(data.totalMarks);
+      expect(snapshot.structuralElements).toHaveLength(10);
+      expect(snapshot.structuralElements).toContainEqual({element:"marksAllocation",present:true});
+      expect(snapshot.structuralElements).toContainEqual({element:"assessmentInstructions",present:null});
+      data.questions[0].questionText="Changed after snapshot";
+      expect(snapshot.questions?.[0].questionText).toBe("Define array?");
+    });
     it("returns correct EvidenceSnapshotData shape", () => {
       const data = makeMockData();
       const metrics = makeMockMetrics();
@@ -127,12 +143,11 @@ describe("SnapshotBuilder", () => {
       const snapshot = builder.build(data, metrics);
 
       expect(snapshot.totalQuestions).toBe(4);
-      // Q1 (co=VERIFIED), Q2 (co=VERIFIED), Q4 (rbt=VERIFIED)
-      expect(snapshot.verifiedQuestions).toBe(3);
-      // Question 4 has coStatus=UNABLE_TO_VERIFY
-      expect(snapshot.unableToVerifyQuestions).toBe(1);
-      // Question 3 has coStatus=MISSING_DATA
-      expect(snapshot.missingDataQuestions).toBe(1);
+      // Every fixture lacks required source ID, PO, PI and type evidence.
+      // Question categories are exclusive, with missing attributes first.
+      expect(snapshot.verifiedQuestions).toBe(0);
+      expect(snapshot.unableToVerifyQuestions).toBe(0);
+      expect(snapshot.missingDataQuestions).toBe(4);
     });
 
     it("maps metric values by indexCode", () => {
@@ -317,6 +332,39 @@ describe("SnapshotBuilder", () => {
     it("returns a 64-character hex string", () => {
       const hash = builder.computeEvidenceHash(snapshot, "1.0.0", "v1");
       expect(hash).toMatch(/^[a-f0-9]{64}$/);
+    });
+
+    it("hashes nested metrics, distributions, question content and provenance", () => {
+      const original=builder.build(makeMockData(),makeMockMetrics());
+      const hash=builder.computeEvidenceHash(original,"v1","p1");
+      const mutations = [
+        (s: typeof original) => { s.metrics.ECS=.1; },
+        (s: typeof original) => { s.distributions.bloom.REMEMBER=9; },
+        (s: typeof original) => { s.questions![0].questionText="A different question"; },
+        (s: typeof original) => { s.questions![0].sourceQuestionId="different-source"; },
+        (s: typeof original) => { s.structuralElements![0].present=true; },
+      ];
+      for (const mutate of mutations) {
+        const copy=structuredClone(original);
+        mutate(copy);
+        expect(builder.computeEvidenceHash(copy,"v1","p1")).not.toBe(hash);
+      }
+    });
+
+    it("canonicalizes nested object keys while preserving array order", () => {
+      const first={...snapshot,metrics:{ECS:.75,EQI:.82}};
+      const reordered={...snapshot,metrics:{EQI:.82,ECS:.75}};
+      expect(builder.computeEvidenceHash(first,"v1","p1")).toBe(builder.computeEvidenceHash(reordered,"v1","p1"));
+      expect(builder.computeEvidenceHash({...first,outlierLists:["a","b"]},"v1","p1"))
+        .not.toBe(builder.computeEvidenceHash({...first,outlierLists:["b","a"]},"v1","p1"));
+    });
+
+    it("frames versions unambiguously and ignores extraction wall-clock time", () => {
+      expect(builder.computeEvidenceHash(snapshot,"ab","c")).not.toBe(builder.computeEvidenceHash(snapshot,"a","bc"));
+      const data=makeMockData();
+      const first=builder.build(data,[]);
+      data.extractionTimestamp="later";
+      expect(builder.computeEvidenceHash(first,"v1","p1")).toBe(builder.computeEvidenceHash(builder.build(data,[]),"v1","p1"));
     });
   });
 });

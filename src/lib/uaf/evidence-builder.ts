@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import type { RawBankData, ExtractedQuestionData, ModuleSummary } from "./types";
+import { EXTRACTION_ATTRIBUTES, attributeStatus } from "./metric-engine";
 
 export class EvidenceBuilder {
   async collect(questionBankId: string): Promise<RawBankData> {
@@ -13,6 +14,7 @@ export class EvidenceBuilder {
           include: {
             assignedQuestion: {
               select: {
+                id: true,
                 questionText: true,
                 marks: true,
                 moduleNumber: true,
@@ -20,6 +22,9 @@ export class EvidenceBuilder {
                 rbtLevel: true,
                 difficultyLevel: true,
                 status: true,
+                questionType: true,
+                poMapping: true,
+                piMapping: true,
               },
             },
           },
@@ -31,31 +36,69 @@ export class EvidenceBuilder {
 
     const questions: ExtractedQuestionData[] = bank.slots
       .filter((s) => s.assignedQuestion)
+      .sort((a, b) => a.moduleNumber - b.moduleNumber || a.marks - b.marks || a.slotNumber - b.slotNumber || a.id.localeCompare(b.id))
       .map((slot, idx) => {
         const q = slot.assignedQuestion!;
         const verb = extractCommandVerb(q.questionText);
+        const poMappings = mappingIds(q.poMapping);
+        const piMappings = mappingIds(q.piMapping);
         return {
           questionIndex: idx + 1,
+          sourceQuestionId: q.id ?? slot.assignedQuestionId,
+          sourceSlotId: slot.id,
+          sourceSlotNumber: slot.slotNumber,
+          poMapping: poMappings?.join(", ") || null,
+          piMapping: piMappings?.join(", ") || null,
+          poMappings,
+          piMappings,
+          poStatus: poMappings?.length ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
+          piStatus: piMappings?.length ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
+          questionTypeStatus: q.questionType ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
+          attributeStatuses: {
+            questionId: (q.id ?? slot.assignedQuestionId) ? "VERIFIED" : "MISSING_DATA",
+            questionText: q.questionText.trim() ? "VERIFIED" : "MISSING_DATA",
+            marks: Number.isFinite(q.marks) && q.marks > 0 ? "VERIFIED" : "MISSING_DATA",
+          },
           questionText: q.questionText,
           marks: q.marks,
           moduleNumber: slot.moduleNumber,
           coMapping: q.coMapping as unknown as string | null,
           rbtLevel: q.rbtLevel as unknown as string | null,
           difficultyLevel: q.difficultyLevel as unknown as string | null,
-          questionType: classifyQuestionType(q.questionText, verb, q.marks),
+          questionType: q.questionType ?? null,
           commandVerb: verb,
-          coStatus: q.coMapping ? "VERIFIED" : "MISSING_DATA",
-          rbtStatus: q.rbtLevel ? "VERIFIED" : "MISSING_DATA",
-          difficultyStatus: q.difficultyLevel ? "VERIFIED" : "MISSING_DATA",
+          coStatus: q.coMapping ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
+          rbtStatus: q.rbtLevel ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
+          difficultyStatus: q.difficultyLevel ? "UNABLE_TO_VERIFY" : "MISSING_DATA",
           questionStatus: (q.status as string) ?? null,
-          clarityScore: computeClarityScore(q.questionText, q.coMapping, q.rbtLevel, q.difficultyLevel),
+          clarityScore: 0,
         };
       });
 
+    for (const q of questions) {
+      q.attributeStatuses = Object.fromEntries(EXTRACTION_ATTRIBUTES.map(a => [a, attributeStatus(q, a)]));
+    }
     const modules = buildModuleSummaries(questions);
+    const all = (check: (q: ExtractedQuestionData) => boolean) => questions.length > 0 ? questions.every(check) : null;
+    const filled = bank.slots.filter(s => s.assignedQuestion);
+    const numbering = filled.map(s => `${s.moduleNumber}:${s.marks}:${s.slotNumber}`);
+    const structuralChecks: RawBankData["structuralChecks"] = {
+      courseInformation: !!(bank.subject.subjectName.trim() && bank.subject.subjectCode.trim()),
+      questionNumbering: filled.length ? filled.every(s => Number.isInteger(s.slotNumber) && s.slotNumber > 0) && new Set(numbering).size === filled.length : null,
+      marksAllocation: all(q => Number.isFinite(q.marks) && q.marks > 0),
+      coMapping: all(q => !!q.coMapping?.trim()),
+      bloomMapping: all(q => !!q.rbtLevel?.trim()),
+      difficultyMapping: all(q => !!q.difficultyLevel?.trim()),
+      // The database has module identifiers, not authored section labels/instructions.
+      sectionLabels: null,
+      assessmentInstructions: null,
+      metadataConsistency: filled.length ? filled.every(s => s.assignedQuestion!.marks === s.marks && s.assignedQuestion!.moduleNumber === s.moduleNumber) : null,
+      questionFormatting: all(q => q.questionText.trim().length > 0 && !q.questionText.includes("�")),
+    };
 
     return {
       questionBankId: bank.id,
+      structuralChecks,
       subjectName: bank.subject.subjectName,
       subjectCode: bank.subject.subjectCode,
       totalSlots: bank.pattern?.totalSlots ?? bank.slots.length,
@@ -63,62 +106,15 @@ export class EvidenceBuilder {
       questions,
       modules,
       totalMarks: questions.reduce((sum, q) => sum + q.marks, 0),
-      marksOptions: (bank.pattern?.marksPattern as number[]) ?? [2, 5, 10],
+      marksOptions: (bank.pattern?.marksPattern as number[]) ?? [],
       extractionTimestamp: new Date().toISOString(),
     };
   }
 }
 
-// ── Question Type Classification ─────────────────────────────────
-
-const QUESTION_TYPE_MAP: Record<string, string> = {
-  define: "definition", list: "enumeration", recall: "recall", state: "enumeration",
-  identify: "identification", label: "identification",
-  explain: "explanation", describe: "description", discuss: "discussion",
-  summarize: "summary", interpret: "interpretation",
-  use: "application", implement: "application", solve: "problem-solving",
-  execute: "application", demonstrate: "demonstration",
-  compare: "comparison", differentiate: "differentiation", investigate: "investigation",
-  categorize: "categorization",
-  assess: "evaluation", critique: "evaluation", justify: "justification",
-  recommend: "recommendation", validate: "validation",
-  design: "design", develop: "development", construct: "construction",
-  propose: "proposal", formulate: "formulation",
-};
-
-function classifyQuestionType(text: string, verb: string | null, marks: number): string {
-  if (verb && QUESTION_TYPE_MAP[verb]) return QUESTION_TYPE_MAP[verb];
-  // Heuristic: long questions with high marks are likely "essay" or "problem-solving"
-  const wordCount = text.split(/\s+/).length;
-  if (marks >= 10 && wordCount > 50) return "essay";
-  if (marks >= 5 && wordCount > 30) return "analytical";
-  if (marks <= 2) return "short-answer";
-  return "constructed-response";
-}
-
-// ── Clarity Score ────────────────────────────────────────────────
-
-function computeClarityScore(
-  text: string,
-  coMapping: string | null,
-  rbtLevel: string | null,
-  difficultyLevel: string | null,
-): number {
-  let score = 0;
-  // Text quality: starts with capital letter, ends with punctuation
-  const trimmed = text.trim();
-  if (/^[A-Z]/.test(trimmed)) score += 0.2;
-  if (/[.?!]$/.test(trimmed)) score += 0.1;
-  // Reasonable length
-  const wc = trimmed.split(/\s+/).length;
-  if (wc >= 5 && wc <= 100) score += 0.2;
-  // Has question mark or instruction verb
-  if (trimmed.includes("?")) score += 0.15;
-  // Metadata presence
-  if (coMapping) score += 0.15;
-  if (rbtLevel) score += 0.1;
-  if (difficultyLevel) score += 0.1;
-  return Math.min(score, 1);
+function mappingIds(value: unknown): string[] | null {
+  if (!Array.isArray(value) || !value.every(item => typeof item === "string" && item.trim().length > 0)) return null;
+  return [...new Set(value.map(item => item.trim()))];
 }
 
 // ── Command Verb Extraction ──────────────────────────────────────

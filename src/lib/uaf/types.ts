@@ -1,4 +1,4 @@
-import { IndexCode, Classification, ConfidenceClassification, AnalysisStatus, FinalVerdict } from "@prisma/client";
+import { IndexCode, Classification, ConfidenceClassification, FinalVerdict } from "@prisma/client";
 import { z } from "zod";
 
 // ── Branded Types ──────────────────────────────
@@ -19,6 +19,14 @@ export enum PipelineStage {
 
 // ── Raw Bank Data (what EvidenceBuilder produces) ──
 export interface RawBankData {
+  /** Documented curriculum outcomes; never inferred from observed mappings. */
+  documentedCourseOutcomes?: string[];
+  structuralChecks?: Partial<Record<StructuralElement, boolean | null>>;
+  expectedBloomDistribution?: Record<string, number>;
+  expectedDifficultyDistribution?: Record<string, number>;
+  /** Reviewed academic scores with source references, not text heuristics. */
+  academicEvidence?: Partial<Record<"QCQI" | "AMI" | "FRI" | "CAI" | "MCS", ReviewedScore[]>>;
+  indexConfidence?: Record<string, { verified: number; required: number }>;
   questionBankId: string;
   subjectName: string;
   subjectCode: string;
@@ -32,6 +40,19 @@ export interface RawBankData {
 }
 
 export interface ExtractedQuestionData {
+  sourceQuestionId?: string | null;
+  sourceSlotId?: string | null;
+  sourceSlotNumber?: number;
+  poMapping?: string | null;
+  piMapping?: string | null;
+  poMappings?: string[] | null;
+  piMappings?: string[] | null;
+  poStatus?: ExtractionStatus;
+  piStatus?: ExtractionStatus;
+  questionTypeStatus?: ExtractionStatus;
+  attributeStatuses?: Partial<Record<ExtractionAttribute, ExtractionStatus>>;
+  /** Reviewed academic correctness, distinct from successful source extraction. */
+  attributeAccuracy?: Partial<Record<ExtractionAttribute, boolean | null>>;
   questionIndex: number;
   questionText: string;
   marks: number;
@@ -57,6 +78,18 @@ export interface ModuleSummary {
 
 // ── EvidenceSnapshot (what SnapshotBuilder produces) ──
 export interface EvidenceSnapshotData {
+  structuralElements?: Array<{ element: StructuralElement; present: boolean | null }>;
+  totalMarks?: number;
+  metricConfidence?: Record<string, number | null>;
+  questionBankId?: string;
+  questions?: ExtractedQuestionData[];
+  structuralChecks?: RawBankData["structuralChecks"];
+  documentedCourseOutcomes?: string[];
+  academicEvidence?: RawBankData["academicEvidence"];
+  indexConfidence?: RawBankData["indexConfidence"];
+  expectedBloomDistribution?: Record<string, number>;
+  expectedDifficultyDistribution?: Record<string, number>;
+  partiallyVerifiedQuestions?: number;
   totalQuestions: number;
   verifiedQuestions: number;
   unableToVerifyQuestions: number;
@@ -147,9 +180,20 @@ export interface AnalysisSnapshotResult {
 
 // ── Metric Result (what MetricEngine produces) ──
 export interface MetricResult {
+  confidenceScore?: number | null;
+  confidenceClassification?: ConfidenceClassification | null;
   indexCode: string;
   value: number | null;
   classification: string | null;
+}
+
+export type ExtractionStatus = "VERIFIED" | "PARTIALLY_VERIFIED" | "UNABLE_TO_VERIFY" | "MISSING_DATA";
+export type ExtractionAttribute = "questionId" | "questionText" | "marks" | "coMapping" | "poMapping" | "piMapping" | "rbtLevel" | "difficultyLevel" | "questionType";
+export type StructuralElement = "courseInformation" | "questionNumbering" | "marksAllocation" | "coMapping" | "bloomMapping" | "difficultyMapping" | "sectionLabels" | "assessmentInstructions" | "metadataConsistency" | "questionFormatting";
+export interface ReviewedScore {
+  criterion: string;
+  score: number | null;
+  sourceIds: string[];
 }
 
 // ── Zod Schema for evidence hash ──

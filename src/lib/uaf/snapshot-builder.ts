@@ -1,5 +1,15 @@
 import { createHash } from "crypto";
 import type { RawBankData, EvidenceSnapshotData, DistributionData, MetricResult } from "./types";
+import { EXTRACTION_ATTRIBUTES, STRUCTURAL_ELEMENTS, attributeStatus } from "./metric-engine";
+
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+      .map(([key, child]) => [key, canonicalize(child)]));
+  }
+  return value;
+}
 
 export class SnapshotBuilder {
   /**
@@ -12,17 +22,34 @@ export class SnapshotBuilder {
       metricValues[m.indexCode] = m.value;
     }
 
+    const questions = structuredClone(data.questions).map(q => ({
+      ...q,
+      attributeStatuses: Object.fromEntries(EXTRACTION_ATTRIBUTES.map(a => [a, attributeStatus(q, a)])),
+    }));
+    const statuses = questions.map(q => {
+      const values = Object.values(q.attributeStatuses);
+      if (values.includes("MISSING_DATA")) return "MISSING_DATA";
+      if (values.includes("UNABLE_TO_VERIFY")) return "UNABLE_TO_VERIFY";
+      if (values.includes("PARTIALLY_VERIFIED")) return "PARTIALLY_VERIFIED";
+      return "VERIFIED";
+    });
     return {
+      questionBankId: data.questionBankId,
+      questions,
+      totalMarks: data.totalMarks,
+      structuralChecks: structuredClone(data.structuralChecks),
+      structuralElements: STRUCTURAL_ELEMENTS.map(element => ({ element, present: data.structuralChecks?.[element] ?? null })),
+      documentedCourseOutcomes: structuredClone(data.documentedCourseOutcomes),
+      academicEvidence: structuredClone(data.academicEvidence),
+      indexConfidence: structuredClone(data.indexConfidence),
+      expectedBloomDistribution: structuredClone(data.expectedBloomDistribution),
+      expectedDifficultyDistribution: structuredClone(data.expectedDifficultyDistribution),
+      metricConfidence: Object.fromEntries(metrics.map(m => [m.indexCode, m.confidenceScore ?? null])),
+      partiallyVerifiedQuestions: statuses.filter(s => s === "PARTIALLY_VERIFIED").length,
       totalQuestions: data.questions.length,
-      verifiedQuestions: data.questions.filter(
-        (q) => q.coStatus === "VERIFIED" || q.rbtStatus === "VERIFIED",
-      ).length,
-      unableToVerifyQuestions: data.questions.filter(
-        (q) => q.coStatus === "UNABLE_TO_VERIFY",
-      ).length,
-      missingDataQuestions: data.questions.filter(
-        (q) => q.coStatus === "MISSING_DATA",
-      ).length,
+      verifiedQuestions: statuses.filter(s => s === "VERIFIED").length,
+      unableToVerifyQuestions: statuses.filter(s => s === "UNABLE_TO_VERIFY").length,
+      missingDataQuestions: statuses.filter(s => s === "MISSING_DATA").length,
       extractionCompletenessScore: metricValues["ECS"] ?? null,
       extractionQualityIndex: metricValues["EQI"] ?? null,
       metrics: metricValues,
@@ -43,8 +70,7 @@ export class SnapshotBuilder {
     evaluationEngineVersion: string,
     promptVersion: string,
   ): string {
-    const canonicalJSON = JSON.stringify(snapshot, Object.keys(snapshot).sort());
-    const input = canonicalJSON + evaluationEngineVersion + promptVersion;
+    const input = JSON.stringify(canonicalize({ snapshot, evaluationEngineVersion, promptVersion }));
     return createHash("sha256").update(input, "utf-8").digest("hex");
   }
 

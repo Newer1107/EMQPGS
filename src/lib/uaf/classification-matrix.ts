@@ -1,7 +1,7 @@
 import { Classification, ConfidenceClassification } from "@prisma/client";
 
 export function classifyIndex(value: number | null): Classification | null {
-  if (value === null) return null;
+  if (value === null || !Number.isFinite(value) || value < 0 || value > 1) return null;
   if (value >= 0.90) return "EXEMPLARY";
   if (value >= 0.80) return "HIGHLY_EFFECTIVE";
   if (value >= 0.70) return "EFFECTIVE";
@@ -11,7 +11,7 @@ export function classifyIndex(value: number | null): Classification | null {
 }
 
 export function classifyConfidence(score: number | null): ConfidenceClassification | null {
-  if (score === null) return null;
+  if (score === null || !Number.isFinite(score) || score < 0 || score > 1) return null;
   if (score >= 0.90) return "VERY_HIGH";
   if (score >= 0.80) return "HIGH";
   if (score >= 0.65) return "MEDIUM";
@@ -20,15 +20,15 @@ export function classifyConfidence(score: number | null): ConfidenceClassificati
 }
 
 export function computeConfidence(verified: number, required: number): {
-  score: number;
-  percentage: number;
-  classification: ConfidenceClassification;
+  score: number | null;
+  percentage: number | null;
+  classification: ConfidenceClassification | null;
 } {
-  const rawScore = required > 0 ? verified / required : 0;
-  const score = Math.min(Math.max(rawScore, 0), 1);
+  const score = Number.isFinite(verified) && Number.isFinite(required) &&
+    required > 0 && verified >= 0 && verified <= required ? verified / required : null;
   return {
     score,
-    percentage: Math.round(score * 100),
-    classification: classifyConfidence(score) ?? "VERY_LOW",
+    percentage: score === null ? null : Math.round(score * 100),
+    classification: classifyConfidence(score),
   };
 }

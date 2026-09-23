@@ -12,7 +12,6 @@ vi.mock("@/lib/db", () => {
 
 import { prisma } from "@/lib/db";
 import { EvidenceBuilder } from "@/lib/uaf/evidence-builder";
-import type { RawBankData } from "@/lib/uaf/types";
 
 // ── Fixtures ─────────────────────────────────────
 
@@ -141,9 +140,15 @@ describe("EvidenceBuilder", () => {
       expect(result.questions[0]).toHaveProperty("commandVerb", "explain");
 
       // Status fields
-      expect(result.questions[0]).toHaveProperty("coStatus", "VERIFIED");
-      expect(result.questions[0]).toHaveProperty("rbtStatus", "VERIFIED");
-      expect(result.questions[0]).toHaveProperty("difficultyStatus", "VERIFIED");
+      expect(result.questions[0]).toHaveProperty("coStatus", "UNABLE_TO_VERIFY");
+      expect(result.questions[0]).toHaveProperty("rbtStatus", "UNABLE_TO_VERIFY");
+      expect(result.questions[0]).toHaveProperty("difficultyStatus", "UNABLE_TO_VERIFY");
+      expect(result.questions[0].sourceQuestionId).toBe("q-1");
+      expect(result.questions[0].sourceSlotId).toBe("slot-1");
+      expect(result.questions[0].attributeStatuses?.questionText).toBe("VERIFIED");
+      expect(result.questions[0].poMapping).toBeNull();
+      expect(result.structuralChecks?.assessmentInstructions).toBeNull();
+      expect(result.structuralChecks?.metadataConsistency).toBe(true);
     });
 
     it("extracts questions only from filled slots", async () => {
@@ -260,6 +265,36 @@ describe("EvidenceBuilder", () => {
       expect(result.questions[0].commandVerb).toBeNull();
       // "1." → strip non-alpha → "" → null
       expect(result.questions[1].commandVerb).toBeNull();
+    });
+
+    it("preserves explicit PO/PI/type without claiming academic verification", async () => {
+      const bank = mockBank();
+      Object.assign(bank.slots[0].assignedQuestion!, {poMapping:["PO1","PO2"],piMapping:["PI1"],questionType:"THEORY"});
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(bank);
+      const result = await builder.collect("qb-1");
+      expect(result.questions[0]).toMatchObject({
+        poMappings:["PO1","PO2"],piMappings:["PI1"],poMapping:"PO1, PO2",
+        questionType:"THEORY",poStatus:"UNABLE_TO_VERIFY",questionTypeStatus:"UNABLE_TO_VERIFY",
+      });
+    });
+
+    it("checks actual structural mismatches and keeps unknown authored instructions unknown", async () => {
+      const bank=mockBank();
+      bank.slots[0].assignedQuestion!.marks=99;
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(bank);
+      const result=await builder.collect("qb-1");
+      expect(result.structuralChecks?.metadataConsistency).toBe(false);
+      expect(result.structuralChecks?.assessmentInstructions).toBeNull();
+      expect(result.structuralChecks?.questionNumbering).toBe(true);
+    });
+
+    it("normalizes source order for reproducible snapshots", async () => {
+      const bank=mockBank();
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(bank);
+      const first=await builder.collect("qb-1");
+      bank.slots.reverse();
+      const second=await builder.collect("qb-1");
+      expect(first.questions).toEqual(second.questions);
     });
 
     it("throws NotFoundError when bank does not exist", async () => {
