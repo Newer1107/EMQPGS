@@ -3,19 +3,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { apiFetch } from "@/lib/client-fetch";
+import type { OtpPurpose } from "@/lib/auth/otp-service";
 import { Loader2, AlertCircle, RefreshCw, CheckCircle2, Clock, Mail } from "lucide-react";
 
 type OtpState =
   | { phase: "requesting" }
   | { phase: "input" }
   | { phase: "verifying" }
-  | { phase: "error"; attemptsRemaining: number; message: string }
+  | { phase: "error"; operation: "request" | "verify"; message: string }
   | { phase: "rate_limited" }
   | { phase: "expired" }
   | { phase: "success" };
 
 interface OtpDialogProps {
-  purpose: string;
+  purpose: OtpPurpose;
+  resourceId?: string;
   email: string;
   onVerified: () => void;
   onCancel: () => void;
@@ -28,18 +31,97 @@ function maskEmail(email: string): string {
   return `${local[0]}***@${domain}`;
 }
 
-export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogProps) {
+export function OtpDialog({ purpose, resourceId, email, onVerified, onCancel }: OtpDialogProps) {
   const [state, setState] = useState<OtpState>({ phase: "requesting" });
   const [digits, setDigits] = useState<string[]>(["", "", "", "", "", ""]);
   const refs = useRef<(HTMLInputElement | null)[]>([]);
+  const pending = useRef<AbortController | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
 
-  // Simulate initial OTP request
+  const submit = useCallback(async (operation: "request" | "verify", code?: string) => {
+    if (pending.current) return;
+    const controller = new AbortController();
+    pending.current = controller;
+    setState({ phase: operation === "request" ? "requesting" : "verifying" });
+    if (operation === "request") {
+      setDigits(["", "", "", "", "", ""]);
+      setExpiresAt(null);
+    }
+    let verified = false;
+    try {
+      const response = await apiFetch(`/api/auth/otp/${operation}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purpose, resourceId, ...(operation === "verify" ? { code } : {}) }),
+        signal: controller.signal,
+      });
+      const result = await response.json().catch(() => {
+        throw new Error("Invalid OTP response. Please try again.");
+      });
+      if (controller.signal.aborted) return;
+      if (!response.ok || result?.success !== true) {
+        if (operation === "verify" && result?.error?.code === "OTP_EXPIRED") {
+          setState({ phase: "expired" });
+        } else if (result?.error?.code === "OTP_RATE_LIMITED") {
+          setState({ phase: "rate_limited" });
+        } else {
+          setState({ phase: "error", operation, message:
+            typeof result?.error?.message === "string" ? result.error.message : "Unable to complete OTP verification. Please try again." });
+        }
+        return;
+      }
+      if (operation === "request") {
+        const expiry = typeof result.data?.expiresAt === "string" ? Date.parse(result.data.expiresAt) : NaN;
+        if (!Number.isFinite(expiry)) throw new Error("Invalid OTP response. Please request a new code.");
+        setExpiresAt(expiry);
+        setState({ phase: expiry > Date.now() ? "input" : "expired" });
+      } else {
+        if (result.data?.verified !== true) throw new Error("The server did not confirm verification. Please try again.");
+        setState({ phase: "success" });
+        verified = true;
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setState({ phase: "error", operation, message: error instanceof Error ? error.message : "Unable to reach the server. Please try again." });
+      }
+    } finally {
+      if (pending.current === controller) pending.current = null;
+    }
+    if (verified && !controller.signal.aborted) onVerified();
+  }, [purpose, resourceId, onVerified]);
+
+  // Callback changes must not send another code or invalidate an in-flight request.
+  const submitRef = useRef(submit);
+  useEffect(() => { submitRef.current = submit; }, [submit]);
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setState({ phase: "input" });
-    }, 1200);
+    void submitRef.current("request");
+    return () => {
+      pending.current?.abort();
+      pending.current = null;
+    };
+  }, [purpose, resourceId, email]);
+
+  useEffect(() => {
+    if (expiresAt === null || state.phase !== "input") return;
+    const timer = setTimeout(() => setState({ phase: "expired" }), Math.max(0, expiresAt - Date.now()));
+    refs.current[0]?.focus();
     return () => clearTimeout(timer);
-  }, []);
+  }, [expiresAt, state.phase]);
+
+  const handleCancel = useCallback(() => {
+    pending.current?.abort();
+    pending.current = null;
+    onCancel();
+  }, [onCancel]);
+
+  const verifyCode = useCallback((code: string) => {
+    if (state.phase !== "input" || !/^\d{6}$/.test(code)) return;
+    if (expiresAt === null || expiresAt <= Date.now()) {
+      setState({ phase: "expired" });
+      return;
+    }
+    void submit("verify", code);
+  }, [state.phase, expiresAt, submit]);
 
   const maskedEmail = maskEmail(email);
 
@@ -64,7 +146,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
         refs.current[index + 1]?.focus();
       }
     },
-    [state.phase, digits],
+    [state.phase, digits, verifyCode],
   );
 
   const handleKeyDown = useCallback(
@@ -121,34 +203,22 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
         verifyCode(pasted);
       }
     },
-    [state.phase, digits],
+    [state.phase, digits, verifyCode],
   );
 
-  const verifyCode = useCallback(async (code: string) => {
-    setState({ phase: "verifying" });
-
-    // Simulate verification — in real usage this calls an API
-    // This is a placeholder that always succeeds after 1.5s
-    // The actual implementation should call the OTP verify endpoint
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Placeholder: treat any 6-digit code as valid
-    // Replace this with actual API call
-    setState({ phase: "success" });
-    setTimeout(() => onVerified(), 600);
-  }, [onVerified]);
-
   const handleRetry = useCallback(() => {
+    if (state.phase !== "error") return;
+    if (state.operation === "request") {
+      void submit("request");
+      return;
+    }
     setDigits(["", "", "", "", "", ""]);
-    setState({ phase: "requesting" });
-    setTimeout(() => setState({ phase: "input" }), 1000);
-  }, []);
+    setState({ phase: expiresAt !== null && expiresAt > Date.now() ? "input" : "expired" });
+  }, [state, expiresAt, submit]);
 
   const handleRequestNew = useCallback(() => {
-    setDigits(["", "", "", "", "", ""]);
-    setState({ phase: "requesting" });
-    setTimeout(() => setState({ phase: "input" }), 1000);
-  }, []);
+    void submit("request");
+  }, [submit]);
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -157,7 +227,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      onClick={state.phase === "verifying" ? undefined : onCancel}
+      onClick={handleCancel}
     >
       <div
         className={cn(
@@ -176,7 +246,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
               Verify to {purpose}
             </h3>
             <p className="text-sm text-[var(--text-tertiary)]">
-              A code was sent to {maskedEmail}
+              Verify your identity using {maskedEmail}
             </p>
           </div>
         </div>
@@ -219,7 +289,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
             </div>
 
             <p className="mt-3 text-center text-xs text-[var(--text-tertiary)]">
-              Code expires in 5 minutes
+              Code expires at {expiresAt === null ? "" : new Date(expiresAt).toLocaleTimeString()}
             </p>
           </>
         )}
@@ -239,9 +309,6 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--danger)]" />
               <div>
                 <p className="font-medium text-[var(--danger)]">{state.message}</p>
-                <p className="mt-0.5 text-[var(--text-tertiary)]">
-                  {state.attemptsRemaining} attempt{state.attemptsRemaining !== 1 ? "s" : ""} remaining
-                </p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -306,7 +373,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
         {/* Footer actions */}
         {state.phase === "input" && (
           <div className="mt-6 flex justify-between">
-            <Button variant="ghost" onClick={onCancel}>
+            <Button variant="ghost" onClick={handleCancel}>
               Cancel
             </Button>
             <p className="text-xs text-[var(--text-tertiary)]">
@@ -323,7 +390,7 @@ export function OtpDialog({ purpose, email, onVerified, onCancel }: OtpDialogPro
 
         {state.phase === "error" && (
           <div className="mt-4 flex justify-center">
-            <Button variant="ghost" size="sm" onClick={onCancel}>
+            <Button variant="ghost" size="sm" onClick={handleCancel}>
               Cancel
             </Button>
           </div>
