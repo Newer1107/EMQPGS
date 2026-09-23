@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { DeanBankComparison } from "@/components/dashboard/dean-bank-comparison";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { DeanReviewWorkspace } from "@/components/production/dean-review-workspace";
 import { getDeanReviewData } from "@/lib/server-data";
@@ -26,6 +27,7 @@ export default async function DeanReviewWorkspacePage({
         description="Select an exam type to generate papers, then review and assign one distinct paper to each final exam slot."
       />
       <DeanReviewWorkspace questionBankId={bank} nextBankId={nextBankId} />
+      <DeanBankComparison banks={data.pendingReviews} currentBankId={bank} />
     </div>
   );
 }

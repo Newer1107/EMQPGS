@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DeanBankComparison } from "@/components/dashboard/dean-bank-comparison";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/dashboard/empty-state";
@@ -111,6 +112,7 @@ export default async function DeanDashboardPage() {
         />
       )}
 
+      <DeanBankComparison banks={data.pendingReviews} />
       {/* ZONE 5: StatCards row — compact */}
       <div className="grid gap-4 sm:grid-cols-4">
         <StatCard
