@@ -16,13 +16,13 @@ export class OllamaService implements AiProvider {
     const start = performance.now();
     if (isDev()) logger.info("AI Gateway request", { promptLength: prompt.length });
 
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => {
-        if (isDev()) logger.warn("AI Gateway timeout", { timeoutMs: AI_TIMEOUT_MS });
-        controller.abort();
-      }, AI_TIMEOUT_MS);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      if (isDev()) logger.warn("AI Gateway timeout", { timeoutMs: AI_TIMEOUT_MS });
+      controller.abort();
+    }, AI_TIMEOUT_MS);
 
+    try {
       const response = await fetch(`${env.AI_BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
@@ -36,7 +36,6 @@ export class OllamaService implements AiProvider {
         }),
         signal: controller.signal,
       });
-      clearTimeout(timer);
 
       const duration = Math.round(performance.now() - start);
 
@@ -59,6 +58,8 @@ export class OllamaService implements AiProvider {
       const message = err instanceof Error ? err.message : "Unknown error";
       if (isDev()) logger.warn("AI Gateway error", { error: message, durationMs: duration });
       return { success: false, error: message };
+    } finally {
+      clearTimeout(timer);
     }
   }
 }

@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { OllamaService } from "@/lib/uaf/ollama-service";
 
+vi.mock("@/lib/env", () => ({ env: {
+  AI_BASE_URL: "https://gateway.example.test/v1",
+  AI_API_KEY: "test-gateway-key",
+  AI_MODEL: "configured-model",
+} }));
+
 vi.mock("@/lib/logger", () => ({
   logger: {
     info: vi.fn(),
@@ -16,9 +22,9 @@ function mockResponse(overrides: Partial<Response> = {}): Response {
     statusText: "OK",
     json: () =>
       Promise.resolve({
-        response: "test response",
-        model: "llama3.1",
-        eval_count: 123,
+        choices: [{ message: { role: "assistant", content: "test response" } }],
+        model: "served-model",
+        usage: { total_tokens: 123 },
       }),
     ...overrides,
   } as Response;
@@ -32,6 +38,7 @@ describe("OllamaService", () => {
   let mockFetch: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.useFakeTimers();
     mockFetch = vi.fn();
     vi.stubGlobal("fetch", mockFetch);
     service = new OllamaService();
@@ -50,17 +57,18 @@ describe("OllamaService", () => {
 
       expect(result).toMatchObject({
         text: "test response",
-        model: "llama3.1",
+        model: "served-model",
         tokensUsed: 123,
       });
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
       expect(mockFetch).toHaveBeenCalledTimes(1);
 
       const callArgs = mockFetch.mock.calls[0] as [string, RequestInit];
-      expect(callArgs[0]).toContain("/api/generate");
+      expect(callArgs[0]).toBe("https://gateway.example.test/v1/chat/completions");
+      expect(callArgs[1].method).toBe("POST");
+      expect(callArgs[1].headers).toEqual({ "Content-Type": "application/json", Authorization: "Bearer test-gateway-key" });
       const body = JSON.parse(callArgs[1].body as string);
-      expect(body.model).toBe("llama3.1");
-      expect(body.prompt).toBe(prompt);
+      expect(body).toEqual({ model: "configured-model", messages: [{ role: "user", content: prompt }], stream: false, temperature: 0.7 });
     });
 
     it("throws on non-200 response", async () => {
@@ -68,7 +76,7 @@ describe("OllamaService", () => {
         mockResponse({ ok: false, status: 500, statusText: "Internal Server Error" }),
       );
 
-      await expect(service.analyze(prompt)).rejects.toThrow("Ollama API error: 500");
+      await expect(service.analyze(prompt)).rejects.toThrow("AI Gateway error: 500");
     });
 
     it("throws on timeout (AbortSignal)", async () => {
@@ -90,6 +98,14 @@ describe("OllamaService", () => {
 
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
+
+    it("honors model and temperature overrides and tolerates missing usage metadata", async () => {
+      mockFetch.mockResolvedValue(mockResponse({ json: async () => ({ choices: [{ message: { content: "answer" } }] }) }));
+      const result = await service.analyze(prompt, { model: "custom-model", temperature: 0 });
+      expect(result).toMatchObject({ text: "answer", model: "custom-model" });
+      expect(result.tokensUsed).toBeUndefined();
+      expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toMatchObject({ model: "custom-model", temperature: 0 });
+    });
   });
 
   describe("analyzeWithRetry", () => {
@@ -102,44 +118,38 @@ describe("OllamaService", () => {
       expect(result.result!.text).toBe("test response");
       expect(result.retryCount).toBe(0);
       expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
     });
 
-    it("retries on failure and succeeds on retry", async () => {
-      vi.useFakeTimers();
-
+    it("fails fast after one attempt even when a subsequent request would succeed", async () => {
       mockFetch
-        .mockRejectedValueOnce(new Error("Network error"))
         .mockRejectedValueOnce(new Error("Network error"))
         .mockResolvedValueOnce(mockResponse());
 
-      const promise = service.analyzeWithRetry(prompt, moduleId);
-
-      // Advance past retry delays: 1000ms + 2000ms
-      await vi.advanceTimersByTimeAsync(3000);
-
-      const result = await promise;
-
-      expect(result.result).not.toBeNull();
-      expect(result.result!.text).toBe("test response");
-      expect(result.retryCount).toBe(2);
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+      const result = await service.analyzeWithRetry(prompt, moduleId);
+      expect(result).toEqual({ result: null, retryCount: 1 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
     });
 
-    it("returns null after exhausting all retries", async () => {
-      vi.useFakeTimers();
+    it("returns deterministic fallback on an HTTP failure without retrying", async () => {
+      mockFetch.mockResolvedValue(mockResponse({ ok: false, status: 503 }));
+      expect(await service.analyzeWithRetry(prompt, moduleId)).toEqual({ result: null, retryCount: 1 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
+    });
 
-      mockFetch.mockRejectedValue(new Error("Network error"));
-
-      const promise = service.analyzeWithRetry(prompt, moduleId);
-
-      // Advance past retry delays: 1000ms + 2000ms
-      await vi.advanceTimersByTimeAsync(3000);
-
-      const result = await promise;
-
-      expect(result.result).toBeNull();
-      expect(result.retryCount).toBe(3);
-      expect(mockFetch).toHaveBeenCalledTimes(3);
+    it("aborts at the existing 120 second timeout and returns fallback", async () => {
+      mockFetch.mockImplementation((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+        init.signal!.addEventListener("abort", () => reject(new Error("Timed out")), { once: true });
+      }));
+      const pending = service.analyzeWithRetry(prompt, moduleId);
+      await vi.advanceTimersByTimeAsync(119_999);
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await pending).toEqual({ result: null, retryCount: 1 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(vi.getTimerCount()).toBe(0);
     });
   });
 });

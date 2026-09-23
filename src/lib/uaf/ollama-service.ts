@@ -80,16 +80,13 @@ export class OllamaService implements AiProvider {
     let lastError: Error | null = null;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 120000);
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000);
-
         const result = await this.analyze(prompt, {
           ...options,
           signal: controller.signal,
         });
-
-        clearTimeout(timeout);
 
         logger.info("AI Gateway module complete", {
           moduleId,
@@ -109,6 +106,8 @@ export class OllamaService implements AiProvider {
           promptChars,
           estimatedTokens,
         });
+      } finally {
+        clearTimeout(timeout);
       }
     }
 
