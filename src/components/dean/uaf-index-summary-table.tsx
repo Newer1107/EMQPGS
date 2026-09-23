@@ -4,14 +4,15 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { confidenceClass } from "@/modules/uaf-export/report-model";
 
 // ── Index metadata ──────────────────────────────────────────────
 
 const INDEX_META: Record<string, { label: string; description: string }> = {
-  SCI: { label: "Slot Coverage Index", description: "Proportion of question slots filled in the bank." },
+  SCI: { label: "Structural Compliance Index", description: "Verified presence of the ten required structural elements." },
   MII: { label: "Metadata Integrity Index", description: "Mean of 9 sub-metrics measuring CO, PO, PI, RBT, difficulty, marks, question type, metadata completeness, and consistency." },
   BDI: { label: "Bloom Distribution Index", description: "How evenly questions are distributed across Bloom's taxonomy levels (L1–L6)." },
-  CVI: { label: "CO Verification Index", description: "Coverage of Course Outcomes — how many of the 6 standard COs are addressed." },
+  CVI: { label: "Coverage Validation Index", description: "Coverage of documented Course Outcomes." },
   MCAI: { label: "Marks–Cognitive Alignment Index", description: "Alignment between assigned marks and the cognitive complexity of each question." },
   DBI: { label: "Difficulty Balance Index", description: "How closely the difficulty distribution matches the ideal (30% Easy, 50% Medium, 20% Hard)." },
   QCQI: { label: "Question Content Quality Index", description: "Evaluates clarity, precision, technical accuracy, context, validity, alignment, and fairness." },
@@ -118,7 +119,7 @@ export function UafIndexSummaryTable({ metrics, showWeights = false, className }
         <TBody>
           {metrics.map((m) => {
             const meta = getIndexMeta(m.indexCode);
-            const style = classificationStyle(m.classification);
+            const style = classificationStyle(m.indexCode === "OCI" ? null : m.classification);
             const pct = m.value !== null ? Math.round(m.value * 100) : null;
             const expanded = expandedIndex === m.indexCode;
 
@@ -139,7 +140,7 @@ export function UafIndexSummaryTable({ metrics, showWeights = false, className }
                 </TD>
                 <TD>
                   <Badge className={cn("text-xs", style.badge)}>
-                    {formatClassification(m.classification)}
+                    {m.indexCode === "OCI" ? confidenceClass(m.value) : formatClassification(m.classification)}
                   </Badge>
                 </TD>
                 {showWeights ? (

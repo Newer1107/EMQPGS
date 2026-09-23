@@ -8,7 +8,8 @@ import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { apiFetch } from "@/lib/client-fetch";
 import { cn } from "@/lib/utils";
-import { getIndexMeta, classificationStyle, formatClassification } from "./uaf-index-summary-table";
+import { confidenceClass, readVersion } from "@/modules/uaf-export/report-model";
+import { getIndexMeta, classificationStyle } from "./uaf-index-summary-table";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -55,26 +56,22 @@ export function UafVersionCompare({
       setError("");
 
       try {
-        const response = await apiFetch(
-          `/api/question-banks/${questionBankId}/analysis/compare?v1=${versionA.id}&v2=${versionB.id}`,
-        );
+        const responses = await Promise.all([versionA.id, versionB.id].map(id => apiFetch(
+          `/api/question-banks/${questionBankId}/analysis/versions/${encodeURIComponent(id)}`,
+        )));
         if (!active) return;
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({ error: { message: "Failed to load comparison." } }));
-          setError(body.error?.message ?? "Failed to load comparison.");
-          setLoading(false);
-          return;
-        }
-
-        const result = await response.json();
-        if (!result.success) {
-          setError(result.error?.message ?? "Failed to load comparison.");
-          setLoading(false);
-          return;
-        }
-
-        setDeltas((result.data?.deltas ?? []) as MetricDelta[]);
+        if (responses.some(r => !r.ok)) throw new Error("Failed to load comparison.");
+        const [a, b] = (await Promise.all(responses.map(r => r.json()))).map(readVersion);
+        if (!active) return;
+        const codes = [...new Set([...a.metrics, ...b.metrics].map(m => String(m.indexCode)))];
+        setDeltas(codes.map(indexCode => {
+          const oldRaw = a.metrics.find(m => m.indexCode === indexCode)?.value;
+          const newRaw = b.metrics.find(m => m.indexCode === indexCode)?.value;
+          const oldValue = typeof oldRaw === "number" ? oldRaw : null;
+          const newValue = typeof newRaw === "number" ? newRaw : null;
+          const delta = oldValue !== null && newValue !== null ? newValue - oldValue : null;
+          return { indexCode, oldValue, newValue, delta, direction: delta === null || delta === 0 ? "unchanged" : delta > 0 ? "improved" : "declined" };
+        }));
       } catch (err) {
         console.error("[UafVersionCompare]", err);
         if (active) setError("Unable to reach the server. Please check your connection.");
@@ -164,8 +161,8 @@ export function UafVersionCompare({
                 const deltaPct = d.delta !== null ? (d.delta * 100).toFixed(1) : null;
 
                 // Classification styling for old/new values
-                const oldStyle = d.oldValue !== null ? classificationStyle(classifyValue(d.oldValue)) : null;
-                const newStyle = d.newValue !== null ? classificationStyle(classifyValue(d.newValue)) : null;
+                const oldStyle = d.oldValue !== null && d.indexCode !== "OCI" ? classificationStyle(classifyValue(d.oldValue)) : null;
+                const newStyle = d.newValue !== null && d.indexCode !== "OCI" ? classificationStyle(classifyValue(d.newValue)) : null;
 
                 const directionIcon = d.direction === "improved" ? "▲" : d.direction === "declined" ? "▼" : "—";
                 const directionColor = d.direction === "improved" ? "text-green-700 dark:text-green-400"
@@ -179,17 +176,17 @@ export function UafVersionCompare({
                       <span className="ml-2 text-[11px] text-[var(--text-tertiary)]">{d.indexCode}</span>
                     </TD>
                     <TD className={cn("text-center tabular-nums", oldStyle?.text)}>
-                      {oldPct !== null ? `${oldPct}%` : "—"}
+                      {oldPct !== null ? `${oldPct}%${d.indexCode === "OCI" ? ` (${confidenceClass(d.oldValue)})` : ""}` : "Unable to Verify"}
                     </TD>
                     <TD className={cn("text-center tabular-nums", newStyle?.text)}>
-                      {newPct !== null ? `${newPct}%` : "—"}
+                      {newPct !== null ? `${newPct}%${d.indexCode === "OCI" ? ` (${confidenceClass(d.newValue)})` : ""}` : "Unable to Verify"}
                     </TD>
                     <TD className={cn("text-center tabular-nums font-medium", directionColor)}>
                       {deltaPct !== null ? `${deltaPct}pp` : "—"}
                     </TD>
                     <TD className={cn("text-center", directionColor)}>
                       <span className="flex items-center justify-center gap-1">
-                        {d.direction !== "unchanged" ? (
+                        {d.delta === null ? <span>Unable to Verify</span> : d.direction !== "unchanged" ? (
                           <Badge className={cn(
                             "text-[10px]",
                             d.direction === "improved"

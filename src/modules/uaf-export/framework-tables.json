@@ -1,0 +1,2418 @@
+[
+  {
+    "id": "1.3",
+    "title": "1.3 Fixed Output Architecture (15 Phases)",
+    "headers": [
+      "#",
+      "Phase"
+    ],
+    "rows": [
+      [
+        "1",
+        "Executive Summary"
+      ],
+      [
+        "2",
+        "Question Bank Extraction"
+      ],
+      [
+        "3",
+        "Structural Compliance Index (SCI)"
+      ],
+      [
+        "4",
+        "Metadata Integrity Index (MII)"
+      ],
+      [
+        "5",
+        "Bloom Distribution Index (BDI)"
+      ],
+      [
+        "6",
+        "Coverage Validation Index (CVI)"
+      ],
+      [
+        "7",
+        "Marks Complexity Alignment Index (MCAI)"
+      ],
+      [
+        "8",
+        "Difficulty Balance Index (DBI)"
+      ],
+      [
+        "9",
+        "Question Construction Quality Index (QCQI)"
+      ],
+      [
+        "10",
+        "Constructive Alignment Index (CAI)"
+      ],
+      [
+        "11",
+        "Academic Moderation Index (AMI)"
+      ],
+      [
+        "12",
+        "Future Readiness Index (FRI)"
+      ],
+      [
+        "13",
+        "Overall Quality Index Computation"
+      ],
+      [
+        "14",
+        "Confidence Index"
+      ],
+      [
+        "15",
+        "Final Verdict"
+      ]
+    ]
+  },
+  {
+    "id": "2.3",
+    "title": "2.3 Evidence Hierarchy (5 Levels)",
+    "headers": [
+      "Level",
+      "Type",
+      "Description"
+    ],
+    "rows": [
+      [
+        "1",
+        "Direct Evidence",
+        "Explicitly stated in the Question Bank"
+      ],
+      [
+        "2",
+        "Metadata Evidence",
+        "Present in course documentation"
+      ],
+      [
+        "3",
+        "Calculated Evidence",
+        "Derived via objective calculations"
+      ],
+      [
+        "4",
+        "Professional Judgement",
+        "Based on moderation expertise"
+      ],
+      [
+        "5",
+        "Unsupported Evidence",
+        "NOT reported as verified"
+      ]
+    ]
+  },
+  {
+    "id": "2.6",
+    "title": "2.6 Standard Moderation Record Format",
+    "headers": [
+      "Component",
+      "Required Content"
+    ],
+    "rows": [
+      [
+        "Observation",
+        "Issue, strength, gap, inconsistency, or finding"
+      ],
+      [
+        "Evidence",
+        "Supporting data, calculations, mappings, or references"
+      ],
+      [
+        "Educational Significance",
+        "Impact on learning, assessment validity, fairness, or outcomes"
+      ],
+      [
+        "Recommendation",
+        "Specific improvement action"
+      ],
+      [
+        "Priority",
+        "Critical, Major, Moderate, or Minor"
+      ]
+    ]
+  },
+  {
+    "id": "2.7",
+    "title": "2.7 Confidence Framework",
+    "headers": [
+      "Classification",
+      "Range",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "Very High",
+        "90–100%",
+        "Direct evidence available with complete verification"
+      ],
+      [
+        "High",
+        "80–89%",
+        "Strong evidence with limited inference"
+      ],
+      [
+        "Medium",
+        "65–79%",
+        "Moderate evidence available"
+      ],
+      [
+        "Low",
+        "50–64%",
+        "Significant evidence gaps present"
+      ],
+      [
+        "Very Low",
+        "Below 50%",
+        "Insufficient evidence for reliable conclusions"
+      ]
+    ]
+  },
+  {
+    "id": "3.2",
+    "title": "3.2 Index Interpretation Matrix (Universal — applies to ALL indices)",
+    "headers": [
+      "Range",
+      "Classification",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "0.90–1.00",
+        "Exemplary",
+        "Outstanding compliance and academic quality"
+      ],
+      [
+        "0.80–0.89",
+        "Highly Effective",
+        "Strong compliance, minor improvements required"
+      ],
+      [
+        "0.70–0.79",
+        "Effective",
+        "Acceptable quality, moderate enhancement opportunities"
+      ],
+      [
+        "0.60–0.69",
+        "Acceptable",
+        "Minimum acceptable quality level"
+      ],
+      [
+        "0.50–0.59",
+        "Needs Improvement",
+        "Significant improvements required"
+      ],
+      [
+        "Below 0.50",
+        "Major Revision Required",
+        "Assessment quality concerns present"
+      ]
+    ]
+  },
+  {
+    "id": "3.14",
+    "title": "3.14 Mandatory Index Reporting Table",
+    "headers": [
+      "Index",
+      "Value",
+      "Classification",
+      "Confidence"
+    ],
+    "rows": [
+      [
+        "SCI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "MII",
+        "",
+        "",
+        ""
+      ],
+      [
+        "BDI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CVI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "MCAI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "DBI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "QCQI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CAI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "AMI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "FRI",
+        "",
+        "",
+        ""
+      ],
+      [
+        "QPQI",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "4.2",
+    "title": "4.2 Mandatory Extraction Workflow (7 Stages)",
+    "headers": [
+      "Stage",
+      "Description"
+    ],
+    "rows": [
+      [
+        "1. Question Identification",
+        "Identify each distinct assessment item"
+      ],
+      [
+        "2. Question Segmentation",
+        "Separate questions, parts, and sub-parts"
+      ],
+      [
+        "3. Metadata Extraction",
+        "Extract CO, PO, PI, Bloom, Difficulty, Marks, Type"
+      ],
+      [
+        "4. Question Classification",
+        "Classify by type and cognitive level"
+      ],
+      [
+        "5. Attribute Verification",
+        "Verify each attribute against source evidence"
+      ],
+      [
+        "6. Dataset Construction",
+        "Build the master extraction table"
+      ],
+      [
+        "7. Extraction Validation",
+        "Validate completeness and accuracy of extraction"
+      ]
+    ]
+  },
+  {
+    "id": "4.3",
+    "title": "4.3 Master Question Extraction Table",
+    "headers": [
+      "QID",
+      "Question Text",
+      "Marks",
+      "CO",
+      "PO",
+      "PI",
+      "RBT",
+      "Difficulty"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "4.4",
+    "title": "4.4 Required Extraction Attributes",
+    "headers": [
+      "Attribute",
+      "Description"
+    ],
+    "rows": [
+      [
+        "Question ID",
+        "Unique identifier"
+      ],
+      [
+        "Question Text",
+        "Full statement of the question"
+      ],
+      [
+        "Marks",
+        "Assigned marks"
+      ],
+      [
+        "CO",
+        "Course Outcome mapping"
+      ],
+      [
+        "PO",
+        "Program Outcome mapping"
+      ],
+      [
+        "PI",
+        "Program Indicator mapping"
+      ],
+      [
+        "Bloom Level",
+        "Declared or verified RBT level"
+      ],
+      [
+        "Difficulty Level",
+        "Easy, Medium, or Hard"
+      ],
+      [
+        "Question Type",
+        "Theory, Numerical, Case Study, Design, Practical"
+      ]
+    ]
+  },
+  {
+    "id": "4.5",
+    "title": "4.5 Extraction Status Codes",
+    "headers": [
+      "Code",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "V",
+        "Verified"
+      ],
+      [
+        "PV",
+        "Partially Verified"
+      ],
+      [
+        "UV",
+        "Unable to Verify"
+      ],
+      [
+        "M",
+        "Missing Data"
+      ]
+    ]
+  },
+  {
+    "id": "4.6",
+    "title": "4.6 Attribute Validation Rules",
+    "headers": [
+      "Attribute",
+      "Validation Requirement"
+    ],
+    "rows": [
+      [
+        "Marks",
+        "Marks explicitly stated"
+      ],
+      [
+        "CO",
+        "Supported by documentation"
+      ],
+      [
+        "PO",
+        "Supported by documentation"
+      ],
+      [
+        "PI",
+        "Supported by documentation"
+      ],
+      [
+        "Bloom Level",
+        "Consistent with command verb"
+      ],
+      [
+        "Difficulty",
+        "Consistent with cognitive complexity"
+      ],
+      [
+        "Question Type",
+        "Correctly classified"
+      ]
+    ]
+  },
+  {
+    "id": "4.11",
+    "title": "4.11 Extraction Summary Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Total Questions",
+        ""
+      ],
+      [
+        "Total Marks",
+        ""
+      ],
+      [
+        "Verified Questions",
+        ""
+      ],
+      [
+        "Partially Verified Questions",
+        ""
+      ],
+      [
+        "Unable to Verify Questions",
+        ""
+      ],
+      [
+        "Missing Data Questions",
+        ""
+      ],
+      [
+        "Extraction Completeness Score (ECS)",
+        ""
+      ],
+      [
+        "Extraction Quality Index (EQI)",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.2",
+    "title": "5.2 Course Outcome Coverage Table",
+    "headers": [
+      "CO",
+      "Questions Mapped",
+      "Marks",
+      "Coverage Status",
+      "Coverage %"
+    ],
+    "rows": [
+      [
+        "CO1",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO2",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO3",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO4",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO5",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO6",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.4",
+    "title": "5.4 Marks Distribution Table",
+    "headers": [
+      "Category",
+      "Marks",
+      "Percentage"
+    ],
+    "rows": [
+      [
+        "CO1",
+        "",
+        ""
+      ],
+      [
+        "CO2",
+        "",
+        ""
+      ],
+      [
+        "CO3",
+        "",
+        ""
+      ],
+      [
+        "CO4",
+        "",
+        ""
+      ],
+      [
+        "CO5",
+        "",
+        ""
+      ],
+      [
+        "CO6",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.6",
+    "title": "5.6 Coverage Gap Table",
+    "headers": [
+      "Area",
+      "Gap Type",
+      "Educational Risk"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.7",
+    "title": "5.7 Outcome Attainment Potential",
+    "headers": [
+      "Rating",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "High",
+        "Strong evidence available for attainment measurement"
+      ],
+      [
+        "Moderate",
+        "Partial evidence available"
+      ],
+      [
+        "Low",
+        "Insufficient evidence available"
+      ]
+    ]
+  },
+  {
+    "id": "5.8",
+    "title": "5.8 Attainment Analysis Table",
+    "headers": [
+      "CO",
+      "Coverage",
+      "Evidence Strength",
+      "Attainment Potential"
+    ],
+    "rows": [
+      [
+        "CO1",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO2",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO3",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO4",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO5",
+        "",
+        "",
+        ""
+      ],
+      [
+        "CO6",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.10",
+    "title": "5.10 Coverage Validation Index Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "CO Coverage",
+        ""
+      ],
+      [
+        "Coverage Validation Index (CVI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "5.11",
+    "title": "5.11 Coverage Moderation Commentary",
+    "headers": [
+      "Component",
+      "Content"
+    ],
+    "rows": [
+      [
+        "Observation",
+        "Coverage finding"
+      ],
+      [
+        "Evidence",
+        "Supporting data"
+      ],
+      [
+        "Educational Significance",
+        "Impact on learning"
+      ],
+      [
+        "Recommendation",
+        "Improvement action"
+      ]
+    ]
+  },
+  {
+    "id": "6.1",
+    "title": "6.1 Metadata Validation Framework",
+    "headers": [
+      "Attribute",
+      "Validation Requirement"
+    ],
+    "rows": [
+      [
+        "CO Mapping",
+        "Matches documented Course Outcome"
+      ],
+      [
+        "PO Mapping",
+        "Matches documented Program Outcome"
+      ],
+      [
+        "PI Mapping",
+        "Matches documented Program Indicator"
+      ],
+      [
+        "Bloom Level",
+        "Consistent with command verb and cognitive demand"
+      ],
+      [
+        "Difficulty",
+        "Consistent with Bloom level and complexity"
+      ],
+      [
+        "Marks",
+        "Consistent with expected effort and depth"
+      ],
+      [
+        "Question Type",
+        "Correctly classified"
+      ]
+    ]
+  },
+  {
+    "id": "6.2",
+    "title": "6.2 Question-Level Metadata Audit Table",
+    "headers": [
+      "QID",
+      "CO",
+      "PO",
+      "PI",
+      "RBT",
+      "Difficulty",
+      "Status",
+      "Remarks"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.3",
+    "title": "6.3 CO Accuracy (COA)",
+    "headers": [
+      "Question",
+      "Assigned CO",
+      "Verified CO",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.4",
+    "title": "6.4 PO Accuracy (POA)",
+    "headers": [
+      "Question",
+      "Assigned PO",
+      "Verified PO",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.5",
+    "title": "6.5 PI Accuracy (PIA)",
+    "headers": [
+      "Question",
+      "Assigned PI",
+      "Verified PI",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.6",
+    "title": "6.6 Bloom Accuracy (RBTA)",
+    "headers": [
+      "Question",
+      "Assigned RBT",
+      "Verified RBT",
+      "Status",
+      "Comment"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.7",
+    "title": "6.7 Difficulty Accuracy (DA)",
+    "headers": [
+      "Question",
+      "Assigned Difficulty",
+      "Verified Difficulty",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.8",
+    "title": "6.8 Marks Allocation Accuracy (MAA)",
+    "headers": [
+      "Question",
+      "Assigned Marks",
+      "Expected Marks",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.9",
+    "title": "6.9 Question Type Accuracy (QTA)",
+    "headers": [
+      "Question",
+      "Assigned Type",
+      "Verified Type",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.13",
+    "title": "6.13 Metadata Integrity Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "CO Accuracy (COA)",
+        ""
+      ],
+      [
+        "PO Accuracy (POA)",
+        ""
+      ],
+      [
+        "PI Accuracy (PIA)",
+        ""
+      ],
+      [
+        "Bloom Accuracy (RBTA)",
+        ""
+      ],
+      [
+        "Difficulty Accuracy (DA)",
+        ""
+      ],
+      [
+        "Marks Accuracy (MAA)",
+        ""
+      ],
+      [
+        "Question Type Accuracy (QTA)",
+        ""
+      ],
+      [
+        "Metadata Completeness (MC)",
+        ""
+      ],
+      [
+        "Metadata Consistency (MCS)",
+        ""
+      ],
+      [
+        "Metadata Integrity Index (MII)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "6.14",
+    "title": "6.14 Metadata Risk Register",
+    "headers": [
+      "Finding",
+      "Risk",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "7.1",
+    "title": "7.1 Bloom Taxonomy Validation Matrix",
+    "headers": [
+      "Bloom Level",
+      "Typical Command Verbs"
+    ],
+    "rows": [
+      [
+        "Remember",
+        "Define, List, Recall, State, Identify, Label"
+      ],
+      [
+        "Understand",
+        "Explain, Describe, Discuss, Summarize, Interpret"
+      ],
+      [
+        "Apply",
+        "Use, Implement, Solve, Execute, Demonstrate"
+      ],
+      [
+        "Analyze",
+        "Compare, Differentiate, Investigate, Categorize"
+      ],
+      [
+        "Evaluate",
+        "Assess, Critique, Justify, Recommend, Validate"
+      ],
+      [
+        "Create",
+        "Design, Develop, Construct, Propose, Formulate"
+      ]
+    ]
+  },
+  {
+    "id": "7.2",
+    "title": "7.2 Bloom Distribution Table",
+    "headers": [
+      "Bloom Level",
+      "Questions",
+      "Marks",
+      "Percentage"
+    ],
+    "rows": [
+      [
+        "Remember",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Understand",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Apply",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Analyze",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Evaluate",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Create",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "7.4",
+    "title": "7.4 LOTS / HOTS Analysis Table",
+    "headers": [
+      "Category",
+      "Questions",
+      "Percentage"
+    ],
+    "rows": [
+      [
+        "LOTS",
+        "",
+        ""
+      ],
+      [
+        "HOTS",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "7.5",
+    "title": "7.5 Cognitive Balance Ratio (CBR)",
+    "headers": [
+      "CBR Value",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "CBR < 0.50",
+        "Excessive lower-order emphasis"
+      ],
+      [
+        "CBR = 0.50–1.00",
+        "Balanced cognition"
+      ],
+      [
+        "CBR > 1.00",
+        "Strong higher-order emphasis"
+      ]
+    ]
+  },
+  {
+    "id": "7.6",
+    "title": "7.6 Bloom Alignment Audit Table",
+    "headers": [
+      "Question",
+      "Assigned RBT",
+      "Verified RBT",
+      "Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "7.7",
+    "title": "7.7 Expected Bloom Distribution",
+    "headers": [
+      "Bloom Level",
+      "Expected Percentage"
+    ],
+    "rows": [
+      [
+        "Remember",
+        "10%"
+      ],
+      [
+        "Understand",
+        "20%"
+      ],
+      [
+        "Apply",
+        "25%"
+      ],
+      [
+        "Analyze",
+        "20%"
+      ],
+      [
+        "Evaluate",
+        "15%"
+      ],
+      [
+        "Create",
+        "10%"
+      ]
+    ]
+  },
+  {
+    "id": "7.10",
+    "title": "7.10 Bloom Distribution Index Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "LOTS Coverage",
+        ""
+      ],
+      [
+        "HOTS Coverage",
+        ""
+      ],
+      [
+        "Cognitive Balance Ratio",
+        ""
+      ],
+      [
+        "Bloom Deviation",
+        ""
+      ],
+      [
+        "Bloom Distribution Index (BDI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "7.11",
+    "title": "7.11 Cognitive Risk Register",
+    "headers": [
+      "Finding",
+      "Educational Risk",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "8.1",
+    "title": "8.1 Difficulty Validation Matrix",
+    "headers": [
+      "Bloom Level",
+      "Easy",
+      "Medium",
+      "Hard"
+    ],
+    "rows": [
+      [
+        "Remember",
+        "✓",
+        "—",
+        "—"
+      ],
+      [
+        "Understand",
+        "✓",
+        "✓",
+        "—"
+      ],
+      [
+        "Apply",
+        "—",
+        "✓",
+        "✓"
+      ],
+      [
+        "Analyze",
+        "—",
+        "✓",
+        "✓"
+      ],
+      [
+        "Evaluate",
+        "—",
+        "—",
+        "✓"
+      ],
+      [
+        "Create",
+        "—",
+        "—",
+        "✓"
+      ]
+    ]
+  },
+  {
+    "id": "8.2",
+    "title": "8.2 Difficulty Distribution Table",
+    "headers": [
+      "Difficulty",
+      "Questions",
+      "Marks",
+      "Percentage"
+    ],
+    "rows": [
+      [
+        "Easy",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Medium",
+        "",
+        "",
+        ""
+      ],
+      [
+        "Hard",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "8.3",
+    "title": "8.3 Expected Difficulty Distribution",
+    "headers": [
+      "Difficulty Level",
+      "Expected Percentage"
+    ],
+    "rows": [
+      [
+        "Easy",
+        "30%"
+      ],
+      [
+        "Medium",
+        "50%"
+      ],
+      [
+        "Hard",
+        "20%"
+      ]
+    ]
+  },
+  {
+    "id": "8.6",
+    "title": "8.6 Marks Complexity Validation Matrix",
+    "headers": [
+      "Marks Range",
+      "Expected Cognitive Level"
+    ],
+    "rows": [
+      [
+        "1–2 Marks",
+        "Remember / Understand"
+      ],
+      [
+        "3–5 Marks",
+        "Understand / Apply"
+      ],
+      [
+        "6–8 Marks",
+        "Apply / Analyze"
+      ],
+      [
+        "9–12 Marks",
+        "Analyze / Evaluate"
+      ],
+      [
+        "13+ Marks",
+        "Evaluate / Create"
+      ]
+    ]
+  },
+  {
+    "id": "8.7",
+    "title": "8.7 Marks Complexity Alignment Audit Table",
+    "headers": [
+      "Question",
+      "Marks",
+      "Bloom Level",
+      "Alignment Status",
+      "Comment"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "8.9",
+    "title": "8.9 Assessment Rigor Analysis",
+    "headers": [
+      "Classification",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "Very High",
+        "Strong cognitive challenge and depth"
+      ],
+      [
+        "High",
+        "Appropriate rigor with limited weaknesses"
+      ],
+      [
+        "Moderate",
+        "Balanced but improvement possible"
+      ],
+      [
+        "Low",
+        "Insufficient challenge"
+      ],
+      [
+        "Very Low",
+        "Minimal cognitive demand"
+      ]
+    ]
+  },
+  {
+    "id": "8.10",
+    "title": "8.10 Difficulty Balance Index Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Easy Question Percentage",
+        ""
+      ],
+      [
+        "Medium Question Percentage",
+        ""
+      ],
+      [
+        "Hard Question Percentage",
+        ""
+      ],
+      [
+        "Difficulty Deviation",
+        ""
+      ],
+      [
+        "Difficulty Balance Index (DBI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "8.11",
+    "title": "8.11 Marks Complexity Alignment Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Total Questions",
+        ""
+      ],
+      [
+        "Aligned Questions",
+        ""
+      ],
+      [
+        "Misaligned Questions",
+        ""
+      ],
+      [
+        "Marks Complexity Alignment Index (MCAI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "8.12",
+    "title": "8.12 Difficulty and Complexity Risk Register",
+    "headers": [
+      "Finding",
+      "Educational Risk",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "9.1",
+    "title": "9.1 Question Quality Evaluation Dimensions",
+    "headers": [
+      "Dimension",
+      "Evaluation Requirement"
+    ],
+    "rows": [
+      [
+        "Clarity",
+        "Question is understandable and unambiguous"
+      ],
+      [
+        "Precision",
+        "Assessment task is clearly specified"
+      ],
+      [
+        "Technical Accuracy",
+        "Subject matter content is correct"
+      ],
+      [
+        "Context Adequacy",
+        "Sufficient information is provided"
+      ],
+      [
+        "Bloom Alignment",
+        "Command verb supports intended RBT level"
+      ],
+      [
+        "Assessment Validity",
+        "Question measures intended learning outcome"
+      ],
+      [
+        "Constructive Alignment",
+        "Question aligns with CO and learning activities"
+      ],
+      [
+        "Fairness",
+        "Question is unbiased and equitable"
+      ]
+    ]
+  },
+  {
+    "id": "9.2",
+    "title": "9.2 Question Quality Scoring Scale",
+    "headers": [
+      "Score",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "1.00",
+        "Excellent"
+      ],
+      [
+        "0.80",
+        "Good"
+      ],
+      [
+        "0.60",
+        "Acceptable"
+      ],
+      [
+        "0.40",
+        "Weak"
+      ],
+      [
+        "0.20",
+        "Poor"
+      ],
+      [
+        "0.00",
+        "Unacceptable"
+      ]
+    ]
+  },
+  {
+    "id": "9.3",
+    "title": "9.3 Question-Level Quality Audit Table",
+    "headers": [
+      "QID",
+      "Clarity",
+      "Precision",
+      "Accuracy",
+      "Context",
+      "Validity",
+      "Alignment",
+      "Fairness",
+      "Average"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "9.6",
+    "title": "9.6 QCQI Computation Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Clarity Score",
+        ""
+      ],
+      [
+        "Precision Score",
+        ""
+      ],
+      [
+        "Technical Accuracy Score",
+        ""
+      ],
+      [
+        "Context Adequacy Score",
+        ""
+      ],
+      [
+        "Assessment Validity Score",
+        ""
+      ],
+      [
+        "Alignment Score",
+        ""
+      ],
+      [
+        "Fairness Score",
+        ""
+      ],
+      [
+        "QCQI",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "9.7",
+    "title": "9.7 Question Quality Risk Register",
+    "headers": [
+      "Finding",
+      "Educational Risk",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.2",
+    "title": "10.2 Constructive Alignment Audit Table",
+    "headers": [
+      "Question",
+      "CO",
+      "Bloom",
+      "Learning Activity",
+      "Evidence Status"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.3",
+    "title": "10.3 Alignment Rating Scale",
+    "headers": [
+      "Rating",
+      "Interpretation"
+    ],
+    "rows": [
+      [
+        "Excellent",
+        "Full observable alignment"
+      ],
+      [
+        "Good",
+        "Minor alignment gaps"
+      ],
+      [
+        "Moderate",
+        "Partial alignment"
+      ],
+      [
+        "Weak",
+        "Significant deficiencies"
+      ],
+      [
+        "Poor",
+        "No observable alignment"
+      ]
+    ]
+  },
+  {
+    "id": "10.5",
+    "title": "10.5 Constructive Alignment Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Aligned Questions",
+        ""
+      ],
+      [
+        "Misaligned Questions",
+        ""
+      ],
+      [
+        "Constructive Alignment Index (CAI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.6.1",
+    "title": "10.6.1 Moderation Criteria",
+    "headers": [
+      "Criterion",
+      "Evaluation Requirement"
+    ],
+    "rows": [
+      [
+        "Validity",
+        "Measures intended learning outcomes"
+      ],
+      [
+        "Reliability",
+        "Produces consistent assessment evidence"
+      ],
+      [
+        "Fairness",
+        "Equitable for all learners"
+      ],
+      [
+        "Transparency",
+        "Assessment expectations are clear"
+      ],
+      [
+        "Traceability",
+        "Evidence linked to outcomes"
+      ],
+      [
+        "Consistency",
+        "Assessment design is coherent"
+      ],
+      [
+        "Governance Compliance",
+        "Institutional standards satisfied"
+      ]
+    ]
+  },
+  {
+    "id": "10.6.2",
+    "title": "10.6.2 Moderation Audit Table",
+    "headers": [
+      "Criterion",
+      "Status",
+      "Evidence"
+    ],
+    "rows": [
+      [
+        "Validity",
+        "",
+        ""
+      ],
+      [
+        "Reliability",
+        "",
+        ""
+      ],
+      [
+        "Fairness",
+        "",
+        ""
+      ],
+      [
+        "Transparency",
+        "",
+        ""
+      ],
+      [
+        "Traceability",
+        "",
+        ""
+      ],
+      [
+        "Consistency",
+        "",
+        ""
+      ],
+      [
+        "Governance Compliance",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.6.4",
+    "title": "10.6.4 Academic Moderation Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Criteria Satisfied",
+        ""
+      ],
+      [
+        "Criteria Not Satisfied",
+        ""
+      ],
+      [
+        "Academic Moderation Index (AMI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.7.1",
+    "title": "10.7.1 Future Readiness Criteria",
+    "headers": [
+      "Criterion",
+      "Description"
+    ],
+    "rows": [
+      [
+        "Problem Solving",
+        "Real-world problem solving"
+      ],
+      [
+        "Critical Thinking",
+        "Analytical reasoning"
+      ],
+      [
+        "Innovation",
+        "Creative solution development"
+      ],
+      [
+        "Industry Relevance",
+        "Professional applicability"
+      ],
+      [
+        "Graduate Attributes",
+        "Graduate competency support"
+      ],
+      [
+        "Employability Skills",
+        "Career readiness"
+      ],
+      [
+        "HOTS Integration",
+        "Higher-order thinking support"
+      ]
+    ]
+  },
+  {
+    "id": "10.7.2",
+    "title": "10.7.2 Future Readiness Audit Table",
+    "headers": [
+      "Criterion",
+      "Status",
+      "Evidence"
+    ],
+    "rows": [
+      [
+        "Problem Solving",
+        "",
+        ""
+      ],
+      [
+        "Critical Thinking",
+        "",
+        ""
+      ],
+      [
+        "Innovation",
+        "",
+        ""
+      ],
+      [
+        "Industry Relevance",
+        "",
+        ""
+      ],
+      [
+        "Graduate Attributes",
+        "",
+        ""
+      ],
+      [
+        "Employability Skills",
+        "",
+        ""
+      ],
+      [
+        "HOTS Integration",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.7.4",
+    "title": "10.7.4 Future Readiness Report",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "Criteria Satisfied",
+        ""
+      ],
+      [
+        "Criteria Not Satisfied",
+        ""
+      ],
+      [
+        "Future Readiness Index (FRI)",
+        ""
+      ],
+      [
+        "Classification",
+        ""
+      ],
+      [
+        "Confidence",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "10.8",
+    "title": "10.8 Strategic Risk Register",
+    "headers": [
+      "Finding",
+      "Institutional Risk",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.1",
+    "title": "11.1 Master Index Summary (with Weights)",
+    "headers": [
+      "Index",
+      "Value",
+      "Classification",
+      "Weight"
+    ],
+    "rows": [
+      [
+        "SCI",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "MII",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "BDI",
+        "",
+        "",
+        "15%"
+      ],
+      [
+        "CVI",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "MCAI",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "DBI",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "QCQI",
+        "",
+        "",
+        "15%"
+      ],
+      [
+        "CAI",
+        "",
+        "",
+        "10%"
+      ],
+      [
+        "AMI",
+        "",
+        "",
+        "5%"
+      ],
+      [
+        "FRI",
+        "",
+        "",
+        "5%"
+      ]
+    ]
+  },
+  {
+    "id": "11.3",
+    "title": "11.3 QPQI Calculation Table",
+    "headers": [
+      "Index",
+      "Value",
+      "Weight",
+      "Weighted Score"
+    ],
+    "rows": [
+      [
+        "SCI",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "MII",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "BDI",
+        "",
+        "0.15",
+        ""
+      ],
+      [
+        "CVI",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "MCAI",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "DBI",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "QCQI",
+        "",
+        "0.15",
+        ""
+      ],
+      [
+        "CAI",
+        "",
+        "0.10",
+        ""
+      ],
+      [
+        "AMI",
+        "",
+        "0.05",
+        ""
+      ],
+      [
+        "FRI",
+        "",
+        "0.05",
+        ""
+      ],
+      [
+        "QPQI",
+        "",
+        "1.00",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.4",
+    "title": "11.4 Final Quality Classification Matrix",
+    "headers": [
+      "QPQI Range",
+      "Classification"
+    ],
+    "rows": [
+      [
+        "0.90–1.00",
+        "Exemplary"
+      ],
+      [
+        "0.80–0.89",
+        "Highly Effective"
+      ],
+      [
+        "0.70–0.79",
+        "Effective"
+      ],
+      [
+        "0.60–0.69",
+        "Acceptable"
+      ],
+      [
+        "0.50–0.59",
+        "Needs Improvement"
+      ],
+      [
+        "Below 0.50",
+        "Major Revision Required"
+      ]
+    ]
+  },
+  {
+    "id": "11.6",
+    "title": "11.6 Confidence Summary Table",
+    "headers": [
+      "Metric",
+      "Value"
+    ],
+    "rows": [
+      [
+        "SCI Confidence",
+        ""
+      ],
+      [
+        "MII Confidence",
+        ""
+      ],
+      [
+        "BDI Confidence",
+        ""
+      ],
+      [
+        "CVI Confidence",
+        ""
+      ],
+      [
+        "MCAI Confidence",
+        ""
+      ],
+      [
+        "DBI Confidence",
+        ""
+      ],
+      [
+        "QCQI Confidence",
+        ""
+      ],
+      [
+        "CAI Confidence",
+        ""
+      ],
+      [
+        "AMI Confidence",
+        ""
+      ],
+      [
+        "FRI Confidence",
+        ""
+      ],
+      [
+        "Overall Confidence Index (OCI)",
+        ""
+      ],
+      [
+        "Confidence Classification",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.7",
+    "title": "11.7 Institutional Strengths Table",
+    "headers": [
+      "#",
+      "Strength Area",
+      "Evidence",
+      "Impact"
+    ],
+    "rows": [
+      [
+        "1",
+        "",
+        "",
+        ""
+      ],
+      [
+        "2",
+        "",
+        "",
+        ""
+      ],
+      [
+        "3",
+        "",
+        "",
+        ""
+      ],
+      [
+        "4",
+        "",
+        "",
+        ""
+      ],
+      [
+        "5",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.8",
+    "title": "11.8 Institutional Weaknesses Table",
+    "headers": [
+      "#",
+      "Weakness Area",
+      "Evidence",
+      "Impact"
+    ],
+    "rows": [
+      [
+        "1",
+        "",
+        "",
+        ""
+      ],
+      [
+        "2",
+        "",
+        "",
+        ""
+      ],
+      [
+        "3",
+        "",
+        "",
+        ""
+      ],
+      [
+        "4",
+        "",
+        "",
+        ""
+      ],
+      [
+        "5",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.9",
+    "title": "11.9 Recommendation Register",
+    "headers": [
+      "#",
+      "Finding",
+      "Evidence",
+      "Recommendation",
+      "Priority"
+    ],
+    "rows": [
+      [
+        "1",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "2",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "3",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "4",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "5",
+        "",
+        "",
+        "",
+        ""
+      ]
+    ]
+  },
+  {
+    "id": "11.10",
+    "title": "11.10 Accreditation Readiness Assessment",
+    "headers": [
+      "Dimension",
+      "Status"
+    ],
+    "rows": [
+      [
+        "OBE Compliance",
+        ""
+      ],
+      [
+        "Bloom Alignment",
+        ""
+      ],
+      [
+        "Constructive Alignment",
+        ""
+      ],
+      [
+        "Assessment Quality",
+        ""
+      ],
+      [
+        "Moderation Compliance",
+        ""
+      ],
+      [
+        "Documentation Readiness",
+        ""
+      ],
+      [
+        "NBA Readiness",
+        ""
+      ],
+      [
+        "NAAC Readiness",
+        ""
+      ]
+    ]
+  }
+]

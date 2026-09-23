@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { apiFetch } from "@/lib/client-fetch";
 import { cn } from "@/lib/utils";
+import { isUafVersion } from "@/modules/uaf-export/report-model";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -73,7 +74,8 @@ export function UafVersionHistory({
           return;
         }
 
-        const data = (result.data ?? []) as VersionInfo[];
+        const data = (Array.isArray(result.data) ? result.data.filter(isUafVersion) : []) as VersionInfo[];
+        data.sort((a, b) => b.versionNumber - a.versionNumber || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
         // Deduplicate by id (safety check)
         const seen = new Set<string>();
@@ -98,7 +100,7 @@ export function UafVersionHistory({
     if (!onSelectionChange) return;
     const next = selectedIds.includes(id)
       ? selectedIds.filter((s) => s !== id)
-      : [...selectedIds, id];
+      : [...selectedIds.slice(-1), id];
     onSelectionChange(next);
   }
 

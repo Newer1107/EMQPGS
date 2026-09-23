@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { apiFetch } from "@/lib/client-fetch";
+import { isUafVersion, readVersion } from "@/modules/uaf-export/report-model";
 import { cn } from "@/lib/utils";
 import { UafIndexSummaryTable, type IndexMetric, classificationStyle, formatClassification } from "./uaf-index-summary-table";
 
@@ -64,7 +65,6 @@ export function UafAnalysisOverview({ questionBankId, className }: UafAnalysisOv
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [versionDetail, setVersionDetail] = useState<VersionDetail | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -92,7 +92,8 @@ export function UafAnalysisOverview({ questionBankId, className }: UafAnalysisOv
           return;
         }
 
-        const versions: AnalysisVersion[] = versionsResult.data ?? [];
+        const versions: AnalysisVersion[] = (Array.isArray(versionsResult.data) ? versionsResult.data : []).filter(isUafVersion);
+        versions.sort((a, b) => b.versionNumber - a.versionNumber);
 
         if (!versions.length) {
           setLoading(false);
@@ -119,8 +120,24 @@ export function UafAnalysisOverview({ questionBankId, className }: UafAnalysisOv
         }
 
         const detail = detailResult.data as VersionDetail;
+        const saved = readVersion(detailResult);
+        const qpqi = saved.metrics.find(m => m.indexCode === "QPQI");
+        detail.questionBankAnalysis = {
+          ...detail.questionBankAnalysis,
+          status: typeof saved.result.status === "string" ? saved.result.status : "Unable to Verify",
+          executiveSummary: typeof saved.result.executiveSummary === "string" ? saved.result.executiveSummary : null,
+          finalVerdict: typeof saved.result.finalVerdict === "string" ? saved.result.finalVerdict : null,
+          accreditationReadiness: saved.result.accreditationReadiness ?? null,
+          qpqi: typeof qpqi?.value === "number" ? qpqi.value : null,
+          qpqiClassification: typeof qpqi?.classification === "string" ? qpqi.classification : null,
+          metrics: saved.metrics.map(m => ({
+            indexCode: String(m.indexCode), value: typeof m.value === "number" ? m.value : null,
+            classification: typeof m.classification === "string" ? m.classification : null,
+            weight: typeof m.weight === "number" ? m.weight : null,
+            weightedScore: typeof m.weightedScore === "number" ? m.weightedScore : null,
+          })),
+        };
         setVersionDetail(detail);
-        setStatus(detail.questionBankAnalysis.status);
       } catch (err) {
         console.error("[UafAnalysisOverview]", err);
         if (active) setError("Unable to reach the server. Please check your connection.");
@@ -193,7 +210,8 @@ export function UafAnalysisOverview({ questionBankId, className }: UafAnalysisOv
             <Badge variant={analysis.status === "COMPLETE" ? "success" : analysis.status === "FAILED" ? "danger" : "warning"}>
               {analysis.status}
             </Badge>
-            <Badge variant="info">v{analysis.version}</Badge>
+            <Badge variant="info">v{versionDetail.versionNumber}</Badge>
+            <a className="text-sm underline" href={`/api/question-banks/${questionBankId}/analysis/export?versionId=${encodeURIComponent(versionDetail.id)}`} download>Download PDF</a>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
