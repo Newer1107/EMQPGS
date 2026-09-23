@@ -1,5 +1,6 @@
 import { RecordStatus, QuestionBankPhase, QuestionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { ReadinessEngine } from "@/modules/readiness/engine";
 
 type MetricItem = { label: string; value: string | number };
 type AttentionItem = { id: string; title: string; description: string; href: string; severity: "critical" | "warning" | "info" | "success" };
@@ -62,6 +63,30 @@ export type CoeDashboardData = {
 };
 
 export class CoeDashboardService {
+  async getReadinessDashboard() {
+    const banks = await prisma.questionBank.findMany({
+      where: { phase: { in: [QuestionBankPhase.DRAFTING, QuestionBankPhase.MODERATION] } },
+      select: {
+        id: true, phase: true, recordStatus: true,
+        subject: { select: { subjectName: true, subjectCode: true } },
+        batchSemester: { select: { semesterNumber: true, batch: { select: { name: true } }, academicYear: { select: { code: true } } } },
+      },
+      orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+    });
+    const engine = new ReadinessEngine();
+    const rows = [];
+    // Bound concurrent assessments while retaining all banks in the overview.
+    for (let i = 0; i < banks.length; i += 10) {
+      rows.push(...await Promise.all(banks.slice(i, i + 10).map(async (bank) => {
+        const targetPhase = bank.phase === QuestionBankPhase.DRAFTING ? QuestionBankPhase.MODERATION : QuestionBankPhase.APPROVAL;
+        const assessment = await engine.isReady(bank.id, targetPhase);
+        const issues = bank.recordStatus === RecordStatus.LOCKED ? ["Bank is locked.", ...assessment.issues] : assessment.issues;
+        return { ...bank, ...assessment, issues, ready: assessment.ready && issues.length === 0 };
+      })));
+    }
+    return rows;
+  }
+
   async getDashboard(): Promise<CoeDashboardData> {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 

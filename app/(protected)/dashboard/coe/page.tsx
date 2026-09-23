@@ -1,4 +1,5 @@
 import { QuestionBankPhase } from "@prisma/client";
+import Link from "next/link";
 import { CoeDashboardService } from "@/modules/coe/dashboard.service";
 import { questionBankPhaseLabels } from "@/lib/constants";
 import { DashboardHeader } from "@/components/dashboard/dashboard-header";
@@ -74,6 +75,7 @@ export default async function CoeDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <Link className="text-sm font-medium underline" href="/dashboard/coe/readiness">View bank readiness and revision blockers</Link>
       {/* ZONE 1: Header — greeting, title, summary badges */}
       <DashboardHeader
         title={data.title}
