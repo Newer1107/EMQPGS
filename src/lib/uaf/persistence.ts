@@ -7,6 +7,7 @@ import { computeConfidence } from "./classification-matrix";
 import type { RawBankData } from "./types";
 import { z } from "zod";
 import { createHash } from "node:crypto";
+import type { AnalysisStatus, RiskPriority, RiskType } from "@prisma/client";
 
 // MySQL's default String column is varchar(191). Preserve long source material
 // in TEXT/JSON and use a deterministic digest as the relational lookup key.
@@ -170,8 +171,8 @@ export class Persistence {
           data: {
             questionBankAnalysisId,
             finding: r.finding,
-            priority: r.priority as any,
-            riskType: (r.riskType as any) ?? null,
+            priority: r.priority as RiskPriority,
+            riskType: (r.riskType as RiskType | undefined) ?? null,
             evidenceReference: detail.evidenceReference,
             educationalRisk: detail.educationalRisk,
             institutionalRisk: detail.institutionalRisk,
@@ -189,7 +190,7 @@ export class Persistence {
             questionBankAnalysisId,
             finding: r.finding,
             recommendation: r.recommendation,
-            priority: r.priority as any,
+            priority: r.priority as RiskPriority,
             evidenceReference: detail.evidenceReference,
             impact: detail.impact,
             suggestedActions: detail.suggestedActions,
@@ -201,7 +202,7 @@ export class Persistence {
       await tx.questionBankAnalysis.update({
         where: { id: questionBankAnalysisId },
         data: {
-          status: analysisResult.status as any,
+          status: analysisResult.status as AnalysisStatus,
           qpqi:
             analysisResult.metrics.find((m) => m.indexCode === "QPQI")
               ?.value ?? null,

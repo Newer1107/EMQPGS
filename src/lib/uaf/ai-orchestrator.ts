@@ -10,6 +10,7 @@ import { Persistence } from "./persistence";
 import { createHash } from "crypto";
 import type { PipelineOptions, AnalysisSnapshotResult } from "./types";
 import { UAF_ANALYSIS_FILTER } from "./pipeline";
+import type { AnalysisStatus } from "@prisma/client";
 export { UAF_ANALYSIS_FILTER } from "./pipeline";
 
 const EVALUATION_ENGINE_VERSION = "1.1.0";
@@ -147,19 +148,19 @@ export class AiOrchestrator {
       if (!aiResponse) {
         await this.updateStatus(analysis.id, "AI_PENDING");
         const modules: ReturnType<ResponseValidator["validate"]>["modules"] = [];
-        for (const module of structuredPrompts.modules) {
+        for (const modulePrompt of structuredPrompts.modules) {
           try {
             const { result, retryCount } = await this.ollamaService.analyzeWithRetry(
-              module.promptText,
-              module.moduleId,
+              modulePrompt.promptText,
+              modulePrompt.moduleId,
               { format: "json" },
             );
             const validated = this.responseValidator.validate({
               rawText: result?.text ?? "", model: result?.model ?? "unknown", durationMs: result?.durationMs ?? 0,
-            }, [module]);
+            }, [modulePrompt]);
             modules.push(...validated.modules.map((m) => ({ ...m, retryCount })));
           } catch (error) {
-            modules.push({ moduleId: module.moduleId, success: false, data: null,
+            modules.push({ moduleId: modulePrompt.moduleId, success: false, data: null,
               validationErrors: [error instanceof Error ? error.message : String(error)], retryCount: 0 });
           }
         }
@@ -195,7 +196,7 @@ export class AiOrchestrator {
       await prisma.questionBankAnalysis.update({
         where: { id: analysis.id },
         data: {
-          status: "FAILED" as any,
+          status: "FAILED" as AnalysisStatus,
           // ponytail: truncate to 191 chars to avoid Prisma P2000 on varchar(191)
           failureReason: failure.message.slice(0, 190),
           errorDetails: { stack: failure.stack ?? "" },
@@ -249,7 +250,7 @@ export class AiOrchestrator {
     await prisma.questionBankAnalysis.update({
       where: { id: analysisId },
       data: {
-        status: status as any,
+        status: status as AnalysisStatus,
         startedAt: status === "EXTRACTING" ? new Date() : undefined,
         completedAt:
           status === "COMPLETE" || status === "FAILED"
