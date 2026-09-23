@@ -137,6 +137,16 @@ enum DifficultyLevel {
   HARD
 }
 
+enum QuestionType {
+  THEORY
+  NUMERICAL
+}
+
+enum QBAuditStatus {
+  DRAFT
+  FINAL
+}
+
 enum QuestionStatus {
   DRAFT
   PENDING
@@ -353,6 +363,7 @@ model User {
   emergencyApprovalsRequested EmergencyApproval[]        @relation("emergencyApprovalRequestedBy")
   emergencyApprovalsApproved  EmergencyApproval[]        @relation("emergencyApprovalApprovedBy")
   analysisTriggers            QuestionBankAnalysis[]     @relation("analysisTriggeredBy")
+  uafReviews                  UafReview[]
 
   @@index([homeDepartmentId])
 }
@@ -431,6 +442,9 @@ model QuestionBank {
   paperSnapshots       PaperSnapshot[]
   approvalDecisions    ApprovalDecision[]
   questionBankAnalyses QuestionBankAnalysis[]
+  auditBlueprints      QBAuditBlueprint[]
+  auditSnapshots       QBAuditSnapshot[]
+  uafReviews           UafReview[]
 
   @@unique([batchSemesterId, subjectId])
   @@index([subjectId])
@@ -447,6 +461,9 @@ model QuestionLibraryItem {
   coMapping           CourseOutcome
   rbtLevel            RbtLevel
   difficultyLevel     DifficultyLevel?
+  questionType        QuestionType?
+  poMapping           Json?
+  piMapping           Json?
   teachingIndex       String?
   status              QuestionStatus             @default(DRAFT)
   createdById         String
@@ -470,6 +487,51 @@ model QuestionLibraryItem {
   @@index([createdById, status])
   @@index([ownerId])
   @@index([status])
+}
+
+// Append-only audit versions. Final snapshots retain their full evidence payload.
+model UafReview {
+  id             String @id @default(cuid())
+  questionBankId String
+  version        Int
+  reviewerId     String
+  evidence       Json
+  createdAt      DateTime @default(now())
+  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
+  reviewer       User @relation(fields: [reviewerId], references: [id])
+
+  @@unique([questionBankId, version])
+}
+
+model QBAuditBlueprint {
+  id             String @id @default(cuid())
+  questionBankId String
+  version        Int
+  data           Json
+  createdById    String
+  createdAt      DateTime @default(now())
+  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
+
+  @@unique([questionBankId, version])
+}
+
+model QBAuditSnapshot {
+  id             String @id @default(cuid())
+  questionBankId String
+  version        Int
+  status         QBAuditStatus
+  finalizedFromId String? @unique
+  evaluatorId    String
+  evaluatorName  String
+  remarks        String @db.Text
+  score          Int
+  decision       String
+  payload        Json
+  createdAt      DateTime @default(now())
+  questionBank   QuestionBank @relation(fields: [questionBankId], references: [id])
+
+  @@unique([questionBankId, version])
+  @@index([questionBankId, status])
 }
 
 model QuestionOwnershipHistory {
@@ -498,6 +560,9 @@ model QuestionRevision {
   snapshotCo            CourseOutcome
   snapshotRbt           RbtLevel
   snapshotDifficulty    DifficultyLevel?
+  snapshotQuestionType  QuestionType?
+  snapshotPoMapping     Json?
+  snapshotPiMapping     Json?
   snapshotTeachingIndex String?
   changedById           String
   changeReason          String?
