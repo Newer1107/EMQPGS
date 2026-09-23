@@ -66,8 +66,9 @@ export function attributeStatus(q: ExtractedQuestionData, attribute: ExtractionA
 export function computeECS(data: RawBankData): MetricResult {
   const extracted = data.questions.reduce((sum, q) => sum +
     EXTRACTION_ATTRIBUTES.filter(a => attributePresent(q, a)).length, 0);
-  return result("ECS", data.questions.length ? extracted / (data.questions.length * 9) : null,
-    "extracted_attributes / required_attributes (9 per question)");
+  const required = EXTRACTION_ATTRIBUTES.length;
+  return result("ECS", data.questions.length ? extracted / (data.questions.length * required) : null,
+    `extracted_attributes / required_attributes (${required} per question)`);
 }
 export function computeEQI(data: RawBankData): MetricResult {
   let extracted = 0, verified = 0;

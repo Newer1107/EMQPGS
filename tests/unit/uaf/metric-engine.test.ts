@@ -32,6 +32,7 @@ import {
   computeQPQI,
   computeOCI,
   MetricEngine,
+  EXTRACTION_ATTRIBUTES,
 } from "@/lib/uaf/metric-engine";
 import type { RawBankData, ExtractedQuestionData } from "@/lib/uaf/types";
 import type { MetricResult } from "@/lib/uaf/metric-engine";
@@ -79,7 +80,8 @@ describe("UAF evidence contracts", () => {
   it("counts all nine required attributes without status/command verb inflation", () => {
     const q = baseQuestion({ sourceQuestionId: "q1", poMapping: "PO1", piMapping: "PI1", questionType: "Theory" });
     expect(computeECS(makeData([q])).value).toBe(1);
-    expect(computeECS(makeData([baseQuestion()])).value).toBeCloseTo(5 / 9);
+    expect(computeECS(makeData([baseQuestion()])).value).toBeCloseTo(5 / EXTRACTION_ATTRIBUTES.length);
+    expect(computeECS(makeData([baseQuestion()])).formulaUsed).toContain(`${EXTRACTION_ATTRIBUTES.length} per question`);
     expect(computeECS(makeData([baseQuestion({questionText: " ", marks: 0, coMapping:null, rbtLevel:null, difficultyLevel:null})])).value).toBe(0);
     expect(computeECS(makeData([])).value).toBeNull();
   });
