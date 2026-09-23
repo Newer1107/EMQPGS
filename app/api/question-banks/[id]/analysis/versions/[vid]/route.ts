@@ -1,10 +1,12 @@
 import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
+import { requireAnalysisAccess } from "@/lib/uaf/access";
 
-export const GET = withApiHandler(async (request) => {
+export const GET = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");
   const versionId = segments[segments.length - 1]!;
+  await requireAnalysisAccess(context.auth!, segments[3]!, [versionId]);
   const version = await prisma.analysisVersion.findUnique({
     where: { id: versionId },
     include: {
@@ -12,7 +14,7 @@ export const GET = withApiHandler(async (request) => {
       analysisSnapshot: true,
       questionBankAnalysis: {
         include: {
-          metrics: { orderBy: { computationOrder: "asc" } },
+          metrics: { orderBy: { computationOrder: "asc" }, include: { confidence: true } },
           risks: { orderBy: { priority: "asc" } },
           recommendations: true,
         },

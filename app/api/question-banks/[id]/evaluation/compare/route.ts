@@ -2,19 +2,21 @@ import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
+import { requireAnalysisAccess } from "@/lib/uaf/access";
 
 const compareSchema = z.object({
   v1: z.string().min(1),
   v2: z.string().min(1),
 });
 
-export const GET = withApiHandler(async (request) => {
+export const GET = withApiHandler(async (request, context) => {
   const { searchParams } = request.nextUrl;
   const params = compareSchema.parse({
     v1: searchParams.get("v1"),
     v2: searchParams.get("v2"),
   });
 
+  await requireAnalysisAccess(context.auth!, request.nextUrl.pathname.split("/")[3]!, [params.v1, params.v2]);
   const [v1Snapshot, v2Snapshot] = await Promise.all([
     prisma.analysisSnapshot.findUnique({ where: { analysisVersionId: params.v1 } }),
     prisma.analysisSnapshot.findUnique({ where: { analysisVersionId: params.v2 } }),

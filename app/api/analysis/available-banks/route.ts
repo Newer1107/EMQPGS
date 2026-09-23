@@ -1,10 +1,12 @@
 import { ResponsibilityType } from "@prisma/client";
 import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
+import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 
-export const GET = withApiHandler(async () => {
+export const GET = withApiHandler(async (_request, context) => {
+  const departmentIds = await new DepartmentAccessUtils().getAssignedDepartmentIds(context.auth!);
   const banks = await prisma.questionBank.findMany({
-    where: { recordStatus: "LOCKED" },
+    where: { recordStatus: "LOCKED", subject: { departmentId: { in: departmentIds } } },
     include: {
       subject: { select: { subjectName: true, subjectCode: true } },
       batchSemester: {
