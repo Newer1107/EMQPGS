@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { apiFetch } from "@/lib/client-fetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 import { BarChart, StackedBarChart, ScoreGauge, HeatmapGrid, ChartLegend } from "./charts";
 import { VersionCompare } from "./version-compare";
@@ -247,9 +247,13 @@ export function EvaluationDashboard({ questionBankId }: { questionBankId: string
               <GitCompare className="mr-1 h-4 w-4" /> {showCompare ? "Close" : "Compare"}
             </Button>
           )}
-          <Button variant="outline" size="sm" disabled title="Export coming soon">
+          <a
+            className={buttonVariants({ variant: "outline", size: "sm" })}
+            href={`/api/question-banks/${questionBankId}/evaluation/export${selectedVersionId ? `?versionId=${encodeURIComponent(selectedVersionId)}` : ""}`}
+            download
+          >
             <FileDown className="mr-1 h-4 w-4" /> Export
-          </Button>
+          </a>
           <Button onClick={handleRun} disabled={running} size="sm">
             {running ? <><RefreshCw className="mr-1 h-4 w-4 animate-spin" /> Running…</> : <><Play className="mr-1 h-4 w-4" /> {report ? "Re-run" : "Run"}</>}
           </Button>
