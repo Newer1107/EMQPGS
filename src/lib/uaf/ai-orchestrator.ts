@@ -7,10 +7,25 @@ import { OllamaService } from "./ollama-service";
 import { ResponseValidator } from "./response-validator";
 import { AnalysisBuilder } from "./analysis-builder";
 import { Persistence } from "./persistence";
+import { createHash } from "crypto";
 import type { PipelineOptions, AnalysisSnapshotResult } from "./types";
+import { UAF_ANALYSIS_FILTER } from "./pipeline";
+export { UAF_ANALYSIS_FILTER } from "./pipeline";
 
-const EVALUATION_ENGINE_VERSION = "1.0.0";
-const ANALYSIS_SCHEMA_VERSION = "1.0.0";
+const EVALUATION_ENGINE_VERSION = "1.1.0";
+const ANALYSIS_SCHEMA_VERSION = "1.1.0";
+
+export type OrchestrationResult = AnalysisSnapshotResult & {
+  cacheHit: boolean;
+  cachedFromAnalysisVersionId: string | null;
+  aiUnavailableReason: string | null;
+};
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.entries(value).filter(([, v]) => v !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`).join(",")}}`;
+  return JSON.stringify(value) ?? "null";
+}
 
 export class AiOrchestrator {
   private evidenceBuilder = new EvidenceBuilder();
@@ -39,25 +54,8 @@ export class AiOrchestrator {
     questionBankId: string,
     triggeredById: string,
     options: PipelineOptions = {},
-  ): Promise<AnalysisSnapshotResult> {
-    // 1. Resolve next version number and create analysis record
-    const lastAnalysis = await prisma.questionBankAnalysis.findFirst({
-      where: { questionBankId },
-      orderBy: { version: "desc" },
-      select: { version: true },
-    });
-    const nextVersion = (lastAnalysis?.version ?? 0) + 1;
-
-    const analysis = await prisma.questionBankAnalysis.create({
-      data: {
-        questionBankId,
-        version: nextVersion,
-        status: "INITIALIZED" as any,
-        triggeredById,
-        evaluationEngineVersion: EVALUATION_ENGINE_VERSION,
-        analysisSchemaVersion: ANALYSIS_SCHEMA_VERSION,
-      },
-    });
+  ): Promise<OrchestrationResult> {
+    const analysis = await this.createRun(questionBankId, triggeredById);
 
     try {
       // Stage 1: Evidence Collection
@@ -70,17 +68,26 @@ export class AiOrchestrator {
 
       // Stage 3: Snapshot Assembly + Hash
       const snapshotData = this.snapshotBuilder.build(rawData, metrics);
+      const structuredPrompts = await this.promptBuilder.build(snapshotData);
+      const aiUnavailableReason = structuredPrompts.modules.length === 0
+        ? "No active analysis prompts are registered. Deterministic analysis completed; AI details are unavailable."
+        : null;
+      const promptVersionString = createHash("sha256").update(canonical(
+        structuredPrompts.modules.map((m) => ({ ...m })).sort((a, b) => a.moduleId.localeCompare(b.moduleId)),
+      )).digest("hex");
       const evidenceHash = this.snapshotBuilder.computeEvidenceHash(
         snapshotData,
         EVALUATION_ENGINE_VERSION,
-        ANALYSIS_SCHEMA_VERSION,
+        // Include the full nested evidence as well as the actual rendered prompts.
+        canonical({ schema: ANALYSIS_SCHEMA_VERSION, promptVersionString, snapshotData }),
       );
 
       // Create analysis version (immutable version record)
       const version = await prisma.analysisVersion.create({
         data: {
           questionBankAnalysisId: analysis.id,
-          versionNumber: 1,
+          versionNumber: analysis.version,
+          promptVersionString,
           evaluationEngineVersion: EVALUATION_ENGINE_VERSION,
           analysisSchemaVersion: ANALYSIS_SCHEMA_VERSION,
           evidenceHash,
@@ -103,54 +110,65 @@ export class AiOrchestrator {
         },
       });
 
-      // Stages 4-6: AI Pipeline (always runs AI — no cache)
-      let aiResponse: Awaited<ReturnType<typeof this.responseValidator.validate>>;
-      {
+      // Only reuse complete, validated module outputs for this bank and evidence.
+      const cached = options.forceRegenerate || aiUnavailableReason ? null : await prisma.analysisVersion.findFirst({
+        where: {
+          evidenceHash,
+          promptVersionString,
+          evaluationEngineVersion: EVALUATION_ENGINE_VERSION,
+          analysisSchemaVersion: ANALYSIS_SCHEMA_VERSION,
+          questionBankAnalysis: { questionBankId, status: "COMPLETE" },
+          analysisSnapshot: { isNot: null },
+        },
+        orderBy: { createdAt: "desc" },
+        include: { analysisSnapshot: true },
+      });
+      const report = cached?.analysisSnapshot?.fullReport as { result?: AnalysisSnapshotResult } | null;
+      let aiResponse: ReturnType<ResponseValidator["validate"]> | null = null;
+      let cacheHit = false;
+      if (aiUnavailableReason) {
+        aiResponse = { overallValid: false, modules: [{
+          moduleId: "PROMPT_REGISTRY", success: false, data: null,
+          validationErrors: [aiUnavailableReason], retryCount: 0,
+        }] };
+      }
+      if (report?.result?.evidenceHash === evidenceHash && Array.isArray(report.result.aiModules)) {
+        const cachedModules = report.result.aiModules;
+        const modules = structuredPrompts.modules.flatMap((module) => {
+          const output = cachedModules.find((m) => m && m.moduleId === module.moduleId && m.success === true);
+          if (!output?.data) return [];
+          return this.responseValidator.validate({ rawText: JSON.stringify(output.data), model: "cache", durationMs: 0 }, [module]).modules;
+        });
+        if (modules.length === structuredPrompts.modules.length && modules.every((m) => m.success)) {
+          aiResponse = { modules, overallValid: true };
+          cacheHit = true;
+        }
+      }
+      if (!aiResponse) {
         await this.updateStatus(analysis.id, "AI_PENDING");
-
-        // Stage 4: Build structured prompts from snapshot
-        const structuredPrompts = await this.promptBuilder.build(snapshotData);
-
-        // Stage 5: Call Ollama for each AI module
-        const rawResponses: Array<{
-          rawText: string;
-          model: string;
-          durationMs: number;
-        }> = [];
-
+        const modules: ReturnType<ResponseValidator["validate"]>["modules"] = [];
         for (const module of structuredPrompts.modules) {
-          const { result } = await this.ollamaService.analyzeWithRetry(
-            module.promptText,
-            module.moduleId,
-            { format: "json" },
-          );
-          if (result) {
-            rawResponses.push({
-              rawText: result.text,
-              model: result.model,
-              durationMs: result.durationMs,
-            });
+          try {
+            const { result, retryCount } = await this.ollamaService.analyzeWithRetry(
+              module.promptText,
+              module.moduleId,
+              { format: "json" },
+            );
+            const validated = this.responseValidator.validate({
+              rawText: result?.text ?? "", model: result?.model ?? "unknown", durationMs: result?.durationMs ?? 0,
+            }, [module]);
+            modules.push(...validated.modules.map((m) => ({ ...m, retryCount })));
+          } catch (error) {
+            modules.push({ moduleId: module.moduleId, success: false, data: null,
+              validationErrors: [error instanceof Error ? error.message : String(error)], retryCount: 0 });
           }
         }
-
-        // Combine all module responses into a single text block for validation
-        const combinedText = rawResponses.map((r) => r.rawText).join("\n");
-        const rawAiResponse = {
-          rawText: combinedText,
-          model: rawResponses[0]?.model ?? "unknown",
-          durationMs: rawResponses.reduce((s, r) => s + r.durationMs, 0),
-        };
-
-        // Stage 6: Validate responses (hallucination guards, schema checks)
-        aiResponse = this.responseValidator.validate(
-          rawAiResponse,
-          structuredPrompts.modules,
-        );
+        aiResponse = { modules, overallValid: modules.every((m) => m.success) };
         await this.updateStatus(analysis.id, "AI_COMPLETE");
       }
 
       // Stage 7: Build final analysis snapshot (passing snapshotData for fallback generation)
-      const result = await this.analysisBuilder.assemble(
+      const assembled = await this.analysisBuilder.assemble(
         analysis.id,
         version.id,
         snapshotData,
@@ -158,6 +176,8 @@ export class AiOrchestrator {
         aiResponse,
         evidenceHash,
       );
+      const result: OrchestrationResult = { ...assembled, cacheHit,
+        cachedFromAnalysisVersionId: cacheHit ? cached!.id : null, aiUnavailableReason };
 
       // Stage 8: Persist everything in a single transaction
       await this.persistence.save(
@@ -171,16 +191,37 @@ export class AiOrchestrator {
       await this.updateStatus(analysis.id, result.status);
       return result;
     } catch (error) {
+      const failure = error instanceof Error ? error : new Error(String(error));
       await prisma.questionBankAnalysis.update({
         where: { id: analysis.id },
         data: {
           status: "FAILED" as any,
           // ponytail: truncate to 191 chars to avoid Prisma P2000 on varchar(191)
-          failureReason: (error as Error).message.slice(0, 190),
-          errorDetails: { stack: (error as Error).stack },
+          failureReason: failure.message.slice(0, 190),
+          errorDetails: { stack: failure.stack ?? "" },
+          completedAt: new Date(),
         },
       });
       throw error;
+    }
+  }
+
+  private async createRun(questionBankId: string, triggeredById: string) {
+    // Allocation MUST span both pipelines: the DB unique key is bank/version,
+    // not bank/engine/version. Only status, history and cache reads are scoped.
+    for (let attempt = 0; ; attempt++) {
+      const last = await prisma.questionBankAnalysis.findFirst({
+        where: { questionBankId }, orderBy: { version: "desc" }, select: { version: true },
+      });
+      try {
+        return await prisma.questionBankAnalysis.create({ data: {
+          questionBankId, triggeredById, version: (last?.version ?? 0) + 1,
+          status: "INITIALIZED", evaluationEngineVersion: EVALUATION_ENGINE_VERSION,
+          analysisSchemaVersion: ANALYSIS_SCHEMA_VERSION,
+        } });
+      } catch (error) {
+        if (attempt >= 4 || (error as { code?: string }).code !== "P2002") throw error;
+      }
     }
   }
 
@@ -189,7 +230,7 @@ export class AiOrchestrator {
    */
   async getStatus(questionBankId: string) {
     return prisma.questionBankAnalysis.findFirst({
-      where: { questionBankId },
+      where: { questionBankId, ...UAF_ANALYSIS_FILTER },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,

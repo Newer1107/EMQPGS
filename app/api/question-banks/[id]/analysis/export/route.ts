@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import { DepartmentAccessUtils } from "@/modules/coordinator/department-utils";
 import { exportUafPdf } from "@/modules/uaf-export/pdf";
+import { UAF_ANALYSIS_FILTER } from "@/lib/uaf/pipeline";
 
 export const runtime = "nodejs";
 export const GET = withApiHandler(async (request, context) => {
@@ -13,7 +14,7 @@ export const GET = withApiHandler(async (request, context) => {
   await new DepartmentAccessUtils().assertDepartmentAccess(context.auth!, bank.subject.departmentId);
   const versionId = request.nextUrl.searchParams.get("versionId");
   const version = await prisma.analysisVersion.findFirst({
-    where: { ...(versionId ? { id: versionId } : {}), questionBankAnalysis: { questionBankId: bankId, evaluationEngineVersion: { not: { startsWith: "eval-" } } } },
+    where: { ...(versionId ? { id: versionId } : {}), ...UAF_ANALYSIS_FILTER, questionBankAnalysis: { questionBankId: bankId, ...UAF_ANALYSIS_FILTER } },
     orderBy: [{ versionNumber: "desc" }, { createdAt: "desc" }],
     include: { analysisSnapshot: true, evidenceSnapshot: true },
   });

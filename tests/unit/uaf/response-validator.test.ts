@@ -42,6 +42,36 @@ describe("ResponseValidator", () => {
     validator = new ResponseValidator();
   });
 
+  it.each([[], null, true, 12, "text"])("rejects non-object JSON %s", (value) => {
+    expect(validator.validate(makeRawResponse(value), [makeModulePrompt("X")]).overallValid).toBe(false);
+  });
+
+  it.each([
+    ["RISK_ANALYSIS", { risks: [{ finding: "Risk", priority: "HIGH" }] }],
+    ["RISK_ANALYSIS", { risks: "not an array" }],
+    ["RECOMMENDATIONS", { recommendations: [{ finding: "Missing recommendation", priority: "MAJOR" }] }],
+    ["FINAL_VERDICT", { verdict: "APPROVED" }],
+    ["EXECUTIVE_SUMMARY", { executiveSummary: 42 }],
+    ["BLOOM_ANALYSIS", {}],
+  ])("rejects invalid seeded module %s", (id, data) => {
+    expect(validator.validate(makeRawResponse(data), [makeModulePrompt(id as string)]).overallValid).toBe(false);
+  });
+
+  it("validates JSON Schema types and required fields", () => {
+    const customModule = { ...makeModulePrompt("CUSTOM"), outputSchema: { type: "object", required: ["items"],
+      properties: { items: { type: "array", items: { type: "string" } } }, additionalProperties: false } };
+    expect(validator.validate(makeRawResponse({ items: ["ok"] }), [customModule]).overallValid).toBe(true);
+    for (const data of [{}, { items: [1] }, { items: [], extra: true }]) {
+      expect(validator.validate(makeRawResponse(data), [customModule]).overallValid).toBe(false);
+    }
+  });
+
+  it("does not reuse an unwrapped response for multiple modules", () => {
+    const result = validator.validate(makeRawResponse({ finding: "one response" }),
+      [makeModulePrompt("A"), makeModulePrompt("B")]);
+    expect(result.modules.every((m) => !m.success)).toBe(true);
+  });
+
   describe("validate — JSON parsing", () => {
     it("parses valid JSON response with per-module data", () => {
       const rawResponse = makeRawResponse({

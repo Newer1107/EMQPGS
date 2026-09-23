@@ -5,12 +5,14 @@ import { EmailService } from "@/modules/notifications/email-service";
 
 const mockCreateNotification = vi.fn();
 const mockLoggerError = vi.fn();
+const mockFindUser = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
     notification: {
       create: (...args: unknown[]) => mockCreateNotification(...args),
     },
+    user: { findUnique: (...args: unknown[]) => mockFindUser(...args) },
   },
 }));
 
@@ -28,6 +30,14 @@ describe("NotificationService.createAndEmail", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCreateNotification.mockResolvedValue({ id: "notif-1" });
+    const recipients = [
+      defaultRecipient,
+      { id: "mod-1", email: "moderator@example.com", name: "Moderator" },
+      { id: "contrib-1", email: "contributor@example.com", name: "Contributor" },
+    ];
+    mockFindUser.mockImplementation(({ where }: { where: { id: string } }) =>
+      Promise.resolve(recipients.find((recipient) => recipient.id === where.id) ?? null),
+    );
   });
 
   it("creates notification and sends email when email succeeds", async () => {
@@ -58,6 +68,9 @@ describe("NotificationService.createAndEmail", () => {
       "Test title",
       "Test User, Test message",
     );
+    expect(mockFindUser).toHaveBeenCalledExactlyOnceWith({
+      where: { id: "user-1" }, select: { email: true, name: true },
+    });
     expect(mockLoggerError).not.toHaveBeenCalled();
   });
 

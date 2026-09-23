@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/db", () => {
   const mockDb = {
@@ -17,25 +17,42 @@ vi.mock("@/lib/db", () => {
 });
 
 describe("M2 - Query optimization with select", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
   it("getDashboard uses groupBy instead of all-questions query", async () => {
     const { ModeratorDashboardService } = await import("@/modules/moderation/dashboard.service");
     const { prisma } = await import("@/lib/db");
 
     vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([]);
     vi.mocked(prisma.questionLibraryItem.groupBy).mockResolvedValue([
-      { status: "PENDING", _count: { _all: 5 } } as any,
-      { status: "APPROVED", _count: { _all: 10 } } as any,
-    ]);
+      { status: "PENDING", _count: { _all: 5 } },
+      { status: "REVISION_SUBMITTED", _count: { _all: 2 } },
+      { status: "APPROVED", _count: { _all: 10 } },
+    ] as never);
     vi.mocked(prisma.questionLibraryItem.findMany).mockResolvedValue([]);
     vi.mocked(prisma.questionBank.findMany).mockResolvedValue([]);
     vi.mocked(prisma.moderationEvent.findMany).mockResolvedValue([]);
     vi.mocked(prisma.notification.findMany).mockResolvedValue([]);
+    vi.mocked(prisma.questionSlot.findMany).mockResolvedValue([]);
 
     const service = new ModeratorDashboardService();
-    const dashboard = await service.getDashboard({ id: "mod-1", role: "MODERATOR" } as any);
+    const dashboard = await service.getDashboard({ userId: "mod-1", bankId: "bank-1" });
 
-    expect(prisma.questionLibraryItem.groupBy).toHaveBeenCalled();
-    expect(dashboard.summary.pending).toBe(5);
+    expect(prisma.questionLibraryItem.groupBy).toHaveBeenCalledExactlyOnceWith({
+      by: ["status"],
+      where: { slotAssignments: { some: { questionBankId: "bank-1" } } },
+      _count: { _all: true },
+    });
+    // Loading the revision queue is allowed; loading all questions to count them is not.
+    expect(prisma.questionLibraryItem.findMany).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      where: { status: "REVISION_REQUESTED", slotAssignments: { some: { questionBankId: "bank-1" } } },
+    }));
+    expect(prisma.questionSlot.findMany).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      where: { questionBankId: "bank-1", assignedQuestion: { status: { in: ["PENDING", "REVISION_SUBMITTED"] } } },
+    }));
+    expect(prisma.notification.findMany).toHaveBeenCalledExactlyOnceWith({
+      where: { recipientId: "mod-1" }, orderBy: { createdAt: "desc" }, take: 50,
+    });
+    expect(dashboard.summary.pending).toBe(7);
     expect(dashboard.summary.approved).toBe(10);
   });
 

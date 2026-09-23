@@ -95,11 +95,24 @@ describe("PromptBuilder", () => {
   });
 
   describe("build()", () => {
-    it("throws if no active PromptVersion records", async () => {
+    it("selects the latest active version and replaces both placeholder forms literally", async () => {
+      mockFindMany.mockResolvedValue([...mockPromptVersions, { ...mockPromptVersions[1], id: "new", version: 2,
+        promptText: "{{evidence}} / {evidence}" }]);
+      const result = await builder.build(makeSnapshot({ representativeExamples: { Q1: "$& question" } }));
+      const bloom = result.modules.find((m) => m.moduleId === "BLOOM_ANALYSIS")!;
+      expect(bloom.promptVersionId).toBe("new");
+      expect(bloom.promptText).not.toContain("{evidence}");
+      expect(bloom.promptText.match(/\$& question/g)).toHaveLength(2);
+      expect(bloom.promptText).toContain("pv-sys-1");
+    });
+
+    it("returns no modules for a preamble-only registry", async () => {
+      mockFindMany.mockResolvedValue([mockPromptVersions[0]]);
+      await expect(builder.build(makeSnapshot())).resolves.toEqual({ modules: [], totalEstimatedTokens: 0 });
+    });
+    it("returns no modules if no active PromptVersion records", async () => {
       mockFindMany.mockResolvedValue([]);
-      await expect(builder.build(makeSnapshot())).rejects.toThrow(
-        "No active prompt versions found",
-      );
+      await expect(builder.build(makeSnapshot())).resolves.toEqual({ modules: [], totalEstimatedTokens: 0 });
     });
 
     it("returns StructuredPrompts with correct module entries", async () => {

@@ -1,6 +1,6 @@
 import { createHash } from "crypto";
 import type { RawBankData, EvidenceSnapshotData, DistributionData, MetricResult } from "./types";
-import { EXTRACTION_ATTRIBUTES, STRUCTURAL_ELEMENTS, attributeStatus } from "./metric-engine";
+import { EXTRACTION_ATTRIBUTES, STRUCTURAL_ELEMENTS, attributeStatus, deriveConfidenceEvidence } from "./metric-engine";
 
 function canonicalize(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(canonicalize);
@@ -35,16 +35,19 @@ export class SnapshotBuilder {
     });
     return {
       questionBankId: data.questionBankId,
+      sourceBlueprint: structuredClone(data.sourceBlueprint),
+      reviewProvenance: structuredClone(data.reviewProvenance),
       questions,
       totalMarks: data.totalMarks,
       structuralChecks: structuredClone(data.structuralChecks),
       structuralElements: STRUCTURAL_ELEMENTS.map(element => ({ element, present: data.structuralChecks?.[element] ?? null })),
       documentedCourseOutcomes: structuredClone(data.documentedCourseOutcomes),
       academicEvidence: structuredClone(data.academicEvidence),
-      indexConfidence: structuredClone(data.indexConfidence),
+      indexConfidence: structuredClone(deriveConfidenceEvidence(data)),
       expectedBloomDistribution: structuredClone(data.expectedBloomDistribution),
       expectedDifficultyDistribution: structuredClone(data.expectedDifficultyDistribution),
       metricConfidence: Object.fromEntries(metrics.map(m => [m.indexCode, m.confidenceScore ?? null])),
+      rawMetrics: Object.fromEntries(metrics.filter(m => m.rawValue !== undefined).map(m => [m.indexCode, m.rawValue ?? null])),
       partiallyVerifiedQuestions: statuses.filter(s => s === "PARTIALLY_VERIFIED").length,
       totalQuestions: data.questions.length,
       verifiedQuestions: statuses.filter(s => s === "VERIFIED").length,

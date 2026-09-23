@@ -7,13 +7,14 @@ export class PromptBuilder {
    * Loads active prompt versions from the PromptVersion table.
    */
   async build(snapshot: EvidenceSnapshotData): Promise<StructuredPrompts> {
-    const activeVersions = await prisma.promptVersion.findMany({
+    const versions = await prisma.promptVersion.findMany({
       where: { supersededAt: null },
+      orderBy: [{ moduleId: "asc" }, { version: "desc" }],
     });
-
-    if (activeVersions.length === 0) {
-      throw new Error("No active prompt versions found. Run seed data first.");
-    }
+    // Defend against multiple active versions and unordered adapter results.
+    const activeVersions = [...versions].sort((a, b) =>
+      a.moduleId.localeCompare(b.moduleId) || b.version - a.version,
+    ).filter((v, i, all) => i === all.findIndex((other) => other.moduleId === v.moduleId));
 
     // Find the system preamble
     const preamble = activeVersions.find((v) => v.moduleId === "SYSTEM_PREAMBLE");
@@ -28,11 +29,11 @@ export class PromptBuilder {
       let promptText = version.promptText;
 
       // Replace {{evidence}} placeholder with actual data
-      promptText = promptText.replace("{evidence}", evidenceJSON);
+      promptText = promptText.replace(/\{\{evidence\}\}|\{evidence\}/g, () => evidenceJSON);
 
       // Prepend system preamble if exists
       if (preamble) {
-        promptText = preamble.promptText + "\n\n---\n\n" + promptText;
+        promptText = `[System prompt ${preamble.id}, version ${preamble.version}]\n` + preamble.promptText + "\n\n---\n\n" + promptText;
       }
 
       const tokens = this.estimateTokens(promptText);
@@ -47,6 +48,7 @@ export class PromptBuilder {
       });
     }
 
+    // An unseeded registry still permits a deterministic analysis.
     return { modules, totalEstimatedTokens: totalTokens };
   }
 
@@ -57,6 +59,11 @@ export class PromptBuilder {
     const base = {
       totalQuestions: snapshot.totalQuestions,
       extractionCompleteness: snapshot.extractionCompletenessScore,
+      supportingEvidence: snapshot.supportingEvidence,
+      representativeExamples: snapshot.representativeExamples,
+      metricConfidence: snapshot.metricConfidence,
+      academicEvidence: snapshot.academicEvidence,
+      structuralElements: snapshot.structuralElements,
     };
 
     switch (moduleId) {

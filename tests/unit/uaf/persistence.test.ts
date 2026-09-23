@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Persistence } from "@/lib/uaf/persistence";
+import { MetricEngine } from "@/lib/uaf/metric-engine";
+import { AnalysisBuilder } from "@/lib/uaf/analysis-builder";
 import type { MetricResult } from "@/lib/uaf/metric-engine";
 import type {
   EvidenceSnapshotData,
@@ -14,6 +16,9 @@ const mockTx = {
   risk: { create: vi.fn() },
   recommendation: { create: vi.fn() },
   questionBankAnalysis: { update: vi.fn() },
+  generatedPaper: { findMany: vi.fn().mockResolvedValue([]) },
+  paperAnalysis: { create: vi.fn() },
+  analysisEvidence: { create: vi.fn() },
 };
 
 vi.mock("@/lib/db", () => ({
@@ -155,10 +160,116 @@ function makeAnalysisResult(
 // ── Tests ──
 
 describe("Persistence", () => {
+  it("stores long URLs and rationales losslessly with bounded stable relational keys", async () => {
+    const url = `https://example.test/${"x".repeat(980)}`;
+    const rationale = "Reviewed evidence. ".repeat(220);
+    const snapshot = { ...makeSnapshot(), supportingEvidence: { ECS: [url] },
+      academicEvidence: { QCQI: [{ criterion: "clarity", score: .4, sourceIds: ["uaf-review:review-1:QCQI:clarity", url, rationale] }] } };
+    await new Persistence().save("qba", "av", snapshot, makeMetrics(), makeAnalysisResult());
+    const saved = mockTx.analysisEvidence.create.mock.calls.map(([arg]) => arg.data);
+    expect(saved.every((entry) => entry.sourceReference.length <= 191)).toBe(true);
+    const urlEntries = saved.filter((entry) => entry.description.includes(url));
+    expect(urlEntries).toHaveLength(2);
+    expect(urlEntries[0].sourceReference).toBe(urlEntries[1].sourceReference);
+    expect(saved.some((entry) => entry.description.includes(rationale))).toBe(true);
+    expect(saved.some((entry) => entry.sourceReference === "uaf-review:review-1:QCQI:clarity")).toBe(true);
+    expect(mockTx.analysisSnapshot.create.mock.calls[0][0].data.fullReport.snapshot.academicEvidence).toEqual(snapshot.academicEvidence);
+  });
+  it("persists supplied confidence counts and evidence references", async () => {
+    const snapshot = { ...makeSnapshot(), indexConfidence: { ECS: { verified: 8, required: 10 } },
+      supportingEvidence: { ECS: ["question:1", "question:1"] },
+      academicEvidence: { QCQI: [{ criterion: "clarity", score: .8, sourceIds: ["review:1"] }] } };
+    await new Persistence().save("qba", "av", snapshot, makeMetrics(), makeAnalysisResult());
+    expect(mockTx.uAFMetric.create.mock.calls[0][0].data.confidence.create).toMatchObject({
+      verifiedItems: 8, requiredItems: 10, score: .8, percentage: 80, classification: "HIGH",
+    });
+    expect(mockTx.analysisEvidence.create).toHaveBeenCalledTimes(2);
+    expect(mockTx.analysisEvidence.create).toHaveBeenCalledWith({ data: expect.objectContaining({ sourceReference: "review:1", evidenceType: "PROFESSIONAL_JUDGEMENT", level: 4 }) });
+    expect(mockTx.analysisEvidence.create).toHaveBeenCalledWith({ data: expect.objectContaining({ sourceReference: "question:1", evidenceType: "METADATA", level: 2 }) });
+  });
+
+  it("does not manufacture confidence counts when only a score is supplied", async () => {
+    await new Persistence().save("qba", "av", makeSnapshot(),
+      [makeMetricResult({ confidenceScore: .9, confidenceClassification: "VERY_HIGH" })], makeAnalysisResult());
+    expect(mockTx.uAFMetric.create.mock.calls[0][0].data.confidence).toBeUndefined();
+  });
+
+  it.each([{ verified: 0, required: 0 }, { verified: -1, required: 10 }, { verified: 11, required: 10 }])("omits confidence rows for invalid counts %s", async (counts) => {
+    await new Persistence().save("qba", "av", { ...makeSnapshot(), indexConfidence: { ECS: counts } }, makeMetrics(), makeAnalysisResult());
+    expect(mockTx.uAFMetric.create.mock.calls[0][0].data.confidence).toBeUndefined();
+  });
+
+  it.each([null, .3, NaN])("omits rows when computed confidence %s is unavailable or conflicts with counts", async (confidenceScore) => {
+    await new Persistence().save("qba", "av", { ...makeSnapshot(), indexConfidence: { ECS: { verified: 8, required: 10 } } },
+      [makeMetricResult({ confidenceScore })], makeAnalysisResult());
+    expect(mockTx.uAFMetric.create.mock.calls[0][0].data.confidence).toBeUndefined();
+  });
+
+  it("persists the same independent confidence as the computed report/UI", async () => {
+    const indexConfidence = { ECS: { verified: 3, required: 4 } };
+    const metrics = new MetricEngine().computeAll({ questionBankId: "qb", subjectName: "", subjectCode: "",
+      totalSlots: 0, filledSlots: 0, questions: [], modules: [], totalMarks: 0, marksOptions: [], extractionTimestamp: "", indexConfidence });
+    const snapshot = { ...makeSnapshot(), indexConfidence };
+    const report = await new AnalysisBuilder().assemble("qba", "av", snapshot, metrics, null, null);
+    await new Persistence().save("qba", "av", snapshot, metrics, report);
+    const saved = mockTx.uAFMetric.create.mock.calls[0][0].data;
+    expect(saved.value).toBeNull();
+    expect(saved.confidence.create).toMatchObject({ verifiedItems: 3, requiredItems: 4, score: .75, percentage: 75, classification: "MEDIUM" });
+    expect(mockTx.analysisSnapshot.create.mock.calls[0][0].data.fullReport.result.metrics[0].confidenceScore).toBe(.75);
+  });
+
+  it("persists paper-specific evidence and metrics instead of bank scores", async () => {
+    const question = { id: "q1", questionText: "Explain trees.", marks: 5, moduleNumber: 1,
+      coMapping: "CO1", rbtLevel: "L2", difficultyLevel: "EASY", status: "APPROVED" };
+    mockTx.generatedPaper.findMany.mockResolvedValueOnce([
+      { id: "paper-a", questionBankId: "qb", paperJson: { questionIds: ["q1"], evaluationReport: { overall: 63 },
+        scoreBreakdown: "Generator report", generationTrace: { slotDecisions: [{ selectedQuestionId: "q1" }] } }, items: [{ question }] },
+      { id: "paper-b", questionBankId: "qb", paperJson: null, items: [{ question: { ...question, id: "q2", rbtLevel: "L5" } }] },
+    ]);
+    await new Persistence().save("qba", "av", makeSnapshot(), makeMetrics(), makeAnalysisResult());
+    const records = mockTx.paperAnalysis.create.mock.calls.map(([arg]) => arg.data);
+    expect(records).toHaveLength(2);
+    expect(records[0].indexValues.QPQI).toBeNull();
+    expect(records[0].indexValues.LOTS).toBe(1);
+    expect(records[1].indexValues.LOTS).toBe(0);
+    expect(records[0].indexValues.evidence.questions[0].sourceQuestionId).toBe("q1");
+    expect(records[0].indexValues.generationEvidence.evaluationReport.overall).toBe(63);
+    expect(records[0].indexValues.provenance.source).toBe("CURRENT_LINKED_RECORDS");
+    expect(records[0].indexValues.provenance.statement).toContain("not the original paper at generation time");
+    expect(records[0].aiNarrative).toBeUndefined();
+    expect(mockTx.generatedPaper.findMany.mock.calls[0][0].where).toMatchObject({
+      status: "COMPLETED", questionBank: { questionBankAnalyses: { some: { id: "qba" } } },
+    });
+  });
+
+  it("propagates paper persistence failure from the transaction", async () => {
+    mockTx.generatedPaper.findMany.mockRejectedValueOnce(new Error("paper read failed"));
+    await expect(new Persistence().save("qba", "av", makeSnapshot(), makeMetrics(), makeAnalysisResult())).rejects.toThrow("paper read failed");
+    expect(mockTx.questionBankAnalysis.update).not.toHaveBeenCalled();
+  });
+
+  it("prefers immutable captured paper questions over edited linked questions", async () => {
+    const original = { id: "q1", questionText: "Original question", marks: 5, moduleNumber: 1, coMapping: "CO1", rbtLevel: "L2" };
+    mockTx.generatedPaper.findMany.mockResolvedValueOnce([{ id: "paper", questionBankId: "qb",
+      paperJson: { selectedQuestions: [original] }, items: [{ question: { ...original, questionText: "Edited question", rbtLevel: "L5" } }] }]);
+    await new Persistence().save("qba", "av", makeSnapshot(), makeMetrics(), makeAnalysisResult());
+    const values = mockTx.paperAnalysis.create.mock.calls[0][0].data.indexValues;
+    expect(values.LOTS).toBe(1);
+    expect(values.evidence.questions[0].questionText).toBe("Original question");
+    expect(values.provenance.source).toBe("GENERATION_SNAPSHOT");
+  });
+
+  it("labels incomplete captured records as a current-record evaluation", async () => {
+    mockTx.generatedPaper.findMany.mockResolvedValueOnce([{ id: "paper", questionBankId: "qb",
+      paperJson: { questions: [{ id: "q1" }] }, items: [] }]);
+    await new Persistence().save("qba", "av", makeSnapshot(), makeMetrics(), makeAnalysisResult());
+    expect(mockTx.paperAnalysis.create.mock.calls[0][0].data.indexValues.provenance.source).toBe("CURRENT_LINKED_RECORDS");
+  });
   let persistence: Persistence;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTx.generatedPaper.findMany.mockResolvedValue([]);
     persistence = new Persistence();
   });
 
@@ -292,7 +403,7 @@ describe("Persistence", () => {
     const ecsCall = mockTx.uAFMetric.create.mock.calls.find(
       (call: any) => call[0].data.indexCode === "ECS",
     );
-    expect(ecsCall[0].data.weightedScore).toBeNull();
+    expect(ecsCall![0].data.weightedScore).toBeNull();
   });
 
   it("saves Risk records from analysis result", async () => {

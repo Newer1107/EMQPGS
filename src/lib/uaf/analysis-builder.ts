@@ -1,7 +1,6 @@
 import { IndexCode, Classification, FinalVerdict } from "@prisma/client";
 import type { EvidenceSnapshotData, ValidatedAIResponse, AnalysisSnapshotResult } from "./types";
 import type { MetricResult } from "./metric-engine";
-import { classifyIndex } from "./classification-matrix";
 
 export class AnalysisBuilder {
   async assemble(
@@ -13,6 +12,7 @@ export class AnalysisBuilder {
     evidenceHash: string | null,
   ): Promise<AnalysisSnapshotResult> {
     const metricRecords = metrics.map((m) => ({
+      ...m,
       indexCode: m.indexCode as IndexCode,
       value: m.value,
       classification: m.classification as Classification | null,
@@ -27,7 +27,16 @@ export class AnalysisBuilder {
     const aiData = aiResponse ? this.extractFromAi(aiResponse) : null;
     const fallback = this.generateFallbackData(metrics, evidenceSnapshotData);
     const executiveSummary = aiData?.executiveSummary ?? fallback.executiveSummary;
-    const finalVerdict = aiData?.finalVerdict ?? fallback.finalVerdict;
+    // Only deterministic QPQI can authorize a verdict, including when AI disagrees.
+    const finalVerdict = fallback.finalVerdict;
+    const aiModules = (aiResponse?.modules ?? []).map((module) => {
+      if (module.moduleId !== "FINAL_VERDICT" || !module.success || module.data?.verdict === finalVerdict) return module;
+      return { ...module, success: false, data: null, validationErrors: [
+        ...module.validationErrors,
+        finalVerdict === null ? "Verdict unavailable: deterministic QPQI is missing or invalid"
+          : "AI verdict disagrees with deterministic QPQI",
+      ] };
+    });
     const risks = aiData?.risks.length ? aiData.risks : fallback.risks;
     const recommendations = aiData?.recommendations.length ? aiData.recommendations : fallback.recommendations;
     const strengths = aiData?.strengths.length ? aiData.strengths : fallback.strengths;
@@ -35,7 +44,7 @@ export class AnalysisBuilder {
 
     return {
       analysisVersionId,
-      status: aiResponse?.overallValid !== false ? "COMPLETE" : "AI_COMPLETE",
+      status: "COMPLETE",
       metrics: metricRecords,
       executiveSummary,
       finalVerdict,
@@ -43,7 +52,7 @@ export class AnalysisBuilder {
       recommendations,
       strengths,
       weaknesses,
-      aiModules: aiResponse?.modules ?? [],
+      aiModules,
       evidenceHash,
     };
   }
@@ -71,7 +80,8 @@ export class AnalysisBuilder {
       switch (mod.moduleId) {
         case "EXECUTIVE_SUMMARY": {
           const d = mod.data as { executiveSummary?: string; strengths?: Array<{ id: string; strength: string }>; weaknesses?: Array<{ id: string; weakness: string }> };
-          if (d.executiveSummary) result.executiveSummary = d.executiveSummary;
+          const summary = d.executiveSummary ?? mod.data.overallAssessment;
+          if (typeof summary === "string") result.executiveSummary = summary;
           if (Array.isArray(d.strengths)) result.strengths.push(...d.strengths);
           if (Array.isArray(d.weaknesses)) result.weaknesses.push(...d.weaknesses);
           break;
@@ -79,7 +89,7 @@ export class AnalysisBuilder {
         case "RISK_ANALYSIS": {
           const d = mod.data as { risks?: Array<{ finding: string; priority: string; riskType?: string }> };
           if (d.risks) {
-            result.risks.push(...d.risks.map((r) => ({ finding: r.finding, priority: r.priority, riskType: r.riskType ?? null })));
+            result.risks.push(...d.risks.map((r) => ({ ...r, riskType: r.riskType ?? null })));
           }
           break;
         }
@@ -133,7 +143,7 @@ export class AnalysisBuilder {
       (snapshot.detectedRisks.length > 0 ? `${snapshot.detectedRisks.length} risk(s) identified.` : "No critical risks detected.");
 
     // Deterministic verdict
-    const finalVerdict: FinalVerdict | null = qpqi != null
+    const finalVerdict: FinalVerdict | null = qpqi != null && Number.isFinite(qpqi) && qpqi >= 0 && qpqi <= 1
       ? qpqi >= 0.9 ? "APPROVED_WITHOUT_MODIFICATION"
         : qpqi >= 0.8 ? "APPROVED_WITH_MINOR_IMPROVEMENTS"
           : qpqi >= 0.7 ? "APPROVED_SUBJECT_TO_REVISION"

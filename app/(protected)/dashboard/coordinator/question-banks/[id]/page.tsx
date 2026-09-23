@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { QuestionBankWorkflowService } from "@/modules/coordinator/question-bank.service";
@@ -84,6 +85,11 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
   const bs = bank.batchSemester;
 
   return (
+    <div className="space-y-4">
+      <nav aria-label="Bank evidence" className="flex gap-4 text-sm">
+        <Link className="underline" href={`/dashboard/coordinator/question-banks/${id}/uaf-review`}>Review academic evidence</Link>
+        <Link className="underline" href={`/dashboard/coordinator/question-banks/${id}/audit`}>Question bank audit</Link>
+      </nav>
     <BankDetailClient
       bankId={bank.id}
       subjectName={(bank.subject).subjectName}
@@ -107,5 +113,6 @@ export default async function QuestionBankDetailPage({ params }: { params: Promi
       moderators={moderators}
       contributors={contributors}
     />
+    </div>
   );
 }

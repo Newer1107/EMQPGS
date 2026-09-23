@@ -14,6 +14,7 @@ import { getCurrentUserFromCookies } from "@/lib/api-context";
 import { ResponsibilityResolver } from "@/lib/auth/responsibility-resolver";
 import { CoordinatorService, type AttentionItem, type BankStatusItem } from "@/modules/coordinator/service";
 import { questionBankPhaseLabels } from "@/lib/constants";
+import { CoordinatorBankComparison } from "@/components/dashboard/coordinator-bank-progress";
 
 const ATTENTION_SEVERITY: Record<AttentionItem["type"], Severity> = {
   stalled: "critical",
@@ -208,6 +209,8 @@ export default async function CoordinatorDashboardPage() {
         title="Task Queue"
         emptyMessage="All banks are on track"
       />
+
+      <CoordinatorBankComparison banks={data.bankStatuses} />
 
       {/* UAF Analysis Section */}
       {data.bankStatuses.length > 0 && (

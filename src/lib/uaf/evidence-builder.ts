@@ -2,12 +2,19 @@ import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import type { RawBankData, ExtractedQuestionData, ModuleSummary } from "./types";
 import { EXTRACTION_ATTRIBUTES, attributeStatus } from "./metric-engine";
+import { blueprintSchema } from "@/modules/qb-audit/validation";
+import { applyLatestUafReview } from "@/modules/uaf-review/adapter";
 
 export class EvidenceBuilder {
   async collect(questionBankId: string): Promise<RawBankData> {
     const bank = await prisma.questionBank.findUnique({
       where: { id: questionBankId },
       include: {
+        auditBlueprints: {
+          orderBy: { version: "desc" },
+          take: 1,
+          select: { id: true, version: true, data: true },
+        },
         subject: { select: { subjectName: true, subjectCode: true } },
         pattern: { select: { totalModules: true, marksPattern: true, totalSlots: true } },
         slots: {
@@ -33,6 +40,8 @@ export class EvidenceBuilder {
     });
 
     if (!bank) throw new NotFoundError("QuestionBank not found");
+    const latestBlueprint = bank.auditBlueprints?.[0];
+    const blueprint = blueprintSchema.safeParse(latestBlueprint?.data);
 
     const questions: ExtractedQuestionData[] = bank.slots
       .filter((s) => s.assignedQuestion)
@@ -96,7 +105,11 @@ export class EvidenceBuilder {
       questionFormatting: all(q => q.questionText.trim().length > 0 && !q.questionText.includes("�")),
     };
 
-    return {
+    const raw: RawBankData = {
+      ...(blueprint.success && latestBlueprint ? {
+        documentedCourseOutcomes: [...new Set(blueprint.data.table1.flatMap(row => row.co))].sort(),
+        sourceBlueprint: { id: latestBlueprint.id, version: latestBlueprint.version, syllabusReference: blueprint.data.syllabusReference },
+      } : {}),
       questionBankId: bank.id,
       structuralChecks,
       subjectName: bank.subject.subjectName,
@@ -109,6 +122,7 @@ export class EvidenceBuilder {
       marksOptions: (bank.pattern?.marksPattern as number[]) ?? [],
       extractionTimestamp: new Date().toISOString(),
     };
+    return applyLatestUafReview(raw);
   }
 }
 

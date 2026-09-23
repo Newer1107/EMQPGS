@@ -146,6 +146,23 @@ function makeValidAIResponse(
 describe("AnalysisBuilder", () => {
   const builder = new AnalysisBuilder();
 
+  it.each([null, NaN, Infinity, -0.1, 1.1])("does not authorize an AI verdict with unavailable/invalid QPQI %s", async (value) => {
+    const result = await builder.assemble("qba", "av", makeSnapshot(),
+      [makeMetricResult({ indexCode: "QPQI", value })], makeValidAIResponse(), null);
+    expect(result.finalVerdict).toBeNull();
+    expect(result.status).toBe("COMPLETE");
+    expect(result.aiModules.find((m) => m.moduleId === "FINAL_VERDICT")).toMatchObject({ success: false, data: null });
+  });
+
+  it("preserves optional metric confidence and the seeded summary field", async () => {
+    const result = await builder.assemble("qba", "av", makeSnapshot(),
+      [makeMetricResult({ confidenceScore: .8, confidenceClassification: "HIGH" })],
+      { overallValid: true, modules: [{ moduleId: "EXECUTIVE_SUMMARY", success: true,
+        data: { overallAssessment: "Evidence-based summary" }, validationErrors: [], retryCount: 0 }] }, null);
+    expect(result.metrics[0]).toMatchObject({ confidenceScore: .8, confidenceClassification: "HIGH" });
+    expect(result.executiveSummary).toBe("Evidence-based summary");
+  });
+
   describe("assemble()", () => {
     it("returns correct AnalysisSnapshotResult shape", async () => {
       const result = await builder.assemble(
@@ -338,7 +355,7 @@ describe("AnalysisBuilder", () => {
         null,
       );
 
-      expect(result.risks).toHaveLength(0);
+      expect(result.risks.every((r) => !r.finding.includes("Low HOTS"))).toBe(true);
     });
 
     it("does not extract recommendations from failed RECOMMENDATIONS module", async () => {
@@ -367,7 +384,7 @@ describe("AnalysisBuilder", () => {
       expect(result.recommendations).toHaveLength(0);
     });
 
-    it("returns empty arrays when no AI response", async () => {
+    it("returns deterministic findings when no AI response", async () => {
       const result = await builder.assemble(
         "qba-1",
         "av-1",
@@ -377,7 +394,7 @@ describe("AnalysisBuilder", () => {
         null,
       );
 
-      expect(result.risks).toEqual([]);
+      expect(result.risks.length).toBeGreaterThan(0);
       expect(result.recommendations).toEqual([]);
       expect(result.aiModules).toEqual([]);
     });
@@ -409,7 +426,7 @@ describe("AnalysisBuilder", () => {
       expect(result.status).toBe("COMPLETE");
     });
 
-    it("returns AI_COMPLETE status when AI has failures", async () => {
+    it("returns COMPLETE status when AI has failures", async () => {
       const result = await builder.assemble(
         "qba-1",
         "av-1",
@@ -419,7 +436,7 @@ describe("AnalysisBuilder", () => {
         null,
       );
 
-      expect(result.status).toBe("AI_COMPLETE");
+      expect(result.status).toBe("COMPLETE");
     });
 
     it("copies aiModules from AI response", async () => {
@@ -453,7 +470,7 @@ describe("AnalysisBuilder", () => {
       expect(result.executiveSummary).toBe("Good overall");
     });
 
-    it("extracts finalVerdict from FINAL_VERDICT AI module", async () => {
+    it("overrides an AI verdict that disagrees with QPQI", async () => {
       const result = await builder.assemble(
         "qba-1",
         "av-1",
@@ -463,10 +480,10 @@ describe("AnalysisBuilder", () => {
         null,
       );
 
-      expect(result.finalVerdict).toBe("APPROVED_WITH_MINOR_IMPROVEMENTS");
+      expect(result.finalVerdict).toBe("APPROVED_SUBJECT_TO_REVISION");
     });
 
-    it("sets executiveSummary and finalVerdict to null when modules are absent", async () => {
+    it("uses deterministic summary and verdict when modules are absent", async () => {
       const aiResponse = makeValidAIResponse({
         modules: [
           {
@@ -489,8 +506,8 @@ describe("AnalysisBuilder", () => {
         null,
       );
 
-      expect(result.executiveSummary).toBeNull();
-      expect(result.finalVerdict).toBeNull();
+      expect(result.executiveSummary).toContain("Deterministic evaluation");
+      expect(result.finalVerdict).toBe("APPROVED_SUBJECT_TO_REVISION");
     });
 
     it("preserves evidenceHash", async () => {

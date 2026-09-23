@@ -1,20 +1,53 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
 // ---- N3: Slot override IDOR ----
-import { ForbiddenError } from "@/lib/errors";
+import { userSchema } from "@/modules/users/validation";
+import { DeanReviewService } from "@/modules/production/dean-review.service";
+import { prisma } from "@/lib/db";
+import { NotificationService } from "@/modules/notifications/service";
 
-describe("N4 — Dean notification targets bank department", () => {
-  const servicePath = path.resolve("src/modules/production/dean-review.service.ts");
-  const source = fs.readFileSync(servicePath, "utf-8");
+vi.mock("@/lib/db", () => ({ prisma: {
+  questionBank: { findFirst: vi.fn() },
+  deanReview: { create: vi.fn() },
+  responsibilityAssignment: { findMany: vi.fn() },
+} }));
+vi.mock("@/lib/audit", () => ({ logAudit: vi.fn() }));
+vi.mock("@/lib/storage/storage-service", () => ({ StorageService: vi.fn() }));
+vi.mock("@/modules/notifications/service", () => ({ NotificationService: vi.fn(function () {
+  return { create: vi.fn(), createAndEmail: vi.fn(), markByActionUrlAsRead: vi.fn() };
+}) }));
 
-  it("uses questionBank.subject.departmentId in the COE notification query (not actor.departmentId)", () => {
-    const coeUserQuery = source.match(/const coeUsers = await prisma\.user\.findMany\(\{[\s\S]*?\}\);/);
-    expect(coeUserQuery).toBeTruthy();
-    expect(coeUserQuery![0]).toContain("questionBank.subject.departmentId");
-    expect(coeUserQuery![0]).not.toContain("actor.departmentId");
+describe("N4 — Dean notifications respect responsibility scopes", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("notifies institution COEs and coordinators of the bank department, independently of the dean's home department", async () => {
+    const selection = { regularPaper: "PAPER_A", supplementaryPaper: "PAPER_B", ktPaper: "PAPER_C" } as const;
+    const dean = { id: "dean-1", email: "dean@example.com", name: "Dean", homeDepartmentId: "dean-home" };
+    vi.mocked(prisma.questionBank.findFirst).mockResolvedValue({
+      id: "bank-1", subject: { departmentId: "bank-dept", subjectName: "Algorithms" },
+      deanReview: null, generatedPapers: Object.values(selection).map((variant) => ({ variant })),
+    } as never);
+    vi.mocked(prisma.deanReview.create).mockResolvedValue({ id: "review-1", ...selection, reviewedAt: new Date(), reviewedBy: dean } as never);
+    const coe = { id: "coe-1", email: "coe@example.com", name: "COE" };
+    vi.mocked(prisma.responsibilityAssignment.findMany)
+      .mockResolvedValueOnce([{ user: coe }] as never)
+      .mockResolvedValueOnce([{ user: { id: "bank-coordinator" } }] as never);
+    await new DeanReviewService().submitDeanReview("bank-1", selection, {
+      user: dean,
+      responsibilities: [{ id: "dean-ra", type: "DEAN", scopeType: "INSTITUTION", scopeId: null, activeFrom: new Date(), activeTo: null }],
+    });
+    expect(prisma.responsibilityAssignment.findMany).toHaveBeenCalledTimes(2);
+    expect(prisma.responsibilityAssignment.findMany).toHaveBeenNthCalledWith(1, {
+      where: { responsibility: "COE", scopeType: "INSTITUTION" }, include: { user: true },
+    });
+    expect(prisma.responsibilityAssignment.findMany).toHaveBeenNthCalledWith(2, {
+      where: { responsibility: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: "bank-dept" }, include: { user: true },
+    });
+    const notification = vi.mocked(NotificationService).mock.results[0].value;
+    expect(notification.createAndEmail).toHaveBeenCalledExactlyOnceWith(coe, "Dean review complete", expect.any(String), "/dashboard/coe/production", "ACTION_REQUIRED");
+    expect(notification.create).toHaveBeenCalledWith("bank-coordinator", "Dean review complete", expect.any(String), "/dashboard/coordinator/question-banks?bank=bank-1", "SUCCESS");
   });
 });
 
@@ -127,8 +160,11 @@ describe("N14 — Zod .min(1) on ID fields", () => {
     expect(src).toContain("batchSemesterId: z.string().min(1),");
   });
 
-  it("users validation requires non-empty departmentId", () => {
-    const src = fs.readFileSync(path.resolve("src/modules/users/validation.ts"), "utf-8");
-    expect(src).toContain("departmentId: z.string().min(1).nullable().optional()");
+  it("users validation rejects an empty homeDepartmentId while allowing null or omission", () => {
+    const base = { name: "Test User", email: "test@example.com" };
+    expect(userSchema.safeParse({ ...base, homeDepartmentId: "" }).success).toBe(false);
+    for (const homeDepartmentId of ["dept-1", null, undefined]) {
+      expect(userSchema.safeParse({ ...base, homeDepartmentId }).success).toBe(true);
+    }
   });
 });

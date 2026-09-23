@@ -3,6 +3,7 @@ import { classifyIndex, classifyConfidence, computeConfidence } from "./classifi
 import type { RawBankData, ExtractedQuestionData, ExtractionAttribute, ExtractionStatus, StructuralElement } from "./types";
 
 export interface MetricResult {
+  rawValue?: number | null;
   indexCode: IndexCode;
   value: number | null;
   classification: ReturnType<typeof classifyIndex>;
@@ -138,8 +139,11 @@ export function computeHOTS(data: RawBankData): MetricResult {
     "hots_questions / total_questions");
 }
 export function computeCBR(_data: RawBankData, lots: MetricResult, hots: MetricResult): MetricResult {
-  return result("CBR", lots.value !== null && lots.value > 0 && hots.value !== null
-    ? Math.min(hots.value / lots.value, 1) : null, "min(hots / lots, 1)");
+  const rawValue = lots.value !== null && lots.value > 0 && hots.value !== null ? hots.value / lots.value : null;
+  // The cognitive ratio (§7) can exceed one; global §3.1 requires normalized indices.
+  // Preserve the raw ratio for audit/export, and classify the normalized index.
+  return { ...result("CBR", rawValue === null ? null : Math.min(rawValue, 1),
+    "min(hots / lots, 1); unnormalized ratio retained as rawValue"), rawValue };
 }
 export function computeSCI(data: RawBankData): MetricResult {
   const checks = STRUCTURAL_ELEMENTS.map(key => data.structuralChecks?.[key]);
@@ -200,6 +204,30 @@ export function computeOCI(results: MetricResult[]): MetricResult {
   return { ...result("OCI", value, "mean(confidence_scores_for_10_core_indices)"),
     confidenceScore: value, confidenceClassification: classifyConfidence(value) };
 }
+
+/** Derive core confidence from observed checks and reviewed attributes.
+ * Reviewed false verdicts still supply evidence; academic quality is separate.
+ * The review adapter supplies the source-validated QCQI/CAI/AMI/FRI counts.
+ */
+export function deriveConfidenceEvidence(data: RawBankData): NonNullable<RawBankData["indexConfidence"]> {
+  const counts = { ...data.indexConfidence };
+  const n = data.questions.length;
+  const reviewedCount = (attribute: ExtractionAttribute) => data.questions.filter(q =>
+    attributePresent(q, attribute) && typeof q.attributeAccuracy?.[attribute] === "boolean").length;
+  const metadata: ExtractionAttribute[] = ["coMapping", "poMapping", "piMapping", "rbtLevel", "difficultyLevel", "marks", "questionType"];
+  const consistency = data.academicEvidence?.MCS ?? [];
+  const reviewedConsistency = data.questions.filter(q => q.sourceQuestionId && consistency.some(row =>
+    row.criterion === q.sourceQuestionId && validScore(row.score) && row.sourceIds.some(id => id.trim()))).length;
+  counts.SCI = { verified: STRUCTURAL_ELEMENTS.filter(key => typeof data.structuralChecks?.[key] === "boolean").length, required: 10 };
+  // Nine MII components: seven attribute audits, metadata completeness and consistency.
+  // Presence/absence is observable for MC; it does not establish correctness.
+  counts.MII = { verified: metadata.reduce((sum, a) => sum + reviewedCount(a), 0) + n + reviewedConsistency, required: 9 * n };
+  counts.BDI = { verified: reviewedCount("rbtLevel"), required: n };
+  counts.CVI = { verified: reviewedCount("coMapping") + (data.sourceBlueprint && data.documentedCourseOutcomes?.length ? 1 : 0), required: n + 1 };
+  counts.MCAI = { verified: reviewedCount("marks") + reviewedCount("rbtLevel"), required: 2 * n };
+  counts.DBI = { verified: reviewedCount("difficultyLevel"), required: n };
+  return counts;
+}
 export class MetricEngine {
   computeAll(data: RawBankData): MetricResult[] {
     const results = [computeECS(data), computeEQI(data), computeCOA(data), computePOA(data),
@@ -208,8 +236,9 @@ export class MetricEngine {
     results.push(computeCBR(data, results[11], results[12]), computeSCI(data), computeMII(results),
       computeBDI(data), computeCVI(data), computeMCAI(data), computeDBI(data),
       computeQCQI(data), computeCAI(data), computeAMI(data), computeFRI(data));
+    const confidenceEvidence = deriveConfidenceEvidence(data);
     for (const metric of results) {
-      const evidence = data.indexConfidence?.[metric.indexCode];
+      const evidence = confidenceEvidence[metric.indexCode];
       const confidence = evidence ? computeConfidence(evidence.verified, evidence.required).score : null;
       metric.confidenceScore = confidence;
       metric.confidenceClassification = classifyConfidence(confidence);

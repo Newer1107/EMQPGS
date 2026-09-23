@@ -9,7 +9,7 @@ const orchestrator = new EvaluationOrchestrator();
 export const GET = withApiHandler(async (request, context) => {
   const segments = request.nextUrl.pathname.split("/");
   const vid = segments[6]!; // .../evaluation/versions/[vid]
-  await requireAnalysisAccess(context.auth!, segments[3]!, [vid]);
-  const version = await orchestrator.getVersion(vid);
+  await requireAnalysisAccess(context.auth!, segments[3]!, [vid], "evaluation");
+  const version = await orchestrator.getVersion(vid, segments[3]!);
   return version ?? { notFound: true };
 }, { responsibility: ["COORDINATOR" as ResponsibilityType] });

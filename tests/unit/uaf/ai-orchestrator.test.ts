@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { AiOrchestrator } from "@/lib/uaf/ai-orchestrator";
+import { AiOrchestrator, UAF_ANALYSIS_FILTER } from "@/lib/uaf/ai-orchestrator";
 import type { RawBankData, EvidenceSnapshotData, PipelineOptions } from "@/lib/uaf/types";
 import type { MetricResult } from "@/lib/uaf/metric-engine";
 
@@ -143,6 +143,7 @@ describe("AiOrchestrator", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrisma.questionBankAnalysis.findFirst.mockResolvedValue(null);
     orchestrator = new AiOrchestrator();
 
     // Default successful pipeline
@@ -150,6 +151,7 @@ describe("AiOrchestrator", () => {
       id: "qba-1",
       questionBankId: "qb-1",
       status: "INITIALIZED",
+      version: 1,
     });
 
     mockCollect.mockResolvedValue(makeRawBankData());
@@ -205,6 +207,75 @@ describe("AiOrchestrator", () => {
   });
 
   describe("analyze() - full pipeline", () => {
+    it("completes deterministic analysis with missing AI detail when the registry is unseeded", async () => {
+      const { AnalysisBuilder } = await vi.importActual<typeof import("@/lib/uaf/analysis-builder")>("@/lib/uaf/analysis-builder");
+      const builder = new AnalysisBuilder();
+      mockAssemble.mockImplementationOnce(builder.assemble.bind(builder));
+      mockBuildPrompts.mockResolvedValue({ modules: [], totalEstimatedTokens: 0 });
+      const result = await orchestrator.analyze("qb-1", "user-1");
+      expect(result.status).toBe("COMPLETE");
+      expect(result.cacheHit).toBe(false);
+      expect(result.cachedFromAnalysisVersionId).toBeNull();
+      expect(result.aiUnavailableReason).toContain("No active analysis prompts");
+      expect(result.executiveSummary).toContain("Deterministic evaluation");
+      expect(result.finalVerdict).toBeNull();
+      expect(result.aiModules[0]).toMatchObject({ moduleId: "PROMPT_REGISTRY", success: false });
+      expect(mockAnalyzeWithRetry).not.toHaveBeenCalled();
+      expect(mockPrisma.analysisVersion.findFirst).not.toHaveBeenCalled();
+      expect(mockAssemble.mock.calls[0][4]).toMatchObject({ overallValid: false,
+        modules: [{ moduleId: "PROMPT_REGISTRY", success: false, data: null }] });
+      expect(mockSave.mock.calls[0][4]).toMatchObject({ cacheHit: false, aiUnavailableReason: result.aiUnavailableReason });
+    });
+    it("validates two independent JSON responses without concatenating them", async () => {
+      const first = { moduleId: "EXECUTIVE_SUMMARY", promptText: "one", promptVersionId: "p1", outputSchema: {}, contextBudget: 1000 };
+      const second = { ...first, moduleId: "RISK_ANALYSIS", promptText: "two", promptVersionId: "p2" };
+      mockBuildPrompts.mockResolvedValue({ modules: [first, second] });
+      mockAnalyzeWithRetry.mockResolvedValueOnce({ result: { text: '{"executiveSummary":"Good"}', model: "test", durationMs: 1 }, retryCount: 2 })
+        .mockResolvedValueOnce({ result: { text: '{"risks":[]}', model: "test", durationMs: 1 }, retryCount: 0 });
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockValidate).toHaveBeenNthCalledWith(1, expect.objectContaining({ rawText: '{"executiveSummary":"Good"}' }), [first]);
+      expect(mockValidate).toHaveBeenNthCalledWith(2, expect.objectContaining({ rawText: '{"risks":[]}' }), [second]);
+      expect(mockAssemble.mock.calls[0][4].modules[0].retryCount).toBe(2);
+    });
+
+    it("retains module errors when inference throws", async () => {
+      mockAnalyzeWithRetry.mockRejectedValueOnce(new Error("offline"));
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockAssemble.mock.calls[0][4]).toMatchObject({ overallValid: false,
+        modules: [{ moduleId: "EXECUTIVE_SUMMARY", success: false, validationErrors: ["offline"] }] });
+      expect(mockSave).toHaveBeenCalled();
+    });
+
+    it("retries a concurrent version collision and uses the allocated version consistently", async () => {
+      mockPrisma.questionBankAnalysis.findFirst.mockResolvedValueOnce({ version: 4 }).mockResolvedValueOnce({ version: 5 });
+      mockPrisma.questionBankAnalysis.create.mockRejectedValueOnce({ code: "P2002" }).mockResolvedValueOnce({ id: "qba-1", version: 6 });
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockPrisma.questionBankAnalysis.create.mock.calls.map((c) => c[0].data.version)).toEqual([5, 6]);
+      expect(mockPrisma.analysisVersion.create.mock.calls[0][0].data.versionNumber).toBe(6);
+    });
+
+    it("includes actual prompt versions and nested evidence in the cache identity", async () => {
+      await orchestrator.analyze("qb-1", "user-1");
+      const baseline = mockComputeHash.mock.calls[0][2];
+      const prompts = await mockBuildPrompts();
+      mockBuildPrompts.mockResolvedValue({ ...prompts, modules: [{ ...prompts.modules[0], promptVersionId: "pv-2" }] });
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockComputeHash.mock.calls[1][2]).not.toBe(baseline);
+      mockBuildSnapshot.mockReturnValue(makeSnapshotData({ metrics: { ECS: .4 } }));
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockComputeHash.mock.calls[2][2]).not.toBe(mockComputeHash.mock.calls[1][2]);
+      expect(mockPrisma.analysisVersion.findFirst.mock.calls[0][0].where).toMatchObject({
+        evidenceHash: "evidence-hash-abc", questionBankAnalysis: { questionBankId: "qb-1", status: "COMPLETE" },
+      });
+    });
+
+    it("does not accept a cached version without validated outputs", async () => {
+      mockPrisma.analysisVersion.findFirst.mockResolvedValue({ id: "old", analysisSnapshot: { fullReport: { result: {
+        evidenceHash: "evidence-hash-abc", aiModules: [{ moduleId: "EXECUTIVE_SUMMARY", success: false, data: null }],
+      } } } });
+      await orchestrator.analyze("qb-1", "user-1");
+      expect(mockAnalyzeWithRetry).toHaveBeenCalled();
+    });
     it("completes the full 8-stage pipeline successfully", async () => {
       const result = await orchestrator.analyze("qb-1", "user-1");
 
@@ -286,7 +357,7 @@ describe("AiOrchestrator", () => {
         (call: any) => call[0].data.status === "EXTRACTING",
       );
 
-      expect(extractingUpdate[0].data.startedAt).toBeInstanceOf(Date);
+      expect(extractingUpdate![0].data.startedAt).toBeInstanceOf(Date);
     });
 
     it("sets completedAt on COMPLETE status", async () => {
@@ -296,7 +367,7 @@ describe("AiOrchestrator", () => {
         (call: any) => call[0].data.status === "COMPLETE",
       );
 
-      expect(completeUpdate[0].data.completedAt).toBeInstanceOf(Date);
+      expect(completeUpdate![0].data.completedAt).toBeInstanceOf(Date);
     });
 
     it("skips AI pipeline stages on cache hit", async () => {
@@ -305,14 +376,19 @@ describe("AiOrchestrator", () => {
         id: "av-prior",
         questionBankAnalysisId: "qba-prior",
         versionNumber: 1,
+        analysisSnapshot: { fullReport: { result: {
+          evidenceHash: "evidence-hash-abc",
+          aiModules: [{ moduleId: "EXECUTIVE_SUMMARY", success: true, data: { executiveSummary: "Cached summary" } }],
+        } } },
       });
 
       await orchestrator.analyze("qb-1", "user-1");
 
-      // AI stages should NOT be called
-      expect(mockBuildPrompts).not.toHaveBeenCalled();
+      expect(mockSave.mock.calls[0][4]).toMatchObject({ cacheHit: true, cachedFromAnalysisVersionId: "av-prior" });
+      // Only inference is skipped; cached outputs are revalidated.
+      expect(mockBuildPrompts).toHaveBeenCalled();
       expect(mockAnalyzeWithRetry).not.toHaveBeenCalled();
-      expect(mockValidate).not.toHaveBeenCalled();
+      expect(mockValidate).toHaveBeenCalled();
 
       // But assembly and persistence still run
       expect(mockAssemble).toHaveBeenCalled();
@@ -419,7 +495,7 @@ describe("AiOrchestrator", () => {
       const failedUpdate = mockPrisma.questionBankAnalysis.update.mock.calls.find(
         (call: any) => call[0].data.status === "FAILED",
       );
-      expect(failedUpdate[0].data.errorDetails).toHaveProperty("stack");
+      expect(failedUpdate![0].data.errorDetails).toHaveProperty("stack");
     });
 
     it("re-throws the original error", async () => {
@@ -473,7 +549,7 @@ describe("AiOrchestrator", () => {
         qpqi: 0.72,
       });
       expect(mockPrisma.questionBankAnalysis.findFirst).toHaveBeenCalledWith({
-        where: { questionBankId: "qb-1" },
+        where: { questionBankId: "qb-1", ...UAF_ANALYSIS_FILTER },
         orderBy: { createdAt: "desc" },
         select: expect.objectContaining({
           id: true,

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { Prisma } from "@prisma/client";
-import { ConflictError } from "@/lib/errors";
+import { ConflictError, ForbiddenError } from "@/lib/errors";
 
 vi.mock("@/modules/readiness/engine", () => ({
   ReadinessEngine: class MockReadinessEngine {
@@ -66,9 +66,6 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
 
     vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-1" } as any);
     vi.mocked(prisma.academicYear.findFirst).mockResolvedValue({ id: "ay-1" } as any);
-    vi.mocked(prisma.responsibilityAssignment.findMany).mockResolvedValue([
-      { id: "ra-1", type: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: "dept-1", userId: "coord-1", assignedById: null, activeFrom: new Date(), activeTo: null, assignedAt: new Date(), deletedAt: null },
-    ] as any);
     vi.mocked(prisma.$transaction).mockImplementation(async (cb: any) => cb(prisma));
     vi.mocked(prisma.subject.create).mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError("n/a", {
@@ -82,13 +79,32 @@ describe("H6 - QuestionBank updateStatus concurrency", () => {
     let thrown: unknown;
     try {
       await service.createSubject(
-        { id: "coord-1", role: "COORDINATOR" } as never,
+        {
+          user: { id: "coord-1", name: "Coordinator", email: "coord@example.com" },
+          responsibilities: [{ id: "ra-1", type: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: "dept-1", activeFrom: new Date(), activeTo: null }],
+        },
         { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-1", creditLoad: 4 },
       );
     } catch (e) {
       thrown = e;
     }
     expect(thrown).toBeInstanceOf(ConflictError);
+    expect(prisma.subject.create).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      data: expect.objectContaining({ subjectCode: "CS101", departmentId: "dept-1" }),
+    }));
+    expect(prisma.subjectVersion.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects subject creation outside the coordinator's department before any write", async () => {
+    const { SubjectManagementService } = await import("@/modules/coordinator/subject.service");
+    const { prisma } = await import("@/lib/db");
+    vi.mocked(prisma.department.findUnique).mockResolvedValue({ id: "dept-2" } as never);
+    await expect(new SubjectManagementService().createSubject({
+      user: { id: "coord-1", name: "Coordinator", email: "coord@example.com" },
+      responsibilities: [{ id: "ra-1", type: "COORDINATOR", scopeType: "DEPARTMENT", scopeId: "dept-1", activeFrom: new Date(), activeTo: null }],
+    }, { subjectCode: "CS101", subjectName: "CS", departmentId: "dept-2", creditLoad: 4 })).rejects.toBeInstanceOf(ForbiddenError);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(prisma.subject.create).not.toHaveBeenCalled();
   });
 
   it("passes Serialized isolation level to $transaction", async () => {

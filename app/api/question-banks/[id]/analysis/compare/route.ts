@@ -3,6 +3,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { requireAnalysisAccess } from "@/lib/uaf/access";
+import { UAF_ANALYSIS_FILTER } from "@/lib/uaf/pipeline";
 
 const compareSchema = z.object({
   v1: z.string().min(1),
@@ -16,13 +17,14 @@ export const GET = withApiHandler(async (request, context) => {
     v2: searchParams.get("v2"),
   });
 
-  await requireAnalysisAccess(context.auth!, request.nextUrl.pathname.split("/")[3]!, [params.v1, params.v2]);
+  const bankId = request.nextUrl.pathname.split("/")[3]!;
+  await requireAnalysisAccess(context.auth!, bankId, [params.v1, params.v2], "uaf");
   const [v1Metrics, v2Metrics] = await Promise.all([
     prisma.uAFMetric.findMany({
-      where: { questionBankAnalysis: { versions: { some: { id: params.v1 } } } },
+      where: { questionBankAnalysis: { questionBankId: bankId, ...UAF_ANALYSIS_FILTER, versions: { some: { id: params.v1, ...UAF_ANALYSIS_FILTER } } } },
     }),
     prisma.uAFMetric.findMany({
-      where: { questionBankAnalysis: { versions: { some: { id: params.v2 } } } },
+      where: { questionBankAnalysis: { questionBankId: bankId, ...UAF_ANALYSIS_FILTER, versions: { some: { id: params.v2, ...UAF_ANALYSIS_FILTER } } } },
     }),
   ]);
 

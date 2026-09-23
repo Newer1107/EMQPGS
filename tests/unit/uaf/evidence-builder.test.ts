@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NotFoundError } from "@/lib/errors";
+import type { RawBankData } from "@/lib/uaf/types";
+
+vi.mock("@/modules/uaf-review/adapter", () => ({
+  applyLatestUafReview: vi.fn(async (raw: RawBankData) => raw),
+}));
 
 vi.mock("@/lib/db", () => {
   const mockPrisma = {
@@ -12,6 +17,7 @@ vi.mock("@/lib/db", () => {
 
 import { prisma } from "@/lib/db";
 import { EvidenceBuilder } from "@/lib/uaf/evidence-builder";
+import { applyLatestUafReview } from "@/modules/uaf-review/adapter";
 
 // ── Fixtures ─────────────────────────────────────
 
@@ -276,6 +282,50 @@ describe("EvidenceBuilder", () => {
         poMappings:["PO1","PO2"],piMappings:["PI1"],poMapping:"PO1, PO2",
         questionType:"THEORY",poStatus:"UNABLE_TO_VERIFY",questionTypeStatus:"UNABLE_TO_VERIFY",
       });
+    });
+
+    it("loads the latest validated blueprint outcomes independently of observed COs", async () => {
+      const data = {
+        schemaVersion:1,syllabusReference:"Syllabus 2026",
+        table1:[{module:1,name:"Intro",hours:4,co:["CO1","CO2"]},{module:2,name:"Advanced",hours:4,co:["CO2","CO4"]}],
+        table2:[{module:1,theory:50,numerical:50},{module:2,theory:50,numerical:50}],
+        table3:{theory:50,numerical:50},
+      };
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockBank({
+        auditBlueprints:[{id:"bp-2",version:2,data,createdAt:new Date()}],
+      }));
+      const result = await builder.collect("qb-1");
+      expect(result.documentedCourseOutcomes).toEqual(["CO1","CO2","CO4"]);
+      expect(result.sourceBlueprint).toEqual({id:"bp-2",version:2,syllabusReference:"Syllabus 2026"});
+      expect(prisma.questionBank.findUnique).toHaveBeenCalledWith(expect.objectContaining({
+        include:expect.objectContaining({auditBlueprints:expect.objectContaining({orderBy:{version:"desc"},take:1})}),
+      }));
+    });
+
+    it("leaves documented outcomes unknown when latest blueprint is missing or invalid", async () => {
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockBank({auditBlueprints:[{id:"invalid",version:3,data:{}}]}));
+      const result=await builder.collect("qb-1");
+      expect(result.documentedCourseOutcomes).toBeUndefined();
+      expect(result.sourceBlueprint).toBeUndefined();
+    });
+    it("passes declared source observations to the review adapter and returns its reviewed evidence", async () => {
+      (prisma.questionBank.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue(mockBank());
+      vi.mocked(applyLatestUafReview).mockImplementationOnce(async raw => ({
+        ...raw,
+        reviewProvenance:{reviewId:"rv1",version:1,reviewerId:"reviewer",staleQuestionIds:[],bankEvidenceCurrent:true},
+        questions:raw.questions.map(q => ({
+          ...q,coStatus:"VERIFIED",attributeAccuracy:{coMapping:false},
+          attributeStatuses:{...q.attributeStatuses,coMapping:"VERIFIED"},
+        })),
+      }));
+      const result=await builder.collect("qb-1");
+      expect(applyLatestUafReview).toHaveBeenCalledWith(expect.objectContaining({
+        questions:expect.arrayContaining([expect.objectContaining({coMapping:"CO1",coStatus:"UNABLE_TO_VERIFY"})]),
+      }));
+      expect(result.questions[0].coMapping).toBe("CO1");
+      expect(result.questions[0].attributeAccuracy?.coMapping).toBe(false);
+      expect(result.questions[0].coStatus).toBe("VERIFIED");
+      expect(result.reviewProvenance?.reviewId).toBe("rv1");
     });
 
     it("checks actual structural mismatches and keeps unknown authored instructions unknown", async () => {

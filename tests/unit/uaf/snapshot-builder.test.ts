@@ -366,5 +366,19 @@ describe("SnapshotBuilder", () => {
       data.extractionTimestamp="later";
       expect(builder.computeEvidenceHash(first,"v1","p1")).toBe(builder.computeEvidenceHash(builder.build(data,[]),"v1","p1"));
     });
+    it("hashes stable blueprint/review provenance without collection-time cache misses", () => {
+      const data=makeMockData();
+      data.sourceBlueprint={id:"bp1",version:1,syllabusReference:"Syllabus"};
+      data.reviewProvenance={reviewId:"review1",version:1,reviewerId:"staff1",staleQuestionIds:[],bankEvidenceCurrent:true};
+      const first=builder.build(data,[]);
+      data.extractionTimestamp="2026-09-24T00:00:00Z";
+      const second=builder.build(data,[]);
+      expect(builder.computeEvidenceHash(first,"v1","p1")).toBe(builder.computeEvidenceHash(second,"v1","p1"));
+      data.reviewProvenance.version=2;
+      expect(builder.computeEvidenceHash(first,"v1","p1")).not.toBe(builder.computeEvidenceHash(builder.build(data,[]),"v1","p1"));
+      data.reviewProvenance.version=1;
+      data.sourceBlueprint.version=2;
+      expect(builder.computeEvidenceHash(first,"v1","p1")).not.toBe(builder.computeEvidenceHash(builder.build(data,[]),"v1","p1"));
+    });
   });
 });

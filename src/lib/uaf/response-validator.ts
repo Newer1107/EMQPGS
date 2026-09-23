@@ -1,6 +1,55 @@
 import { z } from "zod";
 import { AIRawResponse, ValidatedAIResponse, ValidatedModuleOutput, ModulePrompt } from "./types";
-import { logger } from "@/lib/logger";
+import { FinalVerdict, RiskPriority, RiskType } from "@prisma/client";
+
+const text = z.string().min(1);
+const priority = z.enum(RiskPriority);
+const moduleSchemas: Record<string, z.ZodTypeAny> = {
+  EXECUTIVE_SUMMARY: z.object({ executiveSummary: text.optional(), overallAssessment: text.optional(),
+    strengths: z.array(z.object({ id: text, strength: text })).optional(),
+    weaknesses: z.array(z.object({ id: text, weakness: text })).optional(),
+  }).passthrough().refine((d) => !!(d.executiveSummary || d.overallAssessment)),
+  BLOOM_ANALYSIS: z.object({ cognitiveBalance: z.array(text), risks: z.array(text), recommendations: z.array(text) }).passthrough(),
+  DIFFICULTY_ANALYSIS: z.object({ difficultyAssessment: text, rigorLevel: text, marksAlignment: z.array(text) }).passthrough(),
+  CO_COVERAGE: z.object({ coverageStatus: text, weakOutcomes: z.array(text), attainmentRisk: z.array(text) }).passthrough(),
+  MODULE_COVERAGE: z.object({ moduleAssessment: z.record(z.string(), text), weakModules: z.array(text), strongModules: z.array(text) }).passthrough(),
+  CONCEPT_DIVERSITY: z.object({ diversityScore: z.enum(["HIGH", "MEDIUM", "LOW"]), clusteringRisk: text.nullable(), recommendation: text }).passthrough(),
+  RISK_ANALYSIS: z.object({ risks: z.array(z.object({ finding: text, priority,
+    riskType: z.enum(RiskType).nullable().optional(), evidenceReference: text.optional(),
+    educationalRisk: text.optional(), institutionalRisk: text.nullable().optional(),
+    affectedModules: z.array(text).optional(), affectedCOs: z.array(text).optional(),
+  }).passthrough()) }).passthrough(),
+  RECOMMENDATIONS: z.object({ recommendations: z.array(z.object({ finding: text, recommendation: text, priority,
+    impact: text.nullable().optional(), suggestedActions: z.array(text).optional(), evidenceReference: text.optional(),
+  }).passthrough()) }).passthrough(),
+  ACADEMIC_QUALITY: z.object({ qualityAssessment: text, strongDimensions: z.array(text), weakDimensions: z.array(text), revisionCandidates: z.array(text) }).passthrough(),
+  FINAL_VERDICT: z.object({ verdict: z.enum(FinalVerdict) }).passthrough(),
+};
+
+function fieldSchema(spec: unknown): z.ZodTypeAny {
+  if (typeof spec === "string") {
+    if (spec === "string") return z.string();
+    if (spec === "number") return z.number();
+    if (spec === "boolean") return z.boolean();
+    if (spec === "array") return z.array(z.unknown());
+    if (spec.endsWith("[]")) return z.array(fieldSchema(spec.slice(0, -2)));
+    if (spec === "object") return z.record(z.string(), z.unknown());
+    throw new Error(`Unsupported schema descriptor: ${spec}`);
+  }
+  if (spec && typeof spec === "object") {
+    const s = spec as Record<string, unknown>;
+    if (Array.isArray(s.enum)) return z.custom((v) => s.enum instanceof Array && s.enum.includes(v));
+    if (s.type === "array") return z.array(fieldSchema(s.items));
+    if (s.type === "object" || s.properties) {
+      const required = Array.isArray(s.required) ? s.required : [];
+      const shape = Object.fromEntries(Object.entries((s.properties ?? {}) as Record<string, unknown>).map(([k, v]) =>
+        [k, required.includes(k) ? fieldSchema(v) : fieldSchema(v).optional()]));
+      return s.additionalProperties === false ? z.object(shape).strict() : z.object(shape).passthrough();
+    }
+    return fieldSchema(s.type);
+  }
+  throw new Error("Unsupported output schema");
+}
 
 export class ResponseValidator {
   /**
@@ -38,11 +87,12 @@ export class ResponseValidator {
     // Each module should be in the response by its moduleId key
     for (const mod of expectedModules) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const output = (parsed as Record<string, unknown>)[mod.moduleId] ?? parsed;
+      const output = Object.prototype.hasOwnProperty.call(parsed, mod.moduleId)
+        ? parsed[mod.moduleId] : expectedModules.length === 1 ? parsed : undefined;
       const errors: string[] = [];
 
       // Stage 1: Structure check
-      if (!output || typeof output !== "object") {
+      if (!output || typeof output !== "object" || Array.isArray(output)) {
         modules.push({
           moduleId: mod.moduleId,
           success: false,
@@ -57,22 +107,22 @@ export class ResponseValidator {
       // Stage 2: Schema validation (if outputSchema is defined)
       if (mod.outputSchema && Object.keys(mod.outputSchema).length > 0) {
         try {
-          const schemaShape: Record<string, z.ZodTypeAny> = {};
-          for (const [key] of Object.entries(mod.outputSchema)) {
-            schemaShape[key] = z.unknown().optional();
-          }
-          const schema = z.object(schemaShape).strict();
+          const schema = mod.outputSchema.type === "object" || mod.outputSchema.properties
+            ? fieldSchema(mod.outputSchema)
+            : z.object(Object.fromEntries(Object.entries(mod.outputSchema).map(([k, v]) => [k, fieldSchema(v)]))).strict();
           schema.parse(output);
-          // Additional: verify each expected field exists and is not null/undefined
-          const outputRecord = output as Record<string, unknown>;
-          for (const [key] of Object.entries(mod.outputSchema)) {
-            if (outputRecord[key] === undefined || outputRecord[key] === null) {
-              errors.push(`Schema validation failed: Required field '${key}' is missing or null`);
-            }
-          }
         } catch (parseError) {
           errors.push(`Schema validation failed: ${(parseError as Error).message}`);
         }
+      }
+
+      // Seeded prompts may have no stored outputSchema. Enforce their contracts,
+      // and always protect the fields that feed relational persistence.
+      const builtIn = moduleSchemas[mod.moduleId];
+      if (builtIn && (!Object.keys(mod.outputSchema ?? {}).length ||
+        ["EXECUTIVE_SUMMARY", "RISK_ANALYSIS", "RECOMMENDATIONS", "FINAL_VERDICT"].includes(mod.moduleId))) {
+        const checked = builtIn.safeParse(output);
+        if (!checked.success) errors.push(`Schema validation failed: ${checked.error.message}`);
       }
 
       // Stage 3: Semantic hallucination guards
@@ -154,7 +204,8 @@ export class ResponseValidator {
 
   private tryParseJSON(text: string): Record<string, unknown> | null {
     try {
-      return JSON.parse(text) as Record<string, unknown>;
+      const parsed: unknown = JSON.parse(text);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Record<string, unknown> : null;
     } catch {
       return null;
     }

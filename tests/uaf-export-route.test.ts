@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { UAF_ANALYSIS_FILTER } from "@/lib/uaf/pipeline";
 
 const mocks = vi.hoisted(() => ({ bank: vi.fn(), version: vi.fn(), access: vi.fn(), pdf: vi.fn(), auth: { userId: "dean" } }));
 vi.mock("@/lib/api-handler", () => ({ withApiHandler: (handler: (request: NextRequest, context: unknown) => unknown) => (request: NextRequest) => handler(request, { auth: mocks.auth }) }));
@@ -19,7 +20,7 @@ describe("UAF export bank/version scope", () => {
   it("authorizes the bank department and constrains the selected version to that bank", async () => {
     const response = await GET(new NextRequest("http://localhost/api/question-banks/bank-a/analysis/export?versionId=version-a"));
     expect(mocks.access).toHaveBeenCalledWith(mocks.auth, "dept-a");
-    expect(mocks.version.mock.calls[0][0].where).toEqual({ id: "version-a", questionBankAnalysis: { questionBankId: "bank-a", evaluationEngineVersion: { not: { startsWith: "eval-" } } } });
+    expect(mocks.version.mock.calls[0][0].where).toEqual({ id: "version-a", ...UAF_ANALYSIS_FILTER, questionBankAnalysis: { questionBankId: "bank-a", ...UAF_ANALYSIS_FILTER } });
     expect(response.headers.get("content-type")).toBe("application/pdf");
     expect(response.headers.get("content-disposition")).toContain("uaf-report-v3.pdf");
     expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("%PDF");

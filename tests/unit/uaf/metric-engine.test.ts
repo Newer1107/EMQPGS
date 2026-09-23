@@ -142,6 +142,12 @@ describe("UAF evidence contracts", () => {
     expect(computeMCAI(makeData([baseQuestion({rbtLevel:"L1",marks:15})])).value).toBe(0);
     expect(computeMCAI(makeData([baseQuestion({marks:-1})])).value).toBeNull();
   });
+  it("preserves a CBR above one alongside its normalized index", () => {
+    const data=makeData([baseQuestion({rbtLevel:"L1"}),baseQuestion({rbtLevel:"L5"}),baseQuestion({rbtLevel:"L6"})]);
+    const ratio=computeCBR(data,computeLOTS(data),computeHOTS(data));
+    expect(ratio.rawValue).toBe(2);
+    expect(ratio.value).toBe(1);
+  });
   it("does not substitute prose length, diversity or approval for academic quality", () => {
     const data = makeData([baseQuestion({questionText:"Explain ".repeat(80), clarityScore:1,questionType:"Theory",questionStatus:"APPROVED"})]);
     for (const fn of [computeQCQI,computeAMI,computeFRI,computeCAI]) expect(fn(data).value).toBeNull();
@@ -207,7 +213,10 @@ describe("complete composites and independent confidence", () => {
     const results=new MetricEngine().computeAll(data);
     expect(results).toHaveLength(26);
     expect(new Set(results.map(r=>r.indexCode)).size).toBe(26);
-    expect(results.find(r=>r.indexCode==="OCI")?.value).toBeCloseTo(.8);
+    // Core counts cannot be overridden by caller-provided confidence numbers.
+    expect(results.find(r=>r.indexCode==="BDI")?.confidenceScore).toBe(0);
+    expect(results.find(r=>r.indexCode==="SCI")?.confidenceScore).toBe(0);
+    expect(results.find(r=>r.indexCode==="OCI")?.value).not.toBeCloseTo(.8);
     expect(results.find(r=>r.indexCode==="QPQI")?.value).toBeNull();
     for (const m of new MetricEngine().computeAll(makeData([]))) expect(m.value).toBeNull();
   });

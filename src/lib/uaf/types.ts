@@ -19,6 +19,14 @@ export enum PipelineStage {
 
 // ── Raw Bank Data (what EvidenceBuilder produces) ──
 export interface RawBankData {
+  reviewProvenance?: {
+    reviewId: string;
+    version: number;
+    reviewerId: string;
+    staleQuestionIds: string[];
+    bankEvidenceCurrent: boolean;
+  };
+  sourceBlueprint?: { id: string; version: number; syllabusReference: string };
   /** Documented curriculum outcomes; never inferred from observed mappings. */
   documentedCourseOutcomes?: string[];
   structuralChecks?: Partial<Record<StructuralElement, boolean | null>>;
@@ -53,6 +61,7 @@ export interface ExtractedQuestionData {
   attributeStatuses?: Partial<Record<ExtractionAttribute, ExtractionStatus>>;
   /** Reviewed academic correctness, distinct from successful source extraction. */
   attributeAccuracy?: Partial<Record<ExtractionAttribute, boolean | null>>;
+  qualityEvidence?: Partial<Record<"clarity" | "precision" | "technicalAccuracy" | "context" | "validity" | "alignment" | "fairness", ReviewedScore>>;
   questionIndex: number;
   questionText: string;
   marks: number;
@@ -78,9 +87,12 @@ export interface ModuleSummary {
 
 // ── EvidenceSnapshot (what SnapshotBuilder produces) ──
 export interface EvidenceSnapshotData {
+  reviewProvenance?: RawBankData["reviewProvenance"];
+  sourceBlueprint?: RawBankData["sourceBlueprint"];
   structuralElements?: Array<{ element: StructuralElement; present: boolean | null }>;
   totalMarks?: number;
   metricConfidence?: Record<string, number | null>;
+  rawMetrics?: Record<string, number | null>;
   questionBankId?: string;
   questions?: ExtractedQuestionData[];
   structuralChecks?: RawBankData["structuralChecks"];
@@ -180,6 +192,7 @@ export interface AnalysisSnapshotResult {
 
 // ── Metric Result (what MetricEngine produces) ──
 export interface MetricResult {
+  rawValue?: number | null;
   confidenceScore?: number | null;
   confidenceClassification?: ConfidenceClassification | null;
   indexCode: string;

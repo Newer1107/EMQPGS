@@ -3,6 +3,7 @@ import { withApiHandler } from "@/lib/api-handler";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 import { requireAnalysisAccess } from "@/lib/uaf/access";
+import { EVALUATION_ANALYSIS_FILTER } from "@/lib/uaf/pipeline";
 
 const compareSchema = z.object({
   v1: z.string().min(1),
@@ -16,10 +17,12 @@ export const GET = withApiHandler(async (request, context) => {
     v2: searchParams.get("v2"),
   });
 
-  await requireAnalysisAccess(context.auth!, request.nextUrl.pathname.split("/")[3]!, [params.v1, params.v2]);
+  const bankId = request.nextUrl.pathname.split("/")[3]!;
+  await requireAnalysisAccess(context.auth!, bankId, [params.v1, params.v2], "evaluation");
+  const versionScope = { ...EVALUATION_ANALYSIS_FILTER, questionBankAnalysis: { questionBankId: bankId, ...EVALUATION_ANALYSIS_FILTER } };
   const [v1Snapshot, v2Snapshot] = await Promise.all([
-    prisma.analysisSnapshot.findUnique({ where: { analysisVersionId: params.v1 } }),
-    prisma.analysisSnapshot.findUnique({ where: { analysisVersionId: params.v2 } }),
+    prisma.analysisSnapshot.findFirst({ where: { analysisVersionId: params.v1, analysisVersion: versionScope } }),
+    prisma.analysisSnapshot.findFirst({ where: { analysisVersionId: params.v2, analysisVersion: versionScope } }),
   ]);
 
   if (!v1Snapshot?.fullReport || !v2Snapshot?.fullReport) {

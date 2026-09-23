@@ -22,6 +22,7 @@ import {
 } from "./types";
 import type { AnalysisStatus } from "@prisma/client";
 import { createHash } from "node:crypto";
+import { EVALUATION_ANALYSIS_FILTER } from "@/lib/uaf/pipeline";
 
 export class EvaluationOrchestrator {
   private engine = new EvaluationEngine();
@@ -171,7 +172,7 @@ export class EvaluationOrchestrator {
    */
   async getLatest(questionBankId: string) {
     const analysis = await prisma.questionBankAnalysis.findFirst({
-      where: { questionBankId },
+      where: { questionBankId, ...EVALUATION_ANALYSIS_FILTER },
       orderBy: { version: "desc" },
       select: {
         id: true,
@@ -181,6 +182,7 @@ export class EvaluationOrchestrator {
         completedAt: true,
         failureReason: true,
         versions: {
+          where: EVALUATION_ANALYSIS_FILTER,
           orderBy: { versionNumber: "desc" },
           take: 1,
           select: {
@@ -202,7 +204,7 @@ export class EvaluationOrchestrator {
    */
   async listVersions(questionBankId: string) {
     return prisma.questionBankAnalysis.findMany({
-      where: { questionBankId },
+      where: { questionBankId, ...EVALUATION_ANALYSIS_FILTER },
       orderBy: { version: "desc" },
       select: {
         id: true,
@@ -215,6 +217,7 @@ export class EvaluationOrchestrator {
         completedAt: true,
         createdAt: true,
         versions: {
+          where: EVALUATION_ANALYSIS_FILTER,
           orderBy: { versionNumber: "desc" },
           select: {
             id: true,
@@ -231,9 +234,10 @@ export class EvaluationOrchestrator {
   /**
    * Get a specific evaluation version with full report.
    */
-  async getVersion(analysisVersionId: string) {
-    return prisma.analysisVersion.findUnique({
-      where: { id: analysisVersionId },
+  async getVersion(analysisVersionId: string, questionBankId?: string) {
+    return prisma.analysisVersion.findFirst({
+      where: { id: analysisVersionId, ...EVALUATION_ANALYSIS_FILTER,
+        questionBankAnalysis: { ...(questionBankId ? { questionBankId } : {}), ...EVALUATION_ANALYSIS_FILTER } },
       include: {
         questionBankAnalysis: { select: { questionBankId: true, version: true, evaluationEngineVersion: true } },
         evidenceSnapshot: true,

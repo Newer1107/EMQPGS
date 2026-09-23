@@ -11,6 +11,7 @@ import { NextStepGuidance } from "@/components/forms/next-step-guidance";
 import { apiFetch } from "@/lib/client-fetch";
 import { EntityStatusBanner } from "@/components/shared/entity-status-banner";
 import { InlineAssignPanel } from "@/components/shared/inline-assign-panel";
+import { CoordinatorBankEvidenceLinks, ModuleCompletionSummary } from "@/components/dashboard/coordinator-bank-progress";
 
 export type SlotQuestion = {
   id: string;
@@ -809,8 +810,13 @@ export function BankDetailClient(props: BankDetailClientProps) {
           
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm font-medium uppercase tracking-wider text-[var(--text-tertiary)]">Coverage</CardTitle></CardHeader>
-            <CardContent><CoverageStats slots={props.slots} totalSlots={props.totalSlots} /></CardContent>
+            <CardContent className="space-y-4">
+              <CoverageStats slots={props.slots} totalSlots={props.totalSlots} />
+              <ModuleCompletionSummary slots={props.slots} modules={modules} expectedPerModule={props.slotsPerModule * props.marksOptions.length} />
+            </CardContent>
           </Card>
+
+          <CoordinatorBankEvidenceLinks bankId={props.bankId} />
 
           <Link
             href={`/dashboard/coordinator/question-banks/${props.bankId}/evaluation`}

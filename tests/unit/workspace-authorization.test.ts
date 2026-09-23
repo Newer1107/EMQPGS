@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ForbiddenError } from "@/lib/errors";
+import ts from "typescript";
+import fs from "node:fs";
+import path from "node:path";
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -416,8 +419,6 @@ describe("WORKSPACE_PRIORITY", () => {
   });
 
   it("lives in workspace-priority.ts config, not business logic", () => {
-    const fs = require("fs");
-    const path = require("path");
     const libDir = path.resolve(__dirname, "../../src/lib");
     const cfgPath = path.join(libDir, "workspace-priority.ts");
     expect(fs.existsSync(cfgPath)).toBe(true);
@@ -427,9 +428,27 @@ describe("WORKSPACE_PRIORITY", () => {
 });
 
 describe("architectural guardrails", () => {
-  const fs = require("fs");
-  const path = require("path");
   const srcDir = path.resolve(__dirname, "../../src");
+
+  function assignmentQueries(source: string) {
+    const file = ts.createSourceFile("source.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    const calls: { method: string; operation: string; arguments: string }[] = [];
+    function visit(node: ts.Node) {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.expression.getText(file) === "prisma.responsibilityAssignment") {
+        let parent: ts.Node | undefined = node.parent;
+        while (parent && !ts.isMethodDeclaration(parent)) parent = parent.parent;
+        calls.push({
+          method: parent && ts.isMethodDeclaration(parent) ? parent.name.getText(file) : "",
+          operation: node.expression.name.text,
+          arguments: node.arguments.map((arg) => arg.getText(file)).join(",").replace(/\s/g, ""),
+        });
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(file);
+    return calls;
+  }
 
   function listPageFiles(dir: string): string[] {
     const files: string[] = [];
@@ -466,12 +485,24 @@ describe("architectural guardrails", () => {
     expect(src).not.toContain("getAssignedBankIds");
   });
 
-  it("no operational page directly imports ResponsibilityAssignment", () => {
+  it("only personal contributor overview pages query assignments, scoped to the signed-in user", () => {
     const pagesDir = path.resolve(srcDir, "../app/(protected)/dashboard");
     const files = listPageFiles(pagesDir);
     for (const file of files) {
       const content = fs.readFileSync(file, "utf-8");
-      expect(content).not.toMatch(/responsibilityAssignment|RESPONSIBILITY_ASSIGNMENT/);
+      const relative = path.relative(pagesDir, file);
+      // These pages list a user's banks across workspaces; bank operations still
+      // resolve the active workspace instead of enumerating assignments.
+      if (["contributor/coverage/page.tsx", "contributor/my-subjects/page.tsx"].includes(relative)) {
+        expect(content).toContain("await getCurrentUserFromCookies()");
+        expect(assignmentQueries(content), relative).toEqual([{
+          method: "", operation: "findMany",
+          arguments: '{where:{userId:user.id,responsibility:"CONTRIBUTOR",scopeType:"QUESTION_BANK",deletedAt:null},select:{scopeId:true},}',
+        }]);
+        expect(content).toMatch(/where:\s*\{\s*id:\s*\{\s*in:\s*bankIds\s*\}/);
+      } else {
+        expect(content, relative).not.toMatch(/responsibilityAssignment|RESPONSIBILITY_ASSIGNMENT/);
+      }
     }
   });
 
@@ -520,7 +551,7 @@ describe("architectural guardrails", () => {
     expect(fnMatch![0]).not.toContain("auth");
   });
 
-  it("refactored business services do not query ResponsibilityAssignment", () => {
+  it("business services limit assignment reads to scoped notification recipients and slot caller checks", () => {
     const files = [
       "moderation/service.ts",
       "moderation/dashboard.service.ts",
@@ -529,7 +560,14 @@ describe("architectural guardrails", () => {
     ];
     for (const f of files) {
       const content = fs.readFileSync(path.join(srcDir, "modules", f), "utf-8");
-      expect(content).not.toMatch(/prisma\.responsibilityAssignment/);
+      const expected = f === "question-library/service.ts" ? [{
+        method: "submit", operation: "findMany",
+        arguments: '{where:{scopeId:{in:bankIds},scopeType:"QUESTION_BANK",responsibility:"MODERATOR"},include:{user:{select:{id:true,email:true,name:true}}},}',
+      }] : f === "question-slots/service.ts" ? [{
+        method: "assignToSlot", operation: "findFirst",
+        arguments: '{where:{userId:ctx.userId,responsibility:"COORDINATOR"},}',
+      }] : [];
+      expect(assignmentQueries(content), f).toEqual(expected);
     }
   });
 });
