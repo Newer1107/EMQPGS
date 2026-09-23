@@ -14,14 +14,15 @@ export class ModeratorDashboardService {
       _count: { _all: true },
     });
 
-    const pending = questionCounts.find((item) => item.status === QuestionStatus.PENDING)?._count._all ?? 0;
+    const pending = questionCounts.filter((item) => item.status === QuestionStatus.PENDING || item.status === QuestionStatus.REVISION_SUBMITTED)
+      .reduce((sum, item) => sum + item._count._all, 0);
     const approved = questionCounts.find((item) => item.status === QuestionStatus.APPROVED)?._count._all ?? 0;
     const rejected = questionCounts.find((item) => item.status === QuestionStatus.REJECTED)?._count._all ?? 0;
     const revisionRequested = questionCounts.find((item) => item.status === QuestionStatus.REVISION_REQUESTED)?._count._all ?? 0;
 
     const [awaitingRevisionResubmission, recentModerationActivity, pendingQueue, notifications] = await Promise.all([
       this.getAwaitingRevisionResubmission(ctx.bankId),
-      this.getRecentModerationActivity(ctx.userId),
+      this.getRecentModerationActivity(ctx.userId, ctx.bankId),
       this.getPendingQueue(ctx.bankId),
       this.notifications.listForUser(ctx.userId, 50),
     ]);
@@ -64,12 +65,13 @@ export class ModeratorDashboardService {
       markType: q.marks,
       contributorName: q.creator.name,
       revisionRequestedAt: q.updatedAt.toISOString(),
+      daysWaiting: Math.max(0, Math.floor((Date.now() - q.updatedAt.getTime()) / (1000 * 60 * 60 * 24))),
     }));
   }
 
-  private async getRecentModerationActivity(userId: string) {
+  private async getRecentModerationActivity(userId: string, bankId: string) {
     const events = await prisma.moderationEvent.findMany({
-      where: { moderatorId: userId },
+      where: { moderatorId: userId, question: { slotAssignments: { some: { questionBankId: bankId } } } },
       include: {
         question: {
           select: { id: true, subjectVersion: { include: { subject: { select: { subjectName: true } } } } },
@@ -92,11 +94,12 @@ export class ModeratorDashboardService {
     const slots = await prisma.questionSlot.findMany({
       where: {
         questionBankId: bankId,
-        assignedQuestion: { status: QuestionStatus.PENDING },
+        assignedQuestion: { status: { in: [QuestionStatus.PENDING, QuestionStatus.REVISION_SUBMITTED] } },
       },
       include: {
+        questionBank: { select: { subject: { select: { subjectName: true, subjectCode: true } } } },
         assignedQuestion: {
-          select: { id: true, submittedAt: true, createdAt: true, creator: { select: { name: true } } },
+          select: { id: true, status: true, submittedAt: true, createdAt: true, creator: { select: { name: true } } },
         },
       },
       orderBy: [{ moduleNumber: "asc" }, { marks: "asc" }],
@@ -110,8 +113,9 @@ export class ModeratorDashboardService {
         return {
           id: q.id,
           bankId,
-          subjectName: "",
-          subjectCode: "",
+          subjectName: s.questionBank.subject.subjectName,
+          subjectCode: s.questionBank.subject.subjectCode,
+          status: q.status,
           moduleNumber: s.moduleNumber,
           marks: s.marks,
           submitterName: q.creator.name,

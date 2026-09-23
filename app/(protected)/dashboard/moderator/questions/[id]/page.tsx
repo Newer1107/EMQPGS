@@ -22,7 +22,7 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
         creator: { select: { id: true, name: true, email: true } },
         owner: { select: { id: true, name: true, email: true } },
         slotAssignments: {
-          include: { questionBank: { include: { batchSemester: { select: { semesterNumber: true, academicYear: { select: { code: true } } } }, pattern: { select: { examType: true } } } } },
+          include: { questionBank: { include: { subject: { select: { subjectCode: true } }, _count: { select: { generatedPapers: true, exportArtifacts: true } }, batchSemester: { select: { semesterNumber: true, academicYear: { select: { code: true } }, batch: { select: { name: true } } } }, pattern: { select: { examType: true } } } } },
         },
         moderationEvents: {
           orderBy: { createdAt: "asc" },
@@ -36,11 +36,11 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
       include: { changedBy: { select: { name: true } } },
     }),
   ]);
-  if (!question) notFound();
+  if (!question || !question.slotAssignments.some((slot) => slot.questionBankId === ctx.bankId)) notFound();
 
   const service = new ModeratorService();
   const allQuestions = await service.listQuestions(ctx);
-  const queueIds = allQuestions.map((q: { id: string }) => q.id);
+  const queueIds = allQuestions.filter((q) => q.status === "PENDING" || q.status === "REVISION_SUBMITTED").map((q) => q.id);
 
   return (
     <div className="space-y-6">
@@ -85,16 +85,19 @@ export default async function ModeratorQuestionDetailPage({ params }: { params: 
                 <ul className="space-y-1 text-sm">
                   {question.slotAssignments.map((s) => (
                     <li key={s.id}>
-                      Sem {s.questionBank.batchSemester.semesterNumber} ({s.questionBank.batchSemester.academicYear.code})
+                      {s.questionBank.subject.subjectCode} · {s.questionBank.batchSemester.batch.name} · Sem {s.questionBank.batchSemester.semesterNumber} ({s.questionBank.batchSemester.academicYear.code})
+                      <p>{s.questionBank.phase} · {s.questionBank.recordStatus} · Module {s.moduleNumber}, {s.marks} marks, slot {s.slotNumber}</p>
+                      <p>{s.questionBank._count.generatedPapers} generated papers · {s.questionBank._count.exportArtifacts} exports</p>
                     </li>
                   ))}
                 </ul>
+                <p className="mt-3 text-sm text-[var(--text-tertiary)]">Moderation changes the shared library question used by these banks. Generated papers and exports may contain earlier snapshots; coordinate regeneration when needed.</p>
               </CardContent>
             </Card>
           )}
 
           {revisions.length >= 2 && (
-            <RevisionDiff revisions={revisions as any} />
+            <RevisionDiff revisions={revisions.map((revision) => ({ ...revision, createdAt: revision.createdAt.toISOString() }))} />
           )}
 
           {question.moderationEvents.length > 0 && (

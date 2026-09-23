@@ -24,7 +24,7 @@ export default async function ModeratorDashboardPage() {
   const pendingQueueItems = data.pendingQueue.map((item) => ({
     id: item.id,
     title: ctx.subject.subjectName,
-    subtitle: `Module ${item.moduleNumber} · ${item.marks} marks by ${item.submitterName}`,
+    subtitle: `${item.status === "REVISION_SUBMITTED" ? "Revision resubmitted · " : ""}Module ${item.moduleNumber} · ${item.marks} marks by ${item.submitterName}`,
     href: `/dashboard/moderator/questions/${item.id}`,
     badge: { label: `${item.priorityScore}d`, variant: item.priorityScore > 7 ? "danger" as const : item.priorityScore > 3 ? "warning" as const : "info" as const },
     meta: `${item.priorityScore} day${item.priorityScore !== 1 ? "s" : ""} waiting`,
@@ -32,7 +32,7 @@ export default async function ModeratorDashboardPage() {
   }));
 
   const awaitingQueueItems = data.awaitingRevisionResubmission.map((item) => {
-    const daysWaiting = Math.floor((Date.now() - new Date(item.revisionRequestedAt).getTime()) / (1000 * 60 * 60 * 24));
+    const daysWaiting = item.daysWaiting;
     return {
       id: item.id,
       title: item.subjectName,

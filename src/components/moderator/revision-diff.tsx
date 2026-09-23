@@ -51,7 +51,7 @@ export function RevisionDiff({ revisions }: { revisions: RevisionSnapshot[] }) {
               <span className="text-[var(--text-tertiary)]">Old:</span>
               <Select value={String(oldIdx)} onChange={(e) => setOldIdx(Number(e.target.value))} className="w-28">
                 {sorted.map((r, i) => (
-                  <option key={r.id} value={i} disabled={i === newIdx}>v{r.revisionNumber} ({new Date(r.createdAt).toLocaleDateString()})</option>
+                  <option key={r.id} value={i} disabled={i >= newIdx}>v{r.revisionNumber} ({new Date(r.createdAt).toLocaleDateString()})</option>
                 ))}
               </Select>
             </label>
@@ -59,7 +59,7 @@ export function RevisionDiff({ revisions }: { revisions: RevisionSnapshot[] }) {
               <span className="text-[var(--text-tertiary)]">New:</span>
               <Select value={String(newIdx)} onChange={(e) => setNewIdx(Number(e.target.value))} className="w-28">
                 {sorted.map((r, i) => (
-                  <option key={r.id} value={i} disabled={i === oldIdx}>v{r.revisionNumber} ({new Date(r.createdAt).toLocaleDateString()})</option>
+                  <option key={r.id} value={i} disabled={i <= oldIdx}>v{r.revisionNumber} ({new Date(r.createdAt).toLocaleDateString()})</option>
                 ))}
               </Select>
             </label>
