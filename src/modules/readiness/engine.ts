@@ -65,6 +65,20 @@ export class ReadinessEngine {
           issues.push(`${unmoderated.length} questions have no moderation decision.`);
         }
 
+        const unresolvedRevisions = bank.slots.filter((slot) =>
+          slot.assignedQuestion?.status === "REVISION_REQUESTED" ||
+          slot.assignedQuestion?.status === "REVISION_SUBMITTED",
+        );
+        if (unresolvedRevisions.length > 0) {
+          issues.push(`${unresolvedRevisions.length} questions have unresolved revisions. Complete resubmission and moderation before approval.`);
+        }
+        const pendingDecisions = bank.slots.filter((slot) =>
+          slot.assignedQuestion?.status === "PENDING" || slot.assignedQuestion?.status === "DRAFT",
+        );
+        if (pendingDecisions.length > 0) {
+          issues.push(`${pendingDecisions.length} questions still require a moderation decision on their current version.`);
+        }
+
         const latestAiReport = bank.aiReports[0];
         if (!latestAiReport || latestAiReport.status !== "COMPLETED") {
           issues.push("AI report not generated or not completed.");
