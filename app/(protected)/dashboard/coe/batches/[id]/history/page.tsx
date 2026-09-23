@@ -8,7 +8,13 @@ export const metadata: Metadata = { title: "Batch History — EMQPGS" };
 
 export default async function BatchHistoryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const batch = await prisma.batch.findUnique({ where: { id } });
+  const batch = await prisma.batch.findUnique({
+    where: { id },
+    include: { batchSemesters: {
+      orderBy: { semesterNumber: "desc" },
+      include: { academicYear: true, examCycles: { orderBy: { createdAt: "desc" } } },
+    } },
+  });
   if (!batch) notFound();
 
   return (
@@ -26,13 +32,22 @@ export default async function BatchHistoryPage({ params }: { params: Promise<{ i
         <Link href={"/dashboard/coe/batches/" + id + "/history"} className="border-b-2 border-black px-4 py-2 text-sm font-medium">History</Link>
       </div>
 
-      <div className="rounded-lg border-2 border-dashed p-12 text-center">
-        <h3 className="text-lg font-medium text-[var(--text-tertiary)]">Coming Soon</h3>
-        <p className="mt-2 text-sm text-[var(--text-tertiary)]">
-          Semester progression history, exam cycle history, and batch archive will appear here.
-          This tab is ready for future integration.
-        </p>
-      </div>
+      <p className="text-sm">Batch created {batch.createdAt.toLocaleDateString()}. Semester and exam cycle records below show their current recorded status.</p>
+      {batch.batchSemesters.length === 0 && <p>No semester history recorded for this batch.</p>}
+      {batch.batchSemesters.map((semester) => (
+        <section key={semester.id} className="rounded-lg border p-4 space-y-3">
+          <h2 className="font-semibold">Semester {semester.semesterNumber} · {semester.academicYear.code} · {semester.status}</h2>
+          <p className="text-sm">{semester.startDate?.toLocaleDateString() ?? "Start not scheduled"} – {semester.endDate?.toLocaleDateString() ?? "End not scheduled"}</p>
+          {semester.examCycles.length === 0 ? <p className="text-sm">No exam cycles recorded.</p> : (
+            <ul className="space-y-2 text-sm">{semester.examCycles.map((cycle) => (
+              <li key={cycle.id}>
+                <Link className="underline" href={`/dashboard/coe/exam-cycles/${cycle.id}`}>{cycle.examType}</Link>
+                {" · "}{cycle.status}{" · "}{cycle.startDate?.toLocaleDateString() ?? "Start not scheduled"} – {cycle.endDate?.toLocaleDateString() ?? "End not scheduled"}
+              </li>
+            ))}</ul>
+          )}
+        </section>
+      ))}
     </div>
   );
 }
